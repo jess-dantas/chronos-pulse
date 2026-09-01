@@ -1,2 +1,2 @@
-# chronos-pulse-bench
+# chronos-pulse
 Chronos Pulse - Gestão de Controle de Ponto
