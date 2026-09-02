@@ -13,7 +13,7 @@
 
 	<groupId>br.com.jess</groupId>
 	<artifactId>chronos-pulse</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>chronos-pulse</name>
 	<description>Chronos Pulse - Gestão de Controle de Ponto</description>
 
