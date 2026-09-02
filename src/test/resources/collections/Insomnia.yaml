@@ -1,0 +1,338 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: Chronos Pulse - API
+meta:
+  id: wrk_43cc89edb7844b06b70a80ae3a4a74b4
+  created: 1788352684573
+  modified: 1788352684573
+  description: ""
+collection:
+  - name: Gestão de Ponto
+    meta:
+      id: fld_4ed1a96ddbef478883f60329b06e55c0
+      created: 1725278400000
+      modified: 1725278400000
+      sortKey: -1788352684580
+      description: ""
+    children:
+      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
+        name: Registrar Ponto (Individual) - ENTRADA
+        meta:
+          id: req_3b86c167f0eb426dbd3d386524ba8a15
+          created: 1725278400000
+          modified: 1788355624320
+          isPrivate: false
+          description: ""
+          sortKey: -1725278400000
+        method: POST
+        body:
+          mimeType: application/json
+          text: >
+            {
+              "registros": [
+                {
+                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
+                  "tipoRegistro": "ENTRADA",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 5.0,
+                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
+                  "sincronizadoOffline": false
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-CPF-Colaborador
+            value: "{{ _.cpf_teste }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
+        name: Sincronizar Lote Offline (Batch) - PAUSA_INICIO
+        meta:
+          id: req_e750ce5b874d4c1d80f942576c1abfe7
+          created: 1725278400000
+          modified: 1788355532777
+          isPrivate: false
+          description: ""
+          sortKey: -1725278300000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "registros": [
+                {
+                  "idLocal": "b1f45c88-7a1a-4d22-921e-123456789011",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T08:00:00Z",
+                  "tipoRegistro": "ENTRADA",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 4.2,
+                  "fotoUrl": null,
+                  "sincronizadoOffline": true,
+                  "hashLocal": "a1b2c3d4e5f6..."
+                },
+                {
+                  "idLocal": "c2f45c88-7a1a-4d22-921e-123456789022",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
+                  "tipoRegistro": "PAUSA_INICIO",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 3.8,
+                  "fotoUrl": null,
+                  "sincronizadoOffline": true,
+                  "hashLocal": "f6e5d4c3b2a1..."
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-CPF-Colaborador
+            value: "{{ _.cpf_teste }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
+        name: Sincronizar Lote Offline (Batch) - PAUSA_FIM
+        meta:
+          id: req_fe8b63ff43454e7e91b82291978f44c1
+          created: 1788355521312
+          modified: 1788355571424
+          isPrivate: false
+          description: ""
+          sortKey: -1725278250000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |
+            {
+              "registros": [
+                {
+                  "idLocal": "d3f45c88-7a1a-4d22-921e-123456789033",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T13:00:00Z",
+                  "tipoRegistro": "PAUSA_FIM",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 4.0,
+                  "fotoUrl": null,
+                  "sincronizadoOffline": true,
+                  "hashLocal": "d3c2b1a0f9e8..."
+                },
+                {
+                  "idLocal": "e4f45c88-7a1a-4d22-921e-123456789044",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T17:00:00Z",
+                  "tipoRegistro": "SAIDA",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 4.5,
+                  "fotoUrl": null,
+                  "sincronizadoOffline": true,
+                  "hashLocal": "e4d3c2b1a0f9..."
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-CPF-Colaborador
+            value: "{{ _.cpf_teste }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
+        name: Registrar Ponto (Individual) - PAUSA_INICIO
+        meta:
+          id: req_9f5d741c8cb24941a8ec777ce8aabff8
+          created: 1788355617641
+          modified: 1788355631490
+          isPrivate: false
+          description: ""
+          sortKey: -1725278350000
+        method: POST
+        body:
+          mimeType: application/json
+          text: >
+            {
+              "registros": [
+                {
+                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
+                  "tipoRegistro": "PAUSA_INICIO",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 5.0,
+                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
+                  "sincronizadoOffline": false
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-CPF-Colaborador
+            value: "{{ _.cpf_teste }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
+        name: Registrar Ponto (Individual) - PAUSA_FIM
+        meta:
+          id: req_f2b97697e6594450a72b7dfc97271c3e
+          created: 1788355645562
+          modified: 1788355651737
+          isPrivate: false
+          description: ""
+          sortKey: -1725278325000
+        method: POST
+        body:
+          mimeType: application/json
+          text: >
+            {
+              "registros": [
+                {
+                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
+                  "tipoRegistro": "PAUSA_FIM",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 5.0,
+                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
+                  "sincronizadoOffline": false
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-CPF-Colaborador
+            value: "{{ _.cpf_teste }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
+        name: Registrar Ponto (Individual) - SAIDA
+        meta:
+          id: req_7131c395a5a745d7a277f40745a05d1d
+          created: 1788355660743
+          modified: 1788355666017
+          isPrivate: false
+          description: ""
+          sortKey: -1725278312500
+        method: POST
+        body:
+          mimeType: application/json
+          text: >
+            {
+              "registros": [
+                {
+                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                  "colaboradorId": "{{ _.colaborador_id }}",
+                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
+                  "tipoRegistro": "SAIDA",
+                  "latitude": -23.550520,
+                  "longitude": -46.633308,
+                  "precisaoGps": 5.0,
+                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
+                  "sincronizadoOffline": false
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-CPF-Colaborador
+            value: "{{ _.cpf_teste }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Fiscal & Auditoria (Portaria 671)
+    meta:
+      id: fld_a14efe2b770c4d14a859308ecad03396
+      created: 1725278400000
+      modified: 1725278400000
+      sortKey: -1788352684582
+      description: ""
+    children:
+      - url: "{{ _.base_url }}/api/v1/fiscal/aej/download"
+        name: Download Arquivo Fiscal AEJ
+        meta:
+          id: req_2e8ed67b46bb491cbdc9f292eba92cef
+          created: 1725278400000
+          modified: 1788355262130
+          isPrivate: false
+          description: ""
+          sortKey: -1725278200000
+        method: GET
+        parameters:
+          - name: cnpj
+            value: "{{ _.cnpj_teste }}"
+          - name: razaoSocial
+            value: Chronos Pulse Tech LTDA
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_29316d45762702ce952598e10a2d184c22b66e6c
+    created: 1788352684781
+    modified: 1788352684781
+environments:
+  name: Base Environment
+  meta:
+    id: env_ef7148ae2abb4f4fb1faab41d940c95e
+    created: 1725278400000
+    modified: 1725278400000
+    isPrivate: false
+  data:
+    base_url: http://localhost:8080
+    cpf_teste: "12345678901"
+    colaborador_id: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+    cnpj_teste: "12345678000195"

@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chronos-postgres
+    environment:
+      POSTGRES_DB: chronos_db
+      POSTGRES_USER: chronos_user
+      POSTGRES_PASSWORD: chronos_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos_user -d chronos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: chronos-pulse-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/chronos_db
+      SPRING_DATASOURCE_USERNAME: chronos_user
+      SPRING_DATASOURCE_PASSWORD: chronos_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
