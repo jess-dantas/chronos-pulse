@@ -60,20 +60,126 @@ src/main/java/.../modules/ponto/
 
 ---
 
+## Uso da API
+
+### `POST /api/v1/pontos/sincronizar`
+
+Recebe um lote de registros gerados offline pelo dispositivo móvel. O header `X-CPF-Colaborador` é obrigatório.
+
+Cada jornada completa exige 4 batidas nesta ordem:
+
+| Sequência | `tipoRegistro` | Descrição |
+|---|---|---|
+| 1 | `ENTRADA` | Início do expediente |
+| 2 | `PAUSA_INICIO` | Saída para intervalo |
+| 3 | `PAUSA_FIM` | Retorno do intervalo |
+| 4 | `SAIDA` | Fim do expediente |
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/pontos/sincronizar \
+  --header 'Content-Type: application/json' \
+  --header 'X-CPF-Colaborador: 12345678901' \
+  --data '{
+  "registros": [
+    {
+      "idLocal": "b1f45c88-7a1a-4d22-921e-123456789011",
+      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "dataHoraDispositivo": "2026-09-02T08:00:00Z",
+      "tipoRegistro": "ENTRADA",
+      "latitude": -23.550520,
+      "longitude": -46.633308,
+      "precisaoGps": 4.2,
+      "sincronizadoOffline": true
+    },
+    {
+      "idLocal": "c2f45c88-7a1a-4d22-921e-123456789022",
+      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "dataHoraDispositivo": "2026-09-02T12:00:00Z",
+      "tipoRegistro": "PAUSA_INICIO",
+      "latitude": -23.550520,
+      "longitude": -46.633308,
+      "precisaoGps": 3.8,
+      "sincronizadoOffline": true
+    },
+    {
+      "idLocal": "d3f45c88-7a1a-4d22-921e-123456789033",
+      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "dataHoraDispositivo": "2026-09-02T13:00:00Z",
+      "tipoRegistro": "PAUSA_FIM",
+      "latitude": -23.550520,
+      "longitude": -46.633308,
+      "precisaoGps": 4.0,
+      "sincronizadoOffline": true
+    },
+    {
+      "idLocal": "e4f45c88-7a1a-4d22-921e-123456789044",
+      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "dataHoraDispositivo": "2026-09-02T17:00:00Z",
+      "tipoRegistro": "SAIDA",
+      "latitude": -23.550520,
+      "longitude": -46.633308,
+      "precisaoGps": 4.5,
+      "sincronizadoOffline": true
+    }
+  ]
+}'
+```
+
+Resposta:
+
+```json
+{
+  "idsSucesso": [
+    "b1f45c88-7a1a-4d22-921e-123456789011",
+    "c2f45c88-7a1a-4d22-921e-123456789022",
+    "d3f45c88-7a1a-4d22-921e-123456789033",
+    "e4f45c88-7a1a-4d22-921e-123456789044"
+  ],
+  "idsFalha": []
+}
+```
+
+### `GET /api/v1/fiscal/aej/download`
+
+Gera e faz o download do arquivo AEJ (Arquivo Eletrônico de Jornada) no formato exigido pela legislação.
+
+```bash
+curl --request GET \
+  --url 'http://localhost:8080/api/v1/fiscal/aej/download?cnpj=12345678000195&razaoSocial=Chronos%20Pulse%20Tech%20LTDA'
+```
+
+Retorna o arquivo `AEJ_<cnpj>.txt` como download.
+
+---
+
 ## Pré-requisitos
 
+**Com Docker (recomendado)**
+- Docker 24+
+- Docker Compose 2.x
+
+**Sem Docker**
 - Java 25+
 - Maven 3.9+
-- PostgreSQL 14+ (para produção)
+- PostgreSQL 14+
 
 ---
 
 ## Configuração
 
-Configure as variáveis de conexão com o banco em `src/main/resources/application.properties`:
+**Com Docker** — as variáveis já estão definidas no `docker-compose.yml`:
+
+| Variável | Valor padrão |
+|---|---|
+| `POSTGRES_DB` | `chronos_db` |
+| `POSTGRES_USER` | `chronos_user` |
+| `POSTGRES_PASSWORD` | `chronos_pass` |
+
+**Sem Docker** — configure em `src/main/resources/application.properties`:
 
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/chronos_pulse
+spring.datasource.url=jdbc:postgresql://localhost:5432/chronos_db
 spring.datasource.username=<usuario>
 spring.datasource.password=<senha>
 spring.jpa.hibernate.ddl-auto=update
@@ -83,9 +189,55 @@ spring.jpa.hibernate.ddl-auto=update
 
 ## Executando
 
+**Com Docker:**
+
+```bash
+docker compose up --build -d
+```
+
+A aplicação estará disponível em `http://localhost:8080`.
+O PostgreSQL ficará exposto na porta `5432`.
+
+Para encerrar:
+
+```bash
+docker compose down
+```
+
+**Sem Docker:**
+
 ```bash
 ./mvnw spring-boot:run
 ```
+
+---
+
+## Coleção Insomnia
+
+A coleção de requisições está disponível em `src/test/resources/collections/Insomnia.yaml`.
+
+Para importar: abra o Insomnia → **Import** → selecione o arquivo.
+
+As variáveis de ambiente já estão configuradas na coleção:
+
+| Variável | Valor padrão |
+|---|---|
+| `base_url` | `http://localhost:8080` |
+| `cpf_teste` | `12345678901` |
+| `colaborador_id` | `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` |
+| `cnpj_teste` | `12345678000195` |
+
+Requisições disponíveis:
+
+| Pasta | Requisição |
+|---|---|
+| Gestão de Ponto | Registrar Ponto Individual — `ENTRADA` |
+| Gestão de Ponto | Registrar Ponto Individual — `PAUSA_INICIO` |
+| Gestão de Ponto | Registrar Ponto Individual — `PAUSA_FIM` |
+| Gestão de Ponto | Registrar Ponto Individual — `SAIDA` |
+| Gestão de Ponto | Sincronizar Lote Offline — `ENTRADA` + `PAUSA_INICIO` |
+| Gestão de Ponto | Sincronizar Lote Offline — `PAUSA_FIM` + `SAIDA` |
+| Fiscal & Auditoria | Download Arquivo Fiscal AEJ |
 
 ---
 
