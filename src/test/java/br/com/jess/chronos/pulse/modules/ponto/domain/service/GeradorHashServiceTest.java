@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.*;
 class GeradorHashServiceTest {
 
     private RegistroPonto registro() {
-        return new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), Instant.parse("2024-01-15T08:00:00Z"),
+        return new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), Instant.parse("2024-01-15T08:00:00Z"),
                 null, TipoRegistro.ENTRADA, new BigDecimal("-23.5505"), new BigDecimal("-46.6333"),
                 new BigDecimal("5.0"), null, false, null);
     }
@@ -38,7 +38,7 @@ class GeradorHashServiceTest {
 
     @Test
     void deveGerarHashQuandoTipoRegistroNulo() {
-        RegistroPonto r = new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(),
+        RegistroPonto r = new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 Instant.now(), null, null, BigDecimal.ZERO, BigDecimal.ZERO, null, null, false, null);
         assertThat(GeradorHashService.gerarHashRegistro(r, "12345678901")).hasSize(64);
     }

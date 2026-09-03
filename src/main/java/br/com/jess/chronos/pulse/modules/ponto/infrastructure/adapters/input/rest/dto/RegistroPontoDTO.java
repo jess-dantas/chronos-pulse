@@ -1,7 +1,6 @@
 package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto;
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
-import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
@@ -9,29 +8,27 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record RegistroPontoDTO(
-        UUID idLocal, // ID gerado no SQLite do aparelho mobile
-        @NotNull UUID colaboradorId,
+        UUID idLocal,
         @NotNull Instant dataHoraDispositivo,
-        @NotNull TipoRegistro tipoRegistro,
         BigDecimal latitude,
         BigDecimal longitude,
         BigDecimal precisaoGps,
         String fotoUrl,
-        Boolean sincronizadoOffline,
-        String hashLocal // Hash SHA-256 gerado localmente pelo celular para auditoria
+        String hashLocal
 ) {
-    public RegistroPonto toDomain() {
+    public RegistroPonto toDomain(UUID colaboradorId, UUID tenantId) {
         return new RegistroPonto(
                 this.idLocal(),
-                this.colaboradorId(),
+                colaboradorId,
+                tenantId,
                 this.dataHoraDispositivo(),
-                null, // dataHoraServidor será preenchido pelo backend no recebimento
-                this.tipoRegistro(),
+                null,
+                null, // tipoRegistro será determinado pelo use case
                 this.latitude(),
                 this.longitude(),
                 this.precisaoGps(),
                 this.fotoUrl(),
-                true, // Sincronizado offline
+                true,
                 null
         );
     }

@@ -14,10 +14,10 @@ class GeradorArquivoAEJAdapterTest {
 
     private final GeradorArquivoAEJAdapter adapter = new GeradorArquivoAEJAdapter();
 
-    private RegistroPonto registro() {
-        RegistroPonto r = new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(),
-                Instant.parse("2024-01-15T08:00:00Z"), null, TipoRegistro.ENTRADA,
-                BigDecimal.ZERO, BigDecimal.ZERO, null, null, false, 1L);
+    private RegistroPonto registro(TipoRegistro tipo, long nsr) {
+        RegistroPonto r = new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                Instant.parse("2024-01-15T08:00:00Z"), null, tipo,
+                BigDecimal.ZERO, BigDecimal.ZERO, null, null, false, nsr);
         r.atribuirHash("abc123");
         return r;
     }
@@ -30,15 +30,27 @@ class GeradorArquivoAEJAdapterTest {
 
     @Test
     void deveGerarRodapeComTotalDeRegistros() {
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", List.of(registro()), "12345678901");
+        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", List.of(registro(TipoRegistro.ENTRADA, 1L)), "12345678901");
         assertThat(conteudo).contains("9|TOTAL_REGISTROS=1");
     }
 
     @Test
     void deveGerarLinhaDeRegistroComCamposCorretos() {
-        RegistroPonto r = registro();
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", List.of(r), "12345678901");
+        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", List.of(registro(TipoRegistro.ENTRADA, 1L)), "12345678901");
         assertThat(conteudo).contains("2|1|12345678901|15012024|0800|ENTRADA|abc123");
+    }
+
+    @Test
+    void deveGerarJornadaCompletaComQuatroBatidas() {
+        List<RegistroPonto> jornada = List.of(
+                registro(TipoRegistro.ENTRADA, 1L),
+                registro(TipoRegistro.INTERVALO, 2L),
+                registro(TipoRegistro.RETORNO, 3L),
+                registro(TipoRegistro.SAIDA, 4L)
+        );
+        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", jornada, "12345678901");
+        assertThat(conteudo).contains("ENTRADA", "INTERVALO", "RETORNO", "SAIDA");
+        assertThat(conteudo).contains("9|TOTAL_REGISTROS=4");
     }
 
     @Test

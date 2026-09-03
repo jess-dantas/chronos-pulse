@@ -8,6 +8,7 @@ public class RegistroPonto {
 
     private UUID id;
     private UUID colaboradorId;
+    private UUID tenantId;
     private Instant dataHoraDispositivo;
     private Instant dataHoraServidor;
     private TipoRegistro tipoRegistro;
@@ -19,11 +20,13 @@ public class RegistroPonto {
     private Boolean sincronizadoOffline;
     private Long nsr;
 
-    public RegistroPonto(UUID id, UUID colaboradorId, Instant dataHoraDispositivo, Instant dataHoraServidor,
-                         TipoRegistro tipoRegistro, BigDecimal latitude, BigDecimal longitude,
-                         BigDecimal precisaoGps, String fotoUrl, Boolean sincronizadoOffline, Long nsr) {
+    public RegistroPonto(UUID id, UUID colaboradorId, UUID tenantId, Instant dataHoraDispositivo,
+                         Instant dataHoraServidor, TipoRegistro tipoRegistro, BigDecimal latitude,
+                         BigDecimal longitude, BigDecimal precisaoGps, String fotoUrl,
+                         Boolean sincronizadoOffline, Long nsr) {
         this.id = id != null ? id : UUID.randomUUID();
         this.colaboradorId = colaboradorId;
+        this.tenantId = tenantId;
         this.dataHoraDispositivo = dataHoraDispositivo;
         this.dataHoraServidor = dataHoraServidor != null ? dataHoraServidor : Instant.now();
         this.tipoRegistro = tipoRegistro;
@@ -37,6 +40,7 @@ public class RegistroPonto {
 
     public UUID getId() { return id; }
     public UUID getColaboradorId() { return colaboradorId; }
+    public UUID getTenantId() { return tenantId; }
     public Instant getDataHoraDispositivo() { return dataHoraDispositivo; }
     public Instant getDataHoraServidor() { return dataHoraServidor; }
     public TipoRegistro getTipoRegistro() { return tipoRegistro; }
@@ -48,7 +52,7 @@ public class RegistroPonto {
     public Boolean getSincronizadoOffline() { return sincronizadoOffline; }
     public Long getNsr() { return nsr; }
 
-    public void atribuirHash(String hash) {
-        this.hashIntegridade = hash;
-    }
+    public void atribuirHash(String hash) { this.hashIntegridade = hash; }
+    public void atribuirTipo(TipoRegistro tipo) { this.tipoRegistro = tipo; }
+    public void atribuirNsr(Long nsr) { this.nsr = nsr; }
 }

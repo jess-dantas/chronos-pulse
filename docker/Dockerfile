@@ -1,7 +1,7 @@
 FROM eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /app
 COPY . .
-RUN ./mvnw clean package -DskipTests
+RUN chmod +x mvnw && sed -i 's/\r$//' mvnw && ./mvnw clean package -DskipTests
 
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app

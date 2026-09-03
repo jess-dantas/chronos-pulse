@@ -1,11 +1,18 @@
 package br.com.jess.chronos.pulse.modules.ponto.application.usecases;
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RegistrarPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import br.com.jess.chronos.pulse.modules.ponto.domain.service.GeradorHashService;
 
+import java.util.UUID;
+
 public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
+
+    private static final TipoRegistro[] SEQUENCIA = {
+        TipoRegistro.ENTRADA, TipoRegistro.INTERVALO, TipoRegistro.RETORNO, TipoRegistro.SAIDA
+    };
 
     private final RegistroPontoRepositoryPort repositoryPort;
 
@@ -14,15 +21,29 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
     }
 
     @Override
-    public RegistroPonto executar(RegistroPonto registro, String cpfColaborador) {
-        // 1. Obtém o próximo Número Sequencial de Registro (NSR) exigido por lei
-        Long proximoNsr = repositoryPort.obterProximoNsr();
+    public RegistroPonto executar(RegistroPonto registro, String cpfColaborador, UUID tenantId) {
+        TipoRegistro proximoTipo = determinarProximoTipo(registro.getColaboradorId(), tenantId);
+        registro.atribuirTipo(proximoTipo);
 
-        // 2. Gera o Hash SHA-256 de integridade da batida
+        Long nsr = repositoryPort.obterProximoNsr();
+        registro.atribuirNsr(nsr);
+
         String hash = GeradorHashService.gerarHashRegistro(registro, cpfColaborador);
         registro.atribuirHash(hash);
 
-        // 3. Persiste o registro via porta de saída
         return repositoryPort.salvar(registro);
+    }
+
+    private TipoRegistro determinarProximoTipo(UUID colaboradorId, UUID tenantId) {
+        return repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)
+                .map(ultimo -> SEQUENCIA[(indexOf(ultimo) + 1) % SEQUENCIA.length])
+                .orElse(TipoRegistro.ENTRADA);
+    }
+
+    private int indexOf(TipoRegistro tipo) {
+        for (int i = 0; i < SEQUENCIA.length; i++) {
+            if (SEQUENCIA[i] == tipo) return i;
+        }
+        return SEQUENCIA.length - 1;
     }
 }

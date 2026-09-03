@@ -8,14 +8,21 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         format_sql: true
   flyway:
     enabled: true
+    baseline-on-migrate: true
     locations: classpath:db/migration
 
 server:
   port: 8080
+
+chronos:
+  jwt:
+    secret: ${JWT_SECRET:chronos-pulse-secret-key-must-be-at-least-256-bits-long-for-hs256}
+    expiration-ms: 3600000        # 1 hora
+    refresh-expiration-ms: 604800000  # 7 dias

@@ -13,6 +13,7 @@ public class RegistroPontoJpaEntity {
     @Id
     private UUID id;
     private UUID colaboradorId;
+    private UUID tenantId;
     private Instant dataHoraDispositivo;
     private Instant dataHoraServidor;
     @Enumerated(EnumType.STRING)
@@ -30,6 +31,8 @@ public class RegistroPontoJpaEntity {
     public void setId(UUID id) { this.id = id; }
     public UUID getColaboradorId() { return colaboradorId; }
     public void setColaboradorId(UUID colaboradorId) { this.colaboradorId = colaboradorId; }
+    public UUID getTenantId() { return tenantId; }
+    public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }
     public Instant getDataHoraDispositivo() { return dataHoraDispositivo; }
     public void setDataHoraDispositivo(Instant v) { this.dataHoraDispositivo = v; }
     public Instant getDataHoraServidor() { return dataHoraServidor; }

@@ -22,7 +22,7 @@ class RegistroPontoRepositoryAdapterTest {
     @InjectMocks private RegistroPontoRepositoryAdapter adapter;
 
     private RegistroPonto modelo() {
-        return new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), Instant.now(),
+        return new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), Instant.now(),
                 null, TipoRegistro.ENTRADA, BigDecimal.ZERO, BigDecimal.ZERO, null, null, false, 1L);
     }
 
@@ -66,5 +66,17 @@ class RegistroPontoRepositoryAdapterTest {
     void deveRetornarProximoNsr() {
         when(jpaRepository.obterProximoNsr()).thenReturn(42L);
         assertThat(adapter.obterProximoNsr()).isEqualTo(42L);
+    }
+
+    @Test
+    void deveBuscarUltimoTipoPorColaborador() {
+        UUID colaboradorId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+        when(jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.ENTRADA));
+
+        Optional<TipoRegistro> resultado = adapter.buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
+
+        assertThat(resultado).contains(TipoRegistro.ENTRADA);
+        verify(jpaRepository).buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
     }
 }
