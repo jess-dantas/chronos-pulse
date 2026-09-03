@@ -5,49 +5,224 @@ meta:
   id: wrk_43cc89edb7844b06b70a80ae3a4a74b4
   created: 1788352684573
   modified: 1788352684573
-  description: ""
+  description: "Collection completa do Chronos Pulse: Autenticação JWT, Multi-tenant, Gestão de Colaboradores, Registro de Ponto Sequencial e Fiscal AEJ."
 collection:
+  - name: Autenticação & Acesso
+    meta:
+      id: fld_auth_chronos_pulse_01
+      created: 1725278400000
+      modified: 1725278400000
+      sortKey: -1788352684590
+      description: "Endpoints de autenticação JWT da plataforma."
+    children:
+      - url: "{{ _.base_url }}/api/v1/auth/login"
+        name: Login - Admin Plataforma
+        meta:
+          id: req_auth_login_admin_plataforma
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Autenticação como Admin da Plataforma para gerenciar empresas e sistema."
+          sortKey: -1725278400000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cpf": "{{ _.cpf_admin_plataforma }}",
+              "senha": "{{ _.senha_admin }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/auth/login"
+        name: Login - Admin Empresa (RH)
+        meta:
+          id: req_auth_login_admin_empresa
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Autenticação como Gestor de RH / Admin da Empresa para gerenciar colaboradores."
+          sortKey: -1725278300000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cpf": "{{ _.cpf_admin_empresa }}",
+              "senha": "{{ _.senha_admin }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/auth/login"
+        name: Login - Colaborador
+        meta:
+          id: req_auth_login_colaborador
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Autenticação como Colaborador para bater ponto."
+          sortKey: -1725278200000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cpf": "{{ _.cpf_colaborador }}",
+              "senha": "{{ _.senha_colaborador }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Empresas (Multi-Tenant)
+    meta:
+      id: fld_empresa_chronos_pulse_02
+      created: 1725278400000
+      modified: 1725278400000
+      sortKey: -1788352684585
+      description: "Cadastro de empresas e gestão de tenants."
+    children:
+      - url: "{{ _.base_url }}/api/v1/empresas"
+        name: Cadastrar Nova Empresa (Tenant)
+        meta:
+          id: req_cadastrar_empresa
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Requer role ADMIN_PLATAFORMA."
+          sortKey: -1725278400000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cnpj": "98765432000188",
+              "nome": "Tech Solutions Brasil LTDA"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_plataforma }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+  - name: Colaboradores
+    meta:
+      id: fld_colaborador_chronos_pulse_03
+      created: 1725278400000
+      modified: 1725278400000
+      sortKey: -1788352684582
+      description: "Gestão de Colaboradores dentro de cada Tenant."
+    children:
+      - url: "{{ _.base_url }}/api/v1/colaboradores"
+        name: Cadastrar Novo Colaborador
+        meta:
+          id: req_cadastrar_colaborador
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Requer role ADMIN_EMPRESA."
+          sortKey: -1725278400000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cpf": "98765432100",
+              "nome": "Mariana Souza",
+              "emailCorporativo": "mariana.souza@empresa.com.br",
+              "senha": "senhaColab123",
+              "matricula": "MAT-002",
+              "cargo": "Analista de Qualidade",
+              "departamento": "Engenharia de Software",
+              "dataNascimento": "1994-06-20",
+              "dataAdmissao": "2026-09-01",
+              "tenantId": "{{ _.tenant_id }}",
+              "configuracaoJornadaId": null
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Gestão de Ponto
     meta:
       id: fld_4ed1a96ddbef478883f60329b06e55c0
       created: 1725278400000
       modified: 1725278400000
       sortKey: -1788352684580
-      description: ""
+      description: "Sincronização e registro de ponto com identificação automática do ciclo sequencial (ENTRADA -> INTERVALO -> RETORNO -> SAIDA)."
     children:
       - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
-        name: Registrar Ponto (Individual) - ENTRADA
+        name: Registrar Ponto (Sequência Automática)
         meta:
           id: req_3b86c167f0eb426dbd3d386524ba8a15
           created: 1725278400000
           modified: 1788355624320
           isPrivate: false
-          description: ""
+          description: "Registra uma batida de ponto para o colaborador autenticado via Bearer JWT."
           sortKey: -1725278400000
         method: POST
         body:
           mimeType: application/json
-          text: >
+          text: |-
             {
               "registros": [
                 {
-                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
-                  "tipoRegistro": "ENTRADA",
+                  "idLocal": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+                  "dataHoraDispositivo": "2026-09-03T08:00:00Z",
                   "latitude": -23.550520,
                   "longitude": -46.633308,
-                  "precisaoGps": 5.0,
+                  "precisaoGps": 4.5,
                   "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
-                  "sincronizadoOffline": false
+                  "hashLocal": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
                 }
               ]
             }
         headers:
           - name: Content-Type
             value: application/json
-          - name: X-CPF-Colaborador
-            value: "{{ _.cpf_teste }}"
+          - name: Authorization
+            value: "Bearer {{ _.token_colaborador }}"
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -57,13 +232,13 @@ collection:
             store: true
           rebuildPath: true
       - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
-        name: Sincronizar Lote Offline (Batch) - PAUSA_INICIO
+        name: Sincronizar Lote Offline (Batch)
         meta:
           id: req_e750ce5b874d4c1d80f942576c1abfe7
           created: 1725278400000
           modified: 1788355532777
           isPrivate: false
-          description: ""
+          description: "Sincroniza múltiplos registros de ponto offline coletados pelo app móvel."
           sortKey: -1725278300000
         method: POST
         body:
@@ -73,212 +248,29 @@ collection:
               "registros": [
                 {
                   "idLocal": "b1f45c88-7a1a-4d22-921e-123456789011",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T08:00:00Z",
-                  "tipoRegistro": "ENTRADA",
+                  "dataHoraDispositivo": "2026-09-03T12:00:00Z",
                   "latitude": -23.550520,
                   "longitude": -46.633308,
                   "precisaoGps": 4.2,
                   "fotoUrl": null,
-                  "sincronizadoOffline": true,
-                  "hashLocal": "a1b2c3d4e5f6..."
+                  "hashLocal": "hashLocalIntervalo123"
                 },
                 {
                   "idLocal": "c2f45c88-7a1a-4d22-921e-123456789022",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
-                  "tipoRegistro": "PAUSA_INICIO",
+                  "dataHoraDispositivo": "2026-09-03T13:00:00Z",
                   "latitude": -23.550520,
                   "longitude": -46.633308,
                   "precisaoGps": 3.8,
                   "fotoUrl": null,
-                  "sincronizadoOffline": true,
-                  "hashLocal": "f6e5d4c3b2a1..."
+                  "hashLocal": "hashLocalRetorno123"
                 }
               ]
             }
         headers:
           - name: Content-Type
             value: application/json
-          - name: X-CPF-Colaborador
-            value: "{{ _.cpf_teste }}"
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
-        name: Sincronizar Lote Offline (Batch) - PAUSA_FIM
-        meta:
-          id: req_fe8b63ff43454e7e91b82291978f44c1
-          created: 1788355521312
-          modified: 1788355571424
-          isPrivate: false
-          description: ""
-          sortKey: -1725278250000
-        method: POST
-        body:
-          mimeType: application/json
-          text: |
-            {
-              "registros": [
-                {
-                  "idLocal": "d3f45c88-7a1a-4d22-921e-123456789033",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T13:00:00Z",
-                  "tipoRegistro": "PAUSA_FIM",
-                  "latitude": -23.550520,
-                  "longitude": -46.633308,
-                  "precisaoGps": 4.0,
-                  "fotoUrl": null,
-                  "sincronizadoOffline": true,
-                  "hashLocal": "d3c2b1a0f9e8..."
-                },
-                {
-                  "idLocal": "e4f45c88-7a1a-4d22-921e-123456789044",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T17:00:00Z",
-                  "tipoRegistro": "SAIDA",
-                  "latitude": -23.550520,
-                  "longitude": -46.633308,
-                  "precisaoGps": 4.5,
-                  "fotoUrl": null,
-                  "sincronizadoOffline": true,
-                  "hashLocal": "e4d3c2b1a0f9..."
-                }
-              ]
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-          - name: X-CPF-Colaborador
-            value: "{{ _.cpf_teste }}"
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
-        name: Registrar Ponto (Individual) - PAUSA_INICIO
-        meta:
-          id: req_9f5d741c8cb24941a8ec777ce8aabff8
-          created: 1788355617641
-          modified: 1788355631490
-          isPrivate: false
-          description: ""
-          sortKey: -1725278350000
-        method: POST
-        body:
-          mimeType: application/json
-          text: >
-            {
-              "registros": [
-                {
-                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
-                  "tipoRegistro": "PAUSA_INICIO",
-                  "latitude": -23.550520,
-                  "longitude": -46.633308,
-                  "precisaoGps": 5.0,
-                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
-                  "sincronizadoOffline": false
-                }
-              ]
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-          - name: X-CPF-Colaborador
-            value: "{{ _.cpf_teste }}"
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
-        name: Registrar Ponto (Individual) - PAUSA_FIM
-        meta:
-          id: req_f2b97697e6594450a72b7dfc97271c3e
-          created: 1788355645562
-          modified: 1788355651737
-          isPrivate: false
-          description: ""
-          sortKey: -1725278325000
-        method: POST
-        body:
-          mimeType: application/json
-          text: >
-            {
-              "registros": [
-                {
-                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
-                  "tipoRegistro": "PAUSA_FIM",
-                  "latitude": -23.550520,
-                  "longitude": -46.633308,
-                  "precisaoGps": 5.0,
-                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
-                  "sincronizadoOffline": false
-                }
-              ]
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-          - name: X-CPF-Colaborador
-            value: "{{ _.cpf_teste }}"
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.base_url }}/api/v1/pontos/sincronizar"
-        name: Registrar Ponto (Individual) - SAIDA
-        meta:
-          id: req_7131c395a5a745d7a277f40745a05d1d
-          created: 1788355660743
-          modified: 1788355666017
-          isPrivate: false
-          description: ""
-          sortKey: -1725278312500
-        method: POST
-        body:
-          mimeType: application/json
-          text: >
-            {
-              "registros": [
-                {
-                  "idLocal": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                  "colaboradorId": "{{ _.colaborador_id }}",
-                  "dataHoraDispositivo": "2026-09-02T12:00:00Z",
-                  "tipoRegistro": "SAIDA",
-                  "latitude": -23.550520,
-                  "longitude": -46.633308,
-                  "precisaoGps": 5.0,
-                  "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
-                  "sincronizadoOffline": false
-                }
-              ]
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-          - name: X-CPF-Colaborador
-            value: "{{ _.cpf_teste }}"
+          - name: Authorization
+            value: "Bearer {{ _.token_colaborador }}"
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -292,8 +284,8 @@ collection:
       id: fld_a14efe2b770c4d14a859308ecad03396
       created: 1725278400000
       modified: 1725278400000
-      sortKey: -1788352684582
-      description: ""
+      sortKey: -1788352684575
+      description: "Geração e download do Arquivo Eletrônico de Jornada (AEJ)."
     children:
       - url: "{{ _.base_url }}/api/v1/fiscal/aej/download"
         name: Download Arquivo Fiscal AEJ
@@ -302,7 +294,7 @@ collection:
           created: 1725278400000
           modified: 1788355262130
           isPrivate: false
-          description: ""
+          description: "Gera arquivo fiscal AEJ segundo a Portaria MTP 671/2021."
           sortKey: -1725278200000
         method: GET
         parameters:
@@ -310,6 +302,9 @@ collection:
             value: "{{ _.cnpj_teste }}"
           - name: razaoSocial
             value: Chronos Pulse Tech LTDA
+        headers:
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -333,6 +328,13 @@ environments:
     isPrivate: false
   data:
     base_url: http://localhost:8080
-    cpf_teste: "12345678901"
-    colaborador_id: a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11
+    cpf_admin_plataforma: "00000000000"
+    cpf_admin_empresa: "11111111111"
+    cpf_colaborador: "12345678901"
+    senha_admin: "admin123"
+    senha_colaborador: "senha123"
+    tenant_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
     cnpj_teste: "12345678000195"
+    token_admin_plataforma: ""
+    token_admin_empresa: ""
+    token_colaborador: ""

@@ -5,283 +5,355 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
+![Docker](https://img.shields.io/badge/Docker%20Compose-Ready-2496ED)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Sistema de gestão de controle de ponto com suporte a sincronização offline e exportação fiscal no formato AEJ (Arquivo Eletrônico de Jornada).
+Plataforma escalável e multi-tenant para controle de registro de ponto eletrônico, autenticação JWT por perfil (RBAC), ciclo automático de batidas de jornada, sincronização em lote offline, integridade criptográfica SHA-256 e exportação fiscal AEJ (Arquivo Eletrônico de Jornada - Portaria 671 MTE).
 
 </div>
 
 ---
 
-## Índice
+## Sumário
 
-- [Funcionalidades](#funcionalidades)
-- [Arquitetura](#arquitetura)
+- [Visão Geral e Funcionalidades](#visão-geral-e-funcionalidades)
+- [Arquitetura Hexagonal Modular](#arquitetura-hexagonal-modular)
+- [Estrutura de Perfis e Permissões (RBAC)](#estrutura-de-perfis-e-permissões-rbac)
+- [Ciclo Automático de Batidas](#ciclo-automático-de-batidas)
+- [Endpoints da API](#endpoints-da-api)
 - [Pré-requisitos](#pré-requisitos)
-- [Configuração](#configuração)
-- [Executando](#executando)
-- [Testes](#testes)
-- [Dependências de Terceiros](#dependências-de-terceiros)
+- [Executando a Aplicação](#executando-a-aplicação)
+- [Dados Iniciais de Teste (Seeds)](#dados-iniciais-de-teste-seeds)
+- [Coleção Insomnia](#coleção-insomnia)
+- [Testes Automatizados](#testes-automatizados)
+- [Stack Tecnológica e Dependências](#stack-tecnológica-e-dependências)
 - [Licença](#licença)
 
 ---
 
-## Funcionalidades
+## Visão Geral e Funcionalidades
 
-- **Sincronização de lote** — recebe registros de ponto gerados offline pelo dispositivo móvel via `POST /api/v1/pontos/sincronizar`
-- **Integridade** — gera hash SHA-256 por registro com base em CPF, colaborador, data/hora, tipo e coordenadas GPS
-- **NSR** — atribui Número Sequencial de Registro conforme exigência legal
-- **Exportação fiscal** — gera arquivo AEJ para download via `GET /api/v1/fiscal/aej/download`
-
----
-
-## Arquitetura
-
-O projeto segue a **Arquitetura Hexagonal (Ports & Adapters)**, mantendo o domínio isolado de frameworks e infraestrutura.
-
-```
-src/main/java/.../modules/ponto/
-├── domain/
-│   ├── model/          # Entidades de domínio (RegistroPonto, TipoRegistro)
-│   ├── ports/
-│   │   ├── input/      # Casos de uso (interfaces)
-│   │   └── output/     # Portas de saída (interfaces)
-│   └── service/        # Serviços de domínio (GeradorHashService)
-├── application/
-│   └── usecases/       # Implementações dos casos de uso
-└── infrastructure/
-    ├── adapters/
-    │   ├── input/rest/  # Controllers REST
-    │   └── output/
-    │       ├── persistence/  # Adapter JPA + MapStruct
-    │       └── fiscal/       # Gerador de arquivo AEJ
-    └── config/          # Configuração e injeção de dependências
-```
+- **Multi-Tenant Nativo**: Segregação de empresas clientes, colaboradores e registros com isolamento contextual.
+- **Autenticação e Autorização JWT**: Emissão de tokens Bearer com extração segura de `usuarioId`, `colaboradorId`, `tenantId` e `role`.
+- **Ciclo Sequencial Inteligente**: Detecção automática da próxima batida da jornada (`ENTRADA` → `INTERVALO` → `RETORNO` → `SAIDA` → `ENTRADA`), eliminando divergências manuais.
+- **Sincronização Offline e em Lote**: Suporte à recepção de batidas coletadas em modo offline pelo aplicativo móvel com coordenadas GPS, precisão e hash local.
+- **Integridade Criptográfica & NSR**: Cálculo de hash SHA-256 encadeado e geração de Número Sequencial de Registro (NSR) contínuo.
+- **Conformidade Fiscal (Portaria 671 MTE)**: Geração e download do Arquivo Eletrônico de Jornada (AEJ) para auditoria trabalhista.
+- **Migrations com Flyway**: Versionamento automático da estrutura relacional e carga de dados de desenvolvimento (`V1`, `V2`, `V3`).
 
 ---
 
-## Uso da API
+## Arquitetura Hexagonal Modular
 
-### `POST /api/v1/pontos/sincronizar`
+O sistema adota a **Arquitetura Hexagonal (Ports & Adapters)** dividida em módulos de negócio coesos e desacoplados de frameworks e persistência:
 
-Recebe um lote de registros gerados offline pelo dispositivo móvel. O header `X-CPF-Colaborador` é obrigatório.
+```
+src/main/java/br/com/jess/chronos/pulse/
+├── modules/
+│   ├── auth/                # Módulo de Autenticação e Segurança JWT
+│   │   ├── application/usecases/
+│   │   ├── domain/model/ & ports/
+│   │   └── infrastructure/adapters/ (REST, Security, JWT)
+│   ├── empresa/             # Módulo de Gestão de Empresas (Tenants)
+│   │   ├── application/usecases/
+│   │   ├── domain/model/ & ports/
+│   │   └── infrastructure/adapters/ (REST, JPA Persistence)
+│   ├── colaborador/         # Módulo de Gestão de Colaboradores
+│   │   ├── application/usecases/
+│   │   ├── domain/model/ & ports/
+│   │   └── infrastructure/adapters/ (REST, JPA Persistence)
+│   └── ponto/               # Módulo de Controle de Ponto e Fiscal
+│       ├── domain/model/ & ports/ & service/
+│       ├── application/usecases/
+│       └── infrastructure/adapters/
+│           ├── input/rest/
+│           ├── output/persistence/
+│           └── output/fiscal/
+└── infrastructure/          # Componentes transversais (Config, Flyway)
+```
 
-Cada jornada completa exige 4 batidas nesta ordem:
+---
 
-| Sequência | `tipoRegistro` | Descrição |
+## Estrutura de Perfis e Permissões (RBAC)
+
+| Perfil (`Role`) | Escopo | Ações Permitidas |
 |---|---|---|
-| 1 | `ENTRADA` | Início do expediente |
-| 2 | `PAUSA_INICIO` | Saída para intervalo |
-| 3 | `PAUSA_FIM` | Retorno do intervalo |
-| 4 | `SAIDA` | Fim do expediente |
+| `ADMIN_PLATAFORMA` | Global / SaaS | Criação de novos tenants (empresas) e administração global |
+| `ADMIN_EMPRESA` | Específico do Tenant | Cadastro e gestão de colaboradores da empresa |
+| `COLABORADOR` | Específico do Tenant | Registro de ponto online e sincronização de batidas offline |
+
+---
+
+## Ciclo Automático de Batidas
+
+Ao enviar um registro via `POST /api/v1/pontos/sincronizar`, a aplicação avalia o histórico de batidas do dia para o colaborador e define a classificação automaticamente:
+
+```mermaid
+graph LR
+    A[Sem batidas no dia] -->|1ª Batida| B[ENTRADA]
+    B -->|2ª Batida| C[INTERVALO]
+    C -->|3ª Batida| D[RETORNO]
+    D -->|4ª Batida| E[SAIDA]
+    E -->|Batida Extra| B
+```
+
+---
+
+## Endpoints da API
+
+### 1. Autenticação
+
+#### `POST /api/v1/auth/login`
+Autentica o usuário pelo CPF e senha, retornando o token JWT.
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/auth/login \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "cpf": "12345678901",
+    "senha": "senha123"
+  }'
+```
+
+**Resposta:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "tipo": "Bearer",
+  "nome": "Colaborador Teste",
+  "email": "colaborador@empresa.com.br",
+  "role": "COLABORADOR",
+  "tenantId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+  "colaboradorId": "44444444-4444-4444-4444-444444444444"
+}
+```
+
+---
+
+### 2. Gestão de Empresas (Tenant)
+
+#### `POST /api/v1/empresas`
+Cadastra uma nova empresa na plataforma. Requer token com perfil `ADMIN_PLATAFORMA`.
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/empresas \
+  --header 'Authorization: Bearer <TOKEN_ADMIN_PLATAFORMA>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "cnpj": "98765432000188",
+    "nome": "Tech Solutions Brasil LTDA"
+  }'
+```
+
+---
+
+### 3. Gestão de Colaboradores
+
+#### `POST /api/v1/colaboradores`
+Cadastra um colaborador vinculado a um tenant. Requer token com perfil `ADMIN_EMPRESA`.
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/colaboradores \
+  --header 'Authorization: Bearer <TOKEN_ADMIN_EMPRESA>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "cpf": "98765432100",
+    "nome": "Mariana Souza",
+    "emailCorporativo": "mariana.souza@empresa.com.br",
+    "senha": "senhaColab123",
+    "matricula": "MAT-002",
+    "cargo": "Analista de Qualidade",
+    "departamento": "Engenharia de Software",
+    "dataNascimento": "1994-06-20",
+    "dataAdmissao": "2026-09-01",
+    "tenantId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    "configuracaoJornadaId": null
+  }'
+```
+
+---
+
+### 4. Registro e Sincronização de Ponto
+
+#### `POST /api/v1/pontos/sincronizar`
+Recebe uma ou mais batidas de ponto. O `colaboradorId` e `tenantId` são extraídos diretamente do token JWT Bearer.
 
 ```bash
 curl --request POST \
   --url http://localhost:8080/api/v1/pontos/sincronizar \
+  --header 'Authorization: Bearer <TOKEN_COLABORADOR>' \
   --header 'Content-Type: application/json' \
-  --header 'X-CPF-Colaborador: 12345678901' \
   --data '{
-  "registros": [
-    {
-      "idLocal": "b1f45c88-7a1a-4d22-921e-123456789011",
-      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      "dataHoraDispositivo": "2026-09-02T08:00:00Z",
-      "tipoRegistro": "ENTRADA",
-      "latitude": -23.550520,
-      "longitude": -46.633308,
-      "precisaoGps": 4.2,
-      "sincronizadoOffline": true
-    },
-    {
-      "idLocal": "c2f45c88-7a1a-4d22-921e-123456789022",
-      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      "dataHoraDispositivo": "2026-09-02T12:00:00Z",
-      "tipoRegistro": "PAUSA_INICIO",
-      "latitude": -23.550520,
-      "longitude": -46.633308,
-      "precisaoGps": 3.8,
-      "sincronizadoOffline": true
-    },
-    {
-      "idLocal": "d3f45c88-7a1a-4d22-921e-123456789033",
-      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      "dataHoraDispositivo": "2026-09-02T13:00:00Z",
-      "tipoRegistro": "PAUSA_FIM",
-      "latitude": -23.550520,
-      "longitude": -46.633308,
-      "precisaoGps": 4.0,
-      "sincronizadoOffline": true
-    },
-    {
-      "idLocal": "e4f45c88-7a1a-4d22-921e-123456789044",
-      "colaboradorId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-      "dataHoraDispositivo": "2026-09-02T17:00:00Z",
-      "tipoRegistro": "SAIDA",
-      "latitude": -23.550520,
-      "longitude": -46.633308,
-      "precisaoGps": 4.5,
-      "sincronizadoOffline": true
-    }
-  ]
-}'
+    "registros": [
+      {
+        "idLocal": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "dataHoraDispositivo": "2026-09-03T08:00:00Z",
+        "latitude": -23.550520,
+        "longitude": -46.633308,
+        "precisaoGps": 4.5,
+        "fotoUrl": "https://s3.amazonaws.com/chronos-pulse/fotos/ponto1.jpg",
+        "hashLocal": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }'
 ```
 
-Resposta:
-
+**Resposta:**
 ```json
 {
   "idsSucesso": [
-    "b1f45c88-7a1a-4d22-921e-123456789011",
-    "c2f45c88-7a1a-4d22-921e-123456789022",
-    "d3f45c88-7a1a-4d22-921e-123456789033",
-    "e4f45c88-7a1a-4d22-921e-123456789044"
+    "f47ac10b-58cc-4372-a567-0e02b2c3d479"
   ],
   "idsFalha": []
 }
 ```
 
-### `GET /api/v1/fiscal/aej/download`
+---
 
-Gera e faz o download do arquivo AEJ (Arquivo Eletrônico de Jornada) no formato exigido pela legislação.
+### 5. Auditoria e Exportação Fiscal
+
+#### `GET /api/v1/fiscal/aej/download`
+Gera e baixa o arquivo fiscal AEJ (Portaria 671/2021).
 
 ```bash
 curl --request GET \
   --url 'http://localhost:8080/api/v1/fiscal/aej/download?cnpj=12345678000195&razaoSocial=Chronos%20Pulse%20Tech%20LTDA'
 ```
 
-Retorna o arquivo `AEJ_<cnpj>.txt` como download.
-
 ---
 
 ## Pré-requisitos
 
-**Com Docker (recomendado)**
-- Docker 24+
-- Docker Compose 2.x
-
-**Sem Docker**
-- Java 25+
-- Maven 3.9+
-- PostgreSQL 14+
+- **Ambiente Containerizado (Recomendado)**:
+  - Docker 24+ e Docker Compose v2 (nativo no Linux, Windows ou via WSL2 Ubuntu)
+- **Ambiente de Desenvolvimento Local**:
+  - Java JDK 25+
+  - Maven 3.9+ (ou utilizar o wrapper `./mvnw` / `.\mvnw.cmd`)
+  - PostgreSQL 14+ (porta `5432`)
 
 ---
 
-## Configuração
+## Executando a Aplicação
 
-**Com Docker** — as variáveis já estão definidas no `docker-compose.yml`:
+### 1. Via Docker Compose (Recomendado)
 
-| Variável | Valor padrão |
-|---|---|
-| `POSTGRES_DB` | `chronos_db` |
-| `POSTGRES_USER` | `chronos_user` |
-| `POSTGRES_PASSWORD` | `chronos_pass` |
-
-**Sem Docker** — configure em `src/main/resources/application.properties`:
-
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/chronos_db
-spring.datasource.username=<usuario>
-spring.datasource.password=<senha>
-spring.jpa.hibernate.ddl-auto=update
-```
-
----
-
-## Executando
-
-**Com Docker:**
+Suba os contêineres do PostgreSQL e da aplicação Spring Boot:
 
 ```bash
 docker compose up --build -d
 ```
 
-A aplicação estará disponível em `http://localhost:8080`.
-O PostgreSQL ficará exposto na porta `5432`.
+- A API estará acessível em: `http://localhost:8080`
+- O banco PostgreSQL estará exposto na porta: `5432`
 
-Para encerrar:
+Para verificar os logs:
+```bash
+docker compose logs -f app
+```
 
+Para parar o ambiente:
 ```bash
 docker compose down
 ```
 
-**Sem Docker:**
+### 2. Execução Local com Maven
 
+Certifique-se de que o PostgreSQL esteja em execução e inicie o Spring Boot:
+
+**Linux / macOS / WSL:**
 ```bash
 ./mvnw spring-boot:run
 ```
+
+**Windows (PowerShell / CMD):**
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+---
+
+## Dados Iniciais de Teste (Seeds)
+
+Ao inicializar o banco de dados pela primeira vez, a migration `V3__seed_initial_data.sql` popula automaticamente os seguintes usuários para testes imediatos:
+
+| Usuário | Perfil | CPF | Senha | Tenant |
+|---|---|---|---|---|
+| **Admin Plataforma** | `ADMIN_PLATAFORMA` | `00000000000` | `admin123` | Global (N/A) |
+| **Gestor RH Empresa** | `ADMIN_EMPRESA` | `11111111111` | `admin123` | Chronos Pulse Tech LTDA |
+| **Colaborador Teste** | `COLABORADOR` | `12345678901` | `senha123` | Chronos Pulse Tech LTDA |
 
 ---
 
 ## Coleção Insomnia
 
-A coleção de requisições está disponível em `src/test/resources/collections/Insomnia.yaml`.
+A coleção de requisições completa com rotas, variáveis e fluxos de autenticação JWT está localizada em:
+`src/test/resources/collections/Insomnia.yaml`
 
-Para importar: abra o Insomnia → **Import** → selecione o arquivo.
+### Como importar:
+1. Abra o **Insomnia**.
+2. Vá em **Application** → **Preferences** → **Data** → **Import Data** (ou clique em **Import** na tela inicial).
+3. Selecione o arquivo `src/test/resources/collections/Insomnia.yaml`.
 
-As variáveis de ambiente já estão configuradas na coleção:
-
-| Variável | Valor padrão |
-|---|---|
-| `base_url` | `http://localhost:8080` |
-| `cpf_teste` | `12345678901` |
-| `colaborador_id` | `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` |
-| `cnpj_teste` | `12345678000195` |
-
-Requisições disponíveis:
-
-| Pasta | Requisição |
-|---|---|
-| Gestão de Ponto | Registrar Ponto Individual — `ENTRADA` |
-| Gestão de Ponto | Registrar Ponto Individual — `PAUSA_INICIO` |
-| Gestão de Ponto | Registrar Ponto Individual — `PAUSA_FIM` |
-| Gestão de Ponto | Registrar Ponto Individual — `SAIDA` |
-| Gestão de Ponto | Sincronizar Lote Offline — `ENTRADA` + `PAUSA_INICIO` |
-| Gestão de Ponto | Sincronizar Lote Offline — `PAUSA_FIM` + `SAIDA` |
-| Fiscal & Auditoria | Download Arquivo Fiscal AEJ |
+### Pastas organizadas na coleção:
+- `Autenticação & Acesso`: Login para Admin Plataforma, Admin Empresa e Colaborador.
+- `Empresas (Multi-Tenant)`: Cadastro de novos tenants.
+- `Colaboradores`: Cadastro de colaboradores vinculados a tenant.
+- `Gestão de Ponto`: Registro de batida individual com ciclo automático e sincronização em lote offline.
+- `Fiscal & Auditoria`: Download do arquivo AEJ.
 
 ---
 
-## Testes
+## Testes Automatizados
+
+A aplicação conta com **29 testes automatizados** cobrindo todas as camadas da Arquitetura Hexagonal:
 
 ```bash
+# Executar no Linux / macOS / WSL
 ./mvnw test
+
+# Executar no Windows
+.\mvnw.cmd test
 ```
 
-18 testes unitários cobrindo todas as camadas da arquitetura hexagonal, sem dependência de contexto Spring ou banco de dados.
+### Cobertura de Testes por Camada e Módulo:
 
-| Camada | Classe | Testes |
-|---|---|---|
-| Domínio | `GeradorHashService` | 4 |
-| Aplicação | `RegistrarPontoUseCaseImpl` | 2 |
-| Adapter REST | `SincronizacaoPontoController` | 3 |
-| Adapter Persistência | `RegistroPontoRepositoryAdapter` | 4 |
-| Adapter Fiscal | `GeradorArquivoAEJAdapter` | 4 |
-| Smoke Test | `ChronosPulseApplicationTests` | 1 |
+| Módulo | Camada / Classe | Testes | Objetivo |
+|---|---|---|---|
+| **Smoke** | `ChronosPulseApplicationTests` | 1 | Carregamento do contexto Spring Boot |
+| **Auth** | `AutenticarUsuarioUseCaseImplTest` | 2 | Geração de token JWT e validação de credenciais |
+| **Empresa** | `CadastrarEmpresaUseCaseImplTest` | 2 | Regras de criação e unicidade de CNPJ |
+| **Colaborador** | `CadastrarColaboradorUseCaseImplTest` | 3 | Validação de CPF, matrícula e vínculo com tenant |
+| **Ponto** | `RegistrarPontoUseCaseImplTest` | 4 | Ciclo automático (Entrada/Intervalo/Retorno/Saída), NSR e hash |
+| **Ponto** | `GeradorHashServiceTest` | 5 | Consistência e determinismo do cálculo SHA-256 |
+| **Ponto** | `SincronizacaoPontoControllerTest` | 3 | Endpoints REST de sincronização e segurança |
+| **Ponto** | `RegistroPontoRepositoryAdapterTest` | 4 | Mapeamento e persistência de registros |
+| **Fiscal** | `GeradorArquivoAEJAdapterTest` | 5 | Formatação e integridade do arquivo fiscal AEJ |
 
 ---
 
-## Dependências de Terceiros
+## Stack Tecnológica e Dependências
 
-Este projeto utiliza as seguintes bibliotecas de código aberto:
-
-| Biblioteca | Versão | Licença | Uso |
-|---|---|---|---|
-| [Spring Boot](https://github.com/spring-projects/spring-boot) | 4.1.1 | Apache 2.0 | Framework principal, web, JPA, validação |
-| [Hibernate ORM](https://github.com/hibernate/hibernate-orm) | 7.x | LGPL 2.1 | Mapeamento objeto-relacional |
-| [PostgreSQL JDBC Driver](https://github.com/pgjdbc/pgjdbc) | gerenciado | BSD 2-Clause | Driver de conexão com PostgreSQL |
-| [MapStruct](https://github.com/mapstruct/mapstruct) | 1.5.5 | Apache 2.0 | Mapeamento entre entidades JPA e modelos de domínio |
-| [Lombok](https://github.com/projectlombok/lombok) | gerenciado | MIT | Redução de boilerplate em tempo de compilação |
-| [H2 Database](https://github.com/h2database/h2database) | gerenciado | EPL 1.0 / MPL 2.0 | Banco em memória para testes |
-| [JUnit 5](https://github.com/junit-team/junit5) | gerenciado | EPL 2.0 | Framework de testes unitários |
-| [Mockito](https://github.com/mockito/mockito) | gerenciado | MIT | Mocks para testes unitários |
-| [AssertJ](https://github.com/assertj/assertj) | gerenciado | Apache 2.0 | Asserções fluentes em testes |
-
-> Versões marcadas como _gerenciado_ são controladas pelo `spring-boot-starter-parent`.
+| Componente | Tecnologia | Versão |
+|---|---|---|
+| **Linguagem** | Java | 25 |
+| **Framework Base** | Spring Boot | 4.1.1 |
+| **Segurança & JWT** | Spring Security & JJWT (`io.jsonwebtoken`) | 0.12.6 |
+| **Persistência Relacional** | Spring Data JPA / Hibernate | 7.x |
+| **Banco de Dados** | PostgreSQL | 16 |
+| **Migrations** | Flyway Migration | Gerenciado |
+| **Mapeamento de Objetos** | MapStruct | 1.5.5 |
+| **Produtividade** | Lombok | Gerenciado |
+| **Testes** | JUnit 5, Mockito, AssertJ, H2 Database | Gerenciado |
+| **Containerização** | Docker & Docker Compose | Multi-Stage Build |
 
 ---
 
 ## Licença
 
-Copyright (c) 2025 Chronos Pulse
+Copyright (c) 2026 Chronos Pulse
 
 Distribuído sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.

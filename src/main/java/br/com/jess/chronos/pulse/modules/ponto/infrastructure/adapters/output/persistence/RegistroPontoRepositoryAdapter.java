@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.persistence;
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import org.springframework.stereotype.Component;
 import java.util.Optional;
@@ -30,5 +31,10 @@ public class RegistroPontoRepositoryAdapter implements RegistroPontoRepositoryPo
     @Override
     public Long obterProximoNsr() {
         return jpaRepository.obterProximoNsr();
+    }
+
+    @Override
+    public Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId) {
+        return jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
     }
 }

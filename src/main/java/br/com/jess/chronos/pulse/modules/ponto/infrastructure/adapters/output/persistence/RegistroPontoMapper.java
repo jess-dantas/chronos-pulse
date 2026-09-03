@@ -14,9 +14,9 @@ public interface RegistroPontoMapper {
     @ObjectFactory
     default RegistroPonto criarRegistroPonto(RegistroPontoJpaEntity e) {
         return new RegistroPonto(
-                e.getId(), e.getColaboradorId(), e.getDataHoraDispositivo(), e.getDataHoraServidor(),
-                e.getTipoRegistro(), e.getLatitude(), e.getLongitude(), e.getPrecisaoGps(),
-                e.getFotoUrl(), e.getSincronizadoOffline(), e.getNsr()
+                e.getId(), e.getColaboradorId(), e.getTenantId(), e.getDataHoraDispositivo(),
+                e.getDataHoraServidor(), e.getTipoRegistro(), e.getLatitude(), e.getLongitude(),
+                e.getPrecisaoGps(), e.getFotoUrl(), e.getSincronizadoOffline(), e.getNsr()
         );
     }
 
