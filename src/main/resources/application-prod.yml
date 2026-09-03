@@ -1,0 +1,47 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/chronos_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME:postgres}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD:}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:10}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:2}
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+chronos:
+  jwt:
+    secret: ${JWT_SECRET:chronos-pulse-secret-key-must-be-at-least-256-bits-long-for-hs256}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+  mail:
+    enabled: ${CHRONOS_MAIL_ENABLED:true}
+    from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}
+    remetente-nome: ${CHRONOS_MAIL_NAME:Chronos Pulse}

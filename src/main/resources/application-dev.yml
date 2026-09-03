@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/chronos_db}
+    username: ${SPRING_DATASOURCE_USERNAME:chronos_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:chronos_pass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:jess.dantas.it@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:aiurmmwtmyugaaql}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+chronos:
+  mail:
+    enabled: ${CHRONOS_MAIL_ENABLED:true}
+    from: ${CHRONOS_MAIL_FROM:jess.dantas.it@gmail.com}
+    remetente-nome: ${CHRONOS_MAIL_NAME:Chronos Pulse}

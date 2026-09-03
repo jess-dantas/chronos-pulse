@@ -357,6 +357,64 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/espelho"
+        name: Consultar Espelho de Ponto
+        meta:
+          id: req_pontos_consultar_espelho
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Consulta o demonstrativo/espelho de ponto mensal com marcações e justificativas."
+          sortKey: -1725278250000
+        method: GET
+        parameters:
+          - name: mes
+            value: "9"
+          - name: ano
+            value: "2026"
+        headers:
+          - name: Authorization
+            value: "Bearer {{ _.token_colaborador }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/pontos/ajustar"
+        name: Ajustar Ponto Manual (com Justificativa)
+        meta:
+          id: req_pontos_ajustar_manual
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Registra inclusão ou ajuste de ponto com seleção obrigatória de justificativa legal."
+          sortKey: -1725278200000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "dataHora": "2026-09-03T08:00:00Z",
+              "tipoRegistro": "ENTRADA",
+              "justificativa": "Esquecimento de marcação",
+              "observacao": "Registro esquecido no início do turno."
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: "Bearer {{ _.token_colaborador }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Fiscal & Auditoria (Portaria 671)
     meta:
       id: fld_a14efe2b770c4d14a859308ecad03396

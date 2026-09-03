@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +21,12 @@ public interface RegistroPontoJpaRepository extends JpaRepository<RegistroPontoJ
     Optional<TipoRegistro> buscarUltimoTipoPorColaborador(
             @Param("colaboradorId") UUID colaboradorId,
             @Param("tenantId") UUID tenantId);
+
+    List<RegistroPontoJpaEntity> findByColaboradorIdAndTenantIdOrderByDataHoraDispositivoAsc(
+            UUID colaboradorId, UUID tenantId);
+
+    List<RegistroPontoJpaEntity> findByColaboradorIdAndTenantIdAndDataHoraDispositivoBetweenOrderByDataHoraDispositivoAsc(
+            UUID colaboradorId, UUID tenantId, Instant inicio, Instant fim);
+
+    List<RegistroPontoJpaEntity> findByTenantIdOrderByDataHoraDispositivoAsc(UUID tenantId);
 }

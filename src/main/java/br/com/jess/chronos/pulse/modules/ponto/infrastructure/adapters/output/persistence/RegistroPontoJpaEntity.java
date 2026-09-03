@@ -26,6 +26,10 @@ public class RegistroPontoJpaEntity {
     private Boolean sincronizadoOffline;
     @Column(unique = true)
     private Long nsr;
+    @Column(name = "ajuste_manual")
+    private Boolean ajusteManual;
+    private String justificativa;
+    private String observacao;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -53,4 +57,10 @@ public class RegistroPontoJpaEntity {
     public void setSincronizadoOffline(Boolean v) { this.sincronizadoOffline = v; }
     public Long getNsr() { return nsr; }
     public void setNsr(Long v) { this.nsr = v; }
+    public Boolean getAjusteManual() { return ajusteManual; }
+    public void setAjusteManual(Boolean ajusteManual) { this.ajusteManual = ajusteManual; }
+    public String getJustificativa() { return justificativa; }
+    public void setJustificativa(String justificativa) { this.justificativa = justificativa; }
+    public String getObservacao() { return observacao; }
+    public void setObservacao(String observacao) { this.observacao = observacao; }
 }

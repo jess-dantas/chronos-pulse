@@ -1,6 +1,8 @@
 package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest;
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
+import br.com.jess.chronos.pulse.modules.notificacao.service.EmailComprovantePontoService;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RegistrarPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.ResultadoSincronizacaoDTO;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.SincronizacaoLoteDTO;
@@ -19,9 +21,12 @@ import java.util.UUID;
 public class SincronizacaoPontoController {
 
     private final RegistrarPontoUseCase registrarPontoUseCase;
+    private final EmailComprovantePontoService emailComprovantePontoService;
 
-    public SincronizacaoPontoController(RegistrarPontoUseCase registrarPontoUseCase) {
+    public SincronizacaoPontoController(RegistrarPontoUseCase registrarPontoUseCase,
+                                        EmailComprovantePontoService emailComprovantePontoService) {
         this.registrarPontoUseCase = registrarPontoUseCase;
+        this.emailComprovantePontoService = emailComprovantePontoService;
     }
 
     @PostMapping
@@ -36,14 +41,21 @@ public class SincronizacaoPontoController {
 
         // colaboradorId = cpcId do usuário autenticado (identidade global)
         UUID colaboradorId = usuario.getCpcId();
+        String email = usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal();
 
         List<UUID> processadosComSucesso = new ArrayList<>();
         List<UUID> falhas = new ArrayList<>();
 
         for (var dto : lote.registros()) {
             try {
-                registrarPontoUseCase.executar(dto.toDomain(colaboradorId, tenantId), cpf, tenantId);
+                RegistroPonto salvo = registrarPontoUseCase.executar(dto.toDomain(colaboradorId, tenantId), cpf, tenantId);
                 processadosComSucesso.add(dto.idLocal());
+
+                if (emailComprovantePontoService != null && email != null && !email.isBlank()) {
+                    emailComprovantePontoService.enviarComprovantePontoAsync(
+                            email, usuario.getNome(), salvo, cpf, "Chronos Pulse"
+                    );
+                }
             } catch (Exception e) {
                 falhas.add(dto.idLocal());
             }

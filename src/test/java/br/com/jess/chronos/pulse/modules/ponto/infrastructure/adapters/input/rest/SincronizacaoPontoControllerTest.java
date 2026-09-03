@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.re
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
+import br.com.jess.chronos.pulse.modules.notificacao.service.EmailComprovantePontoService;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RegistrarPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.RegistroPontoDTO;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.*;
 class SincronizacaoPontoControllerTest {
 
     @Mock private RegistrarPontoUseCase registrarPontoUseCase;
+    @Mock private EmailComprovantePontoService emailComprovantePontoService;
     @Mock private Authentication authentication;
     @InjectMocks private SincronizacaoPontoController controller;
 

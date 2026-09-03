@@ -4,6 +4,8 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import org.springframework.stereotype.Component;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,5 +38,23 @@ public class RegistroPontoRepositoryAdapter implements RegistroPontoRepositoryPo
     @Override
     public Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId) {
         return jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
+    }
+
+    @Override
+    public List<RegistroPonto> listarPorColaboradorEPeriodo(UUID colaboradorId, UUID tenantId, Instant inicio, Instant fim) {
+        return jpaRepository.findByColaboradorIdAndTenantIdAndDataHoraDispositivoBetweenOrderByDataHoraDispositivoAsc(
+                colaboradorId, tenantId, inicio, fim).stream().map(mapper::toModel).toList();
+    }
+
+    @Override
+    public List<RegistroPonto> listarPorColaborador(UUID colaboradorId, UUID tenantId) {
+        return jpaRepository.findByColaboradorIdAndTenantIdOrderByDataHoraDispositivoAsc(
+                colaboradorId, tenantId).stream().map(mapper::toModel).toList();
+    }
+
+    @Override
+    public List<RegistroPonto> listarPorTenant(UUID tenantId) {
+        return jpaRepository.findByTenantIdOrderByDataHoraDispositivoAsc(tenantId)
+                .stream().map(mapper::toModel).toList();
     }
 }

@@ -16,7 +16,8 @@ public interface RegistroPontoMapper {
         return new RegistroPonto(
                 e.getId(), e.getColaboradorId(), e.getTenantId(), e.getDataHoraDispositivo(),
                 e.getDataHoraServidor(), e.getTipoRegistro(), e.getLatitude(), e.getLongitude(),
-                e.getPrecisaoGps(), e.getFotoUrl(), e.getSincronizadoOffline(), e.getNsr()
+                e.getPrecisaoGps(), e.getFotoUrl(), e.getSincronizadoOffline(), e.getNsr(),
+                e.getAjusteManual(), e.getJustificativa(), e.getObservacao()
         );
     }
 
