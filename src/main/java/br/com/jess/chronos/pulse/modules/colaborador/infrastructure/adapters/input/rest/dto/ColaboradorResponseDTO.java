@@ -8,5 +8,10 @@ public record ColaboradorResponseDTO(
         UUID tenantId,
         String matricula,
         String cargo,
-        String departamento
-) {}
+        String departamento,
+        boolean acessoEstoque
+) {
+    public ColaboradorResponseDTO(UUID id, UUID cpcUsuarioId, UUID tenantId, String matricula, String cargo, String departamento) {
+        this(id, cpcUsuarioId, tenantId, matricula, cargo, departamento, false);
+    }
+}

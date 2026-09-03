@@ -9,7 +9,16 @@ public interface CadastrarColaboradorUseCase {
             String cpf, String nome, String emailCorporativo, String senha,
             String matricula, String cargo, String departamento,
             LocalDate dataNascimento, LocalDate dataAdmissao,
-            UUID tenantId, UUID configuracaoJornadaId
-    ) {}
+            UUID tenantId, UUID configuracaoJornadaId,
+            boolean acessoEstoque
+    ) {
+        public Comando(String cpf, String nome, String emailCorporativo, String senha,
+                       String matricula, String cargo, String departamento,
+                       LocalDate dataNascimento, LocalDate dataAdmissao,
+                       UUID tenantId, UUID configuracaoJornadaId) {
+            this(cpf, nome, emailCorporativo, senha, matricula, cargo, departamento,
+                    dataNascimento, dataAdmissao, tenantId, configuracaoJornadaId, false);
+        }
+    }
     Colaborador executar(Comando comando);
 }

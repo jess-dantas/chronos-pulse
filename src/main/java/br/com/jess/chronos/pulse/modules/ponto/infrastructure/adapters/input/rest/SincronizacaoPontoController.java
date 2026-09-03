@@ -25,7 +25,7 @@ public class SincronizacaoPontoController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('COLABORADOR', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasAnyRole('COLABORADOR', 'ADMIN_EMPRESA', 'GESTOR_RH', 'ADMIN_PLATAFORMA')")
     public ResponseEntity<ResultadoSincronizacaoDTO> sincronizarLote(
             @RequestBody @Valid SincronizacaoLoteDTO lote,
             Authentication authentication) {

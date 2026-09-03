@@ -4,5 +4,9 @@ public record LoginResponseDTO(
         String accessToken,
         String refreshToken,
         String role,
-        String cpcId
+        String cpcId,
+        String nome,
+        String email,
+        String tenantId,
+        boolean acessoEstoque
 ) {}

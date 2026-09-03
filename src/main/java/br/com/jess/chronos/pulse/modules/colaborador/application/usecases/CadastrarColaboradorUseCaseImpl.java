@@ -30,7 +30,7 @@ public class CadastrarColaboradorUseCaseImpl implements CadastrarColaboradorUseC
 
         CpcUsuario usuario = usuarioRepository.salvar(new CpcUsuario(
                 null, null, comando.cpf(), comando.nome(), comando.emailCorporativo(),
-                passwordEncoder.encode(comando.senha()), Role.COLABORADOR, comando.tenantId()));
+                passwordEncoder.encode(comando.senha()), Role.COLABORADOR, comando.tenantId(), comando.acessoEstoque()));
 
         return colaboradorRepository.salvar(new Colaborador(
                 null, usuario.getId(), comando.tenantId(), comando.matricula(),

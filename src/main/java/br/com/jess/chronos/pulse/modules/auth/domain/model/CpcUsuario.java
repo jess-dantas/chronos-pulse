@@ -16,11 +16,18 @@ public class CpcUsuario {
     private final String senhaHash;
     private final Role role;
     private final UUID tenantId;
+    private final boolean acessoEstoque;
     private final boolean ativo;
     private final Instant criadoEm;
 
     public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
                       String senhaHash, Role role, UUID tenantId) {
+        this(id, cpcId, cpf, nome, emailCorporativo, senhaHash, role, tenantId,
+                role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA || role == Role.GESTOR_RH);
+    }
+
+    public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
+                      String senhaHash, Role role, UUID tenantId, boolean acessoEstoque) {
         this.id = id != null ? id : UUID.randomUUID();
         this.cpcId = cpcId != null ? cpcId : UUID.randomUUID();
         this.cpf = cpf;
@@ -29,6 +36,7 @@ public class CpcUsuario {
         this.senhaHash = senhaHash;
         this.role = role;
         this.tenantId = tenantId;
+        this.acessoEstoque = (role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA || role == Role.GESTOR_RH) || acessoEstoque;
         this.ativo = true;
         this.criadoEm = Instant.now();
     }
@@ -50,6 +58,7 @@ public class CpcUsuario {
     public String getSenhaHash() { return senhaHash; }
     public Role getRole() { return role; }
     public UUID getTenantId() { return tenantId; }
+    public boolean isAcessoEstoque() { return acessoEstoque; }
     public boolean isAtivo() { return ativo; }
     public Instant getCriadoEm() { return criadoEm; }
 }

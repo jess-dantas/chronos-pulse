@@ -72,13 +72,41 @@ collection:
             store: true
           rebuildPath: true
       - url: "{{ _.base_url }}/api/v1/auth/login"
+        name: Login - Gestor de RH
+        meta:
+          id: req_auth_login_gestor_rh
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Autenticação como Gestor de RH com permissão total a colaboradores e estoque."
+          sortKey: -1725278250000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cpf": "{{ _.cpf_gestor_rh }}",
+              "senha": "{{ _.senha_admin }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/auth/login"
         name: Login - Colaborador
         meta:
           id: req_auth_login_colaborador
           created: 1725278400000
           modified: 1725278400000
           isPrivate: false
-          description: "Autenticação como Colaborador para bater ponto."
+          description: "Autenticação como Colaborador Padrão (apenas Ponto)."
           sortKey: -1725278200000
         method: POST
         body:
@@ -86,6 +114,34 @@ collection:
           text: |-
             {
               "cpf": "{{ _.cpf_colaborador }}",
+              "senha": "{{ _.senha_colaborador }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/auth/login"
+        name: Login - Colaborador Almoxarife (Com Estoque)
+        meta:
+          id: req_auth_login_colaborador_estoque
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Autenticação como Colaborador com flag de acesso ao módulo de Estoque habilitada."
+          sortKey: -1725278150000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "cpf": "{{ _.cpf_colaborador_estoque }}",
               "senha": "{{ _.senha_colaborador }}"
             }
         headers:
@@ -146,13 +202,34 @@ collection:
       description: "Gestão de Colaboradores dentro de cada Tenant."
     children:
       - url: "{{ _.base_url }}/api/v1/colaboradores"
+        name: Listar Colaboradores
+        meta:
+          id: req_listar_colaboradores
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          description: "Lista os colaboradores do tenant autenticado. Requer role ADMIN_PLATAFORMA, ADMIN_EMPRESA ou GESTOR_RH."
+          sortKey: -1725278450000
+        method: GET
+        headers:
+          - name: Authorization
+            value: "Bearer {{ _.token_gestor_rh }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/colaboradores"
         name: Cadastrar Novo Colaborador
         meta:
           id: req_cadastrar_colaborador
           created: 1725278400000
           modified: 1725278400000
           isPrivate: false
-          description: "Requer role ADMIN_EMPRESA."
+          description: "Requer role ADMIN_PLATAFORMA, ADMIN_EMPRESA ou GESTOR_RH."
           sortKey: -1725278400000
         method: POST
         body:
@@ -169,7 +246,8 @@ collection:
               "dataNascimento": "1994-06-20",
               "dataAdmissao": "2026-09-01",
               "tenantId": "{{ _.tenant_id }}",
-              "configuracaoJornadaId": null
+              "configuracaoJornadaId": null,
+              "acessoEstoque": true
             }
         headers:
           - name: Content-Type
@@ -501,11 +579,15 @@ environments:
     base_url: http://localhost:8080
     cpf_admin_plataforma: "00000000000"
     cpf_admin_empresa: "11111111111"
+    cpf_gestor_rh: "22222222222"
     cpf_colaborador: "12345678901"
+    cpf_colaborador_estoque: "98765432100"
     senha_admin: "admin123"
     senha_colaborador: "senha123"
     tenant_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
     cnpj_teste: "12345678000195"
     token_admin_plataforma: ""
     token_admin_empresa: ""
+    token_gestor_rh: ""
     token_colaborador: ""
+    token_colaborador_estoque: ""

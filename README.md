@@ -23,7 +23,11 @@ Plataforma escalável e multi-tenant para controle de registro de ponto eletrôn
 - [Ciclo Automático de Batidas](#ciclo-automático-de-batidas)
 - [Endpoints da API](#endpoints-da-api)
 - [Pré-requisitos](#pré-requisitos)
-- [Executando a Aplicação](#executando-a-aplicação)
+- [Executando a Aplicação com Docker](#executando-a-aplicação-com-docker)
+  - [Cenário 1: Linux Puro (Servidores / VPS / Ubuntu / Debian / RHEL)](#cenário-1-linux-puro-servidores--vps--distribuições-linux)
+  - [Cenário 2: Windows com Docker CLI via WSL2 Ubuntu](#cenário-2-windows-com-docker-cli-via-wsl2-ubuntu)
+  - [Solução de Problemas Comuns](#solução-de-problemas-comuns)
+- [Execução Local com Maven](#execução-local-com-maven)
 - [Dados Iniciais de Teste (Seeds)](#dados-iniciais-de-teste-seeds)
 - [Coleção Insomnia](#coleção-insomnia)
 - [Testes Automatizados](#testes-automatizados)
@@ -77,11 +81,12 @@ src/main/java/br/com/jess/chronos/pulse/
 
 ## Estrutura de Perfis e Permissões (RBAC)
 
-| Perfil (`Role`) | Escopo | Ações Permitidas |
-|---|---|---|
-| `ADMIN_PLATAFORMA` | Global / SaaS | Criação de novos tenants (empresas) e administração global |
-| `ADMIN_EMPRESA` | Específico do Tenant | Cadastro e gestão de colaboradores da empresa |
-| `COLABORADOR` | Específico do Tenant | Registro de ponto online e sincronização de batidas offline |
+| Perfil (`Role`) | Escopo | Ações Permitidas | Acesso ao Módulo de Estoque |
+|---|---|---|---|
+| `ADMIN_PLATAFORMA` | Global / SaaS | Criação de novos tenants (empresas) e administração irrestrita da plataforma | Sim (Irrestrito) |
+| `ADMIN_EMPRESA` | Específico do Tenant | Cadastro/gestão completa de colaboradores, jornadas e relatórios fiscais | Sim (Irrestrito) |
+| `GESTOR_RH` | Específico do Tenant | Gestão irrestrita de colaboradores, parametrização de permissão de estoque | Sim (Irrestrito) |
+| `COLABORADOR` | Individual | Registro de ponto online e sincronização de batidas offline | Condicional (via flag `acessoEstoque`) |
 
 ---
 
@@ -226,43 +231,191 @@ curl --request GET \
 
 ---
 
+### 6. Estoque & Almoxarifado Público (MCASP / PMP)
+
+#### `GET /api/v1/estoque/saldos`
+Consulta os saldos físicos e patrimoniais valorados pelo Custo Médio Ponderado (PMP).
+
+```bash
+curl --request GET \
+  --url 'http://localhost:8080/api/v1/estoque/saldos' \
+  --header 'Authorization: Bearer <TOKEN_JWT>'
+```
+
+#### `POST /api/v1/estoque/movimentacoes/entrada`
+Registra entrada de material por NF-e/Empenho com recálculo automático do PMP.
+
+```bash
+curl --request POST \
+  --url 'http://localhost:8080/api/v1/estoque/movimentacoes/entrada' \
+  --header 'Authorization: Bearer <TOKEN_JWT>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "materialId": "UUID_DO_MATERIAL",
+    "almoxarifadoId": "UUID_DO_ALMOXARIFADO",
+    "quantidade": 100.0,
+    "valorUnitario": 25.50,
+    "numeroDocumento": "NF-10293",
+    "numeroEmpenho": "2026NE00142",
+    "tipoDocumento": "NOTA_FISCAL"
+  }'
+```
+
+#### `POST /api/v1/estoque/requisicoes`
+Cria uma requisição de materiais para um departamento/secretaria.
+
+```bash
+curl --request POST \
+  --url 'http://localhost:8080/api/v1/estoque/requisicoes' \
+  --header 'Authorization: Bearer <TOKEN_JWT>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "departamentoDestino": "Secretaria de Obras",
+    "justificativa": "Materiais para manutenção predial",
+    "itens": [
+      {
+        "materialId": "UUID_DO_MATERIAL",
+        "quantidadeRequisitada": 5.0
+      }
+    ]
+  }'
+```
+
+---
+
 ## Pré-requisitos
 
-- **Ambiente Containerizado (Recomendado)**:
-  - Docker 24+ e Docker Compose v2 (nativo no Linux, Windows ou via WSL2 Ubuntu)
-- **Ambiente de Desenvolvimento Local**:
+- **Ambiente Containerizado (Docker & Docker Compose)**:
+  - Docker 24+ e Docker Compose v2 (nativo em Linux puro ou via WSL2 Ubuntu / Docker Desktop no Windows).
+  - Em ambientes **Linux Puro**, certifique-se de que o daemon do Docker esteja ativo via `systemctl`.
+  - No **Windows com WSL2 Ubuntu** (Docker CLI sem Docker Desktop), certifique-se de iniciar o serviço (`wsl sudo service docker start`).
+- **Ambiente de Desenvolvimento Local (Opcional / Sem Docker)**:
   - Java JDK 25+
   - Maven 3.9+ (ou utilizar o wrapper `./mvnw` / `.\mvnw.cmd`)
   - PostgreSQL 14+ (porta `5432`)
 
 ---
 
-## Executando a Aplicação
+## Executando a Aplicação com Docker
 
-### 1. Via Docker Compose (Recomendado)
+---
 
-Suba os contêineres do PostgreSQL e da aplicação Spring Boot:
+### Cenário 1: Linux Puro (Servidores / VPS / Distribuições Linux)
 
+Para executar a aplicação diretamente em uma máquina Linux (Ubuntu Server, Debian, CentOS, AlmaLinux, Rocky Linux, Fedora, Arch Linux ou instâncias em nuvem AWS EC2, GCP, Azure, DigitalOcean):
+
+#### 1. Garantir que o serviço do Docker esteja ativo
 ```bash
+# Iniciar e habilitar o daemon do Docker no boot do sistema:
+sudo systemctl enable --now docker
+
+# (Recomendado) Adicionar seu usuário ao grupo docker para executar comandos sem 'sudo':
+sudo usermod -aG docker $USER
+
+# Aplicar a nova permissão de grupo na sessão atual:
+newgrp docker
+```
+
+#### 2. Subir os Contêineres
+Navegue até o diretório do projeto e execute o build e inicialização dos serviços em segundo plano:
+```bash
+# Clone ou acesse a pasta do projeto:
+cd /caminho/para/chronos-pulse
+
+# Constrói a imagem da aplicação e sobe os contêineres:
 docker compose up --build -d
 ```
 
-- A API estará acessível em: `http://localhost:8080`
+- A API estará disponível em: `http://localhost:8080` (ou `http://IP_DO_SERVIDOR:8080`)
 - O banco PostgreSQL estará exposto na porta: `5432`
 
-Para verificar os logs:
+#### 3. Gerenciamento e Monitoramento no Linux
 ```bash
+# Acompanhar logs em tempo real da aplicação Spring Boot:
+docker compose logs -f app
+
+# Acompanhar logs do PostgreSQL:
+docker compose logs -f postgres
+
+# Verificar status de saúde dos contêineres:
+docker compose ps
+
+# Parar e remover contêineres (os dados do PostgreSQL permanecem salvos no volume):
+docker compose down
+
+# Reiniciar os serviços:
+docker compose restart
+```
+
+#### 4. Liberação de Firewall (Opcional para Servidores / VPS)
+Se o servidor possuir firewall ativo e você precisar de acesso externo à API:
+```bash
+# UFW (Ubuntu / Debian):
+sudo ufw allow 8080/tcp
+sudo ufw reload
+
+# Firewalld (CentOS / RHEL / AlmaLinux / Rocky Linux / Fedora):
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
+```
+
+---
+
+### Cenário 2: Windows com Docker CLI via WSL2 Ubuntu
+
+Se você utiliza Windows com **Docker CLI instalado nativamente no WSL2 Ubuntu** (sem a interface gráfica do Docker Desktop ou Rancher Desktop):
+
+#### 1. Pré-requisito: Iniciar o Daemon do Docker no WSL
+O daemon precisa ser iniciado previamente antes de invocar o compose:
+
+**Pelo terminal do Ubuntu (WSL):**
+```bash
+sudo service docker start
+```
+
+**Ou diretamente pelo PowerShell / Terminal do Windows:**
+```powershell
+wsl sudo service docker start
+```
+
+#### 2. Subindo os Contêineres
+Você pode optar por executar pelo PowerShell ou dentro do terminal WSL:
+
+**Opção A: Diretamente no PowerShell (Recomendado)**
+```powershell
+# Executa o compose delegando ao WSL:
+wsl docker compose up --build -d
+
+# Acompanhar logs:
+wsl docker compose logs -f app
+
+# Encerrar contêineres:
+wsl docker compose down
+```
+
+**Opção B: Dentro do Terminal WSL Ubuntu**
+```bash
+cd /mnt/c/app/chronos-pulse
+docker compose up --build -d
 docker compose logs -f app
 ```
 
-Para parar o ambiente:
-```bash
-docker compose down
-```
+---
 
-### 2. Execução Local com Maven
+### Solução de Problemas Comuns
 
-Certifique-se de que o PostgreSQL esteja em execução e inicie o Spring Boot:
+| Sintoma / Erro | Causa Provável | Solução |
+|---|---|---|
+| `Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?` | O serviço do Docker não está ativo na máquina Linux ou no WSL Ubuntu. | **Linux Puro:** `sudo systemctl start docker`<br>**WSL Ubuntu:** `wsl sudo service docker start` |
+| `permission denied while trying to connect to the Docker daemon socket` | O usuário atual não possui permissão para acessar o socket do Docker sem `sudo`. | Adicione o usuário ao grupo docker: `sudo usermod -aG docker $USER && newgrp docker` |
+| `dial tcp 127.0.0.1:2375: connectex: No connection could be made because the target machine actively refused it` | O comando `docker compose` foi executado diretamente no PowerShell do Windows sem o Docker Desktop nativo do Windows estar ativo. | Utilize o prefixo `wsl docker compose up --build -d` para executar via WSL. |
+| Porta 8080 ou 5432 já em uso (`address already in use`) | Outro processo local (ex: PostgreSQL local ou outra API) está ocupando as portas. | Pare os serviços locais ou altere as portas de mapeamento no arquivo `docker-compose.yml`. |
+
+---
+
+## Execução Local com Maven
+
+Caso deseje executar a aplicação sem contêineres, certifique-se de que o PostgreSQL esteja em execução e inicie o Spring Boot:
 
 **Linux / macOS / WSL:**
 ```bash
@@ -278,13 +431,15 @@ Certifique-se de que o PostgreSQL esteja em execução e inicie o Spring Boot:
 
 ## Dados Iniciais de Teste (Seeds)
 
-Ao inicializar o banco de dados pela primeira vez, a migration `V3__seed_initial_data.sql` popula automaticamente os seguintes usuários para testes imediatos:
+Ao inicializar o banco de dados pela primeira vez, as migrations Flyway (`V3__seed_initial_data.sql`, `V4__create_modulo_estoque_almoxarifado.sql` e `V5__add_gestor_rh_and_acesso_estoque.sql`) populam automaticamente os seguintes usuários e dados de teste:
 
-| Usuário | Perfil | CPF | Senha | Tenant |
-|---|---|---|---|---|
-| **Admin Plataforma** | `ADMIN_PLATAFORMA` | `00000000000` | `admin123` | Global (N/A) |
-| **Gestor RH Empresa** | `ADMIN_EMPRESA` | `11111111111` | `admin123` | Chronos Pulse Tech LTDA |
-| **Colaborador Teste** | `COLABORADOR` | `12345678901` | `senha123` | Chronos Pulse Tech LTDA |
+| Usuário | Perfil | CPF | Senha | Acesso Estoque | Tenant |
+|---|---|---|---|---|---|
+| **Admin Plataforma** | `ADMIN_PLATAFORMA` | `00000000000` | `admin123` | Sim (Irrestrito) | Global (N/A) |
+| **Admin Empresa** | `ADMIN_EMPRESA` | `11111111111` | `admin123` | Sim (Irrestrito) | Chronos Pulse Tech LTDA |
+| **Gestor de RH** | `GESTOR_RH` | `22222222222` | `admin123` | Sim (Irrestrito) | Chronos Pulse Tech LTDA |
+| **Colaborador Padrão** | `COLABORADOR` | `12345678901` | `senha123` | Não (Apenas Ponto) | Chronos Pulse Tech LTDA |
+| **Colaborador Almoxarife** | `COLABORADOR` | `98765432100` | `senha123` | Sim (Ponto + Estoque) | Chronos Pulse Tech LTDA |
 
 ---
 
@@ -299,17 +454,18 @@ A coleção de requisições completa com rotas, variáveis e fluxos de autentic
 3. Selecione o arquivo `src/test/resources/collections/Insomnia.yaml`.
 
 ### Pastas organizadas na coleção:
-- `Autenticação & Acesso`: Login para Admin Plataforma, Admin Empresa e Colaborador.
+- `Autenticação & Acesso`: Login para Admin Plataforma, Admin Empresa, Gestor de RH, Colaborador Padrão e Colaborador Almoxarife.
 - `Empresas (Multi-Tenant)`: Cadastro de novos tenants.
-- `Colaboradores`: Cadastro de colaboradores vinculados a tenant.
+- `Colaboradores`: Listagem e cadastro de colaboradores com parametrização de permissão de estoque.
 - `Gestão de Ponto`: Registro de batida individual com ciclo automático e sincronização em lote offline.
 - `Fiscal & Auditoria`: Download do arquivo AEJ.
+- `Estoque & Almoxarifado`: Catálogo de materiais, consulta de saldos físicos/patrimoniais (PMP), entradas por NF-e/empenho, saídas e requisições públicas.
 
 ---
 
 ## Testes Automatizados
 
-A aplicação conta com **29 testes automatizados** cobrindo todas as camadas da Arquitetura Hexagonal:
+A aplicação conta com **45 testes automatizados** no backend Spring Boot e **11 testes** no app Flutter, todos cobrindo integralmente as regras de negócio:
 
 ```bash
 # Executar no Linux / macOS / WSL
@@ -324,14 +480,19 @@ A aplicação conta com **29 testes automatizados** cobrindo todas as camadas da
 | Módulo | Camada / Classe | Testes | Objetivo |
 |---|---|---|---|
 | **Smoke** | `ChronosPulseApplicationTests` | 1 | Carregamento do contexto Spring Boot |
-| **Auth** | `AutenticarUsuarioUseCaseImplTest` | 2 | Geração de token JWT e validação de credenciais |
+| **Auth** | `AutenticarUsuarioUseCaseImplTest` | 2 | Geração de token JWT, claims de estoque e validação de credenciais |
 | **Empresa** | `CadastrarEmpresaUseCaseImplTest` | 2 | Regras de criação e unicidade de CNPJ |
-| **Colaborador** | `CadastrarColaboradorUseCaseImplTest` | 3 | Validação de CPF, matrícula e vínculo com tenant |
+| **Colaborador** | `CadastrarColaboradorUseCaseImplTest` | 2 | Validação de CPF, matrícula e vínculo com tenant |
+| **Colaborador** | `ListarColaboradoresUseCaseImplTest` | 1 | Consulta de colaboradores com detalhes de perfil e permissão |
 | **Ponto** | `RegistrarPontoUseCaseImplTest` | 4 | Ciclo automático (Entrada/Intervalo/Retorno/Saída), NSR e hash |
 | **Ponto** | `GeradorHashServiceTest` | 5 | Consistência e determinismo do cálculo SHA-256 |
 | **Ponto** | `SincronizacaoPontoControllerTest` | 3 | Endpoints REST de sincronização e segurança |
 | **Ponto** | `RegistroPontoRepositoryAdapterTest` | 4 | Mapeamento e persistência de registros |
 | **Fiscal** | `GeradorArquivoAEJAdapterTest` | 5 | Formatação e integridade do arquivo fiscal AEJ |
+| **Estoque** | `CalculadoraPmpServiceTest` | 5 | Cálculo do Custo Médio Ponderado (PMP - MCASP) e arredondamentos |
+| **Estoque** | `EstoqueMovimentacaoServiceTest` | 4 | Entradas, saídas com validação de saldo e recálculo contábil |
+| **Estoque** | `RequisicaoServiceTest` | 4 | Ciclo de vida de requisições públicas e baixa de estoque |
+| **Estoque** | `MaterialServiceTest` | 3 | Catalogação de materiais e almoxarifados multi-tenant |
 
 ---
 
