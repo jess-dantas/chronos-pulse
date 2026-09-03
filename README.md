@@ -41,10 +41,11 @@ Plataforma escalável e multi-tenant para controle de registro de ponto eletrôn
 - **Multi-Tenant Nativo**: Segregação de empresas clientes, colaboradores e registros com isolamento contextual.
 - **Autenticação e Autorização JWT**: Emissão de tokens Bearer com extração segura de `usuarioId`, `colaboradorId`, `tenantId` e `role`.
 - **Ciclo Sequencial Inteligente**: Detecção automática da próxima batida da jornada (`ENTRADA` → `INTERVALO` → `RETORNO` → `SAIDA` → `ENTRADA`), eliminando divergências manuais.
+- **Disparo de Comprovante de Ponto por E-mail**: Notificação instantânea e assíncrona por e-mail a cada batida de ponto ou ajuste manual, com layout HTML estilizado contendo NSR, Hash SHA-256 e dados legais (Portaria MTP nº 671/2021).
 - **Sincronização Offline e em Lote**: Suporte à recepção de batidas coletadas em modo offline pelo aplicativo móvel com coordenadas GPS, precisão e hash local.
 - **Integridade Criptográfica & NSR**: Cálculo de hash SHA-256 encadeado e geração de Número Sequencial de Registro (NSR) contínuo.
 - **Conformidade Fiscal (Portaria 671 MTE)**: Geração e download do Arquivo Eletrônico de Jornada (AEJ) para auditoria trabalhista.
-- **Migrations com Flyway**: Versionamento automático da estrutura relacional e carga de dados de desenvolvimento (`V1`, `V2`, `V3`).
+- **Migrations com Flyway**: Versionamento automático da estrutura relacional e carga de dados de desenvolvimento (`V1` a `V6`).
 
 ---
 
@@ -182,7 +183,7 @@ curl --request POST \
 
 ---
 
-### 4. Registro e Sincronização de Ponto
+### 4. Registro, Sincronização e Espelho de Ponto
 
 #### `POST /api/v1/pontos/sincronizar`
 Recebe uma ou mais batidas de ponto. O `colaboradorId` e `tenantId` são extraídos diretamente do token JWT Bearer.
@@ -216,6 +217,41 @@ curl --request POST \
   "idsFalha": []
 }
 ```
+
+#### `GET /api/v1/pontos/espelho`
+Consulta o demonstrativo mensal/espelho de ponto com todas as batidas e registros de ajustes manuais.
+
+```bash
+curl --request GET \
+  --url 'http://localhost:8080/api/v1/pontos/espelho?mes=9&ano=2026' \
+  --header 'Authorization: Bearer <TOKEN_COLABORADOR>'
+```
+
+#### `POST /api/v1/pontos/ajustar`
+Permite a inclusão ou correção manual de marcação de ponto com seleção obrigatória de uma justificativa padronizada.
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/pontos/ajustar \
+  --header 'Authorization: Bearer <TOKEN_COLABORADOR>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "dataHora": "2026-09-03T08:00:00Z",
+    "tipoRegistro": "ENTRADA",
+    "justificativa": "Esquecimento de marcação",
+    "observacao": "Registro esquecido no início do turno."
+  }'
+```
+
+**Justificativas Padronizadas:**
+1. `Esquecimento de marcação`: quando o colaborador esquece de registrar entrada, saída ou intervalo.
+2. `Falha técnica`: problemas no equipamento de ponto ou no crachá/biometria.
+3. `Atividade externa`: reuniões, visitas a clientes, treinamentos fora da empresa.
+4. `Viagem a trabalho`: deslocamentos que impossibilitam a marcação no sistema.
+5. `Trabalho remoto`: ajustes necessários quando o registro não é feito automaticamente.
+6. `Atendimento médico`: consultas ou exames que impactam o horário de entrada/saída.
+7. `Autorização da liderança`: situações excepcionais aprovadas pelo gestor.
+8. `Plantão ou sobreaviso`: quando há necessidade de ajuste por horas extras ou chamadas fora do expediente.
 
 ---
 
@@ -465,7 +501,7 @@ A coleção de requisições completa com rotas, variáveis e fluxos de autentic
 
 ## Testes Automatizados
 
-A aplicação conta com **45 testes automatizados** no backend Spring Boot e **11 testes** no app Flutter, todos cobrindo integralmente as regras de negócio:
+A aplicação conta com **53 testes automatizados** no backend Spring Boot e **18 testes** no app Flutter, todos cobrindo integralmente as regras de negócio:
 
 ```bash
 # Executar no Linux / macOS / WSL
@@ -488,6 +524,9 @@ A aplicação conta com **45 testes automatizados** no backend Spring Boot e **1
 | **Ponto** | `GeradorHashServiceTest` | 5 | Consistência e determinismo do cálculo SHA-256 |
 | **Ponto** | `SincronizacaoPontoControllerTest` | 3 | Endpoints REST de sincronização e segurança |
 | **Ponto** | `RegistroPontoRepositoryAdapterTest` | 4 | Mapeamento e persistência de registros |
+| **Ponto** | `ConsultarEspelhoPontoUseCaseImplTest` | 2 | Consulta de espelho de ponto mensal por colaborador/tenant |
+| **Ponto** | `AjustarPontoManualUseCaseImplTest` | 2 | Validação e registro de ajustes manuais com justificativa |
+| **Notificação** | `EmailComprovantePontoServiceTest` | 4 | Envio de comprovante por e-mail, resiliência e fallback assíncrono |
 | **Fiscal** | `GeradorArquivoAEJAdapterTest` | 5 | Formatação e integridade do arquivo fiscal AEJ |
 | **Estoque** | `CalculadoraPmpServiceTest` | 5 | Cálculo do Custo Médio Ponderado (PMP - MCASP) e arredondamentos |
 | **Estoque** | `EstoqueMovimentacaoServiceTest` | 4 | Entradas, saídas com validação de saldo e recálculo contábil |
@@ -502,6 +541,7 @@ A aplicação conta com **45 testes automatizados** no backend Spring Boot e **1
 |---|---|---|
 | **Linguagem** | Java | 25 |
 | **Framework Base** | Spring Boot | 4.1.1 |
+| **E-mail & SMTP** | Spring Mail (`spring-boot-starter-mail`) / Gmail SMTP | 4.1.1 |
 | **Segurança & JWT** | Spring Security & JJWT (`io.jsonwebtoken`) | 0.12.6 |
 | **Persistência Relacional** | Spring Data JPA / Hibernate | 7.x |
 | **Banco de Dados** | PostgreSQL | 16 |

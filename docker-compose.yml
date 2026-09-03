@@ -27,6 +27,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/chronos_db
       SPRING_DATASOURCE_USERNAME: chronos_user
       SPRING_DATASOURCE_PASSWORD: chronos_pass
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-jess.dantas.it@gmail.com}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-aiurmmwtmyugaaql}
+      CHRONOS_MAIL_ENABLED: ${CHRONOS_MAIL_ENABLED:-true}
+      CHRONOS_MAIL_FROM: ${CHRONOS_MAIL_FROM:-jess.dantas.it@gmail.com}
     depends_on:
       postgres:
         condition: service_healthy
