@@ -20,7 +20,7 @@ public interface CpcUsuarioMapper {
     @ObjectFactory
     default CpcUsuario criarCpcUsuario(CpcUsuarioJpaEntity e) {
         return new CpcUsuario(e.getId(), e.getCpcId(), e.getCpf(), e.getNome(),
-                e.getEmailCorporativo(), e.getSenhaHash(), e.getRole(), e.getTenantId());
+                e.getEmailCorporativo(), e.getSenhaHash(), e.getRole(), e.getTenantId(), e.isAcessoEstoque());
     }
 
     @AfterMapping

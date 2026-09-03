@@ -16,6 +16,7 @@ public record CadastrarColaboradorRequestDTO(
         String departamento,
         @NotNull LocalDate dataNascimento,
         @NotNull LocalDate dataAdmissao,
-        @NotNull UUID tenantId,
-        UUID configuracaoJornadaId
+        UUID tenantId,
+        UUID configuracaoJornadaId,
+        Boolean acessoEstoque
 ) {}

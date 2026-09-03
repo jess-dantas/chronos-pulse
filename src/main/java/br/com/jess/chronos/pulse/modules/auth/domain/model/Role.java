@@ -5,5 +5,6 @@ public enum Role {
     SUPORTE_N1,
     SUPORTE_N2,
     ADMIN_EMPRESA,
+    GESTOR_RH,
     COLABORADOR
 }

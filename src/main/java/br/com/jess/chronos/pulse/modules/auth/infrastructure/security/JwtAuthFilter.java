@@ -48,8 +48,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String role = claims.get("role", String.class);
 
         usuarioRepository.buscarPorCpf(cpf).ifPresent(usuario -> {
-            var auth = new UsernamePasswordAuthenticationToken(
-                    usuario, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+            var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+            if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_ESTOQUE"));
+            }
+            var auth = new UsernamePasswordAuthenticationToken(usuario, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
         });
 

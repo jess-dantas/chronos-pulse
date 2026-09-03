@@ -48,7 +48,7 @@ class AutenticarUsuarioUseCaseImplTest {
 
         when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("senha123", "hashSenha")).thenReturn(true);
-        when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", cpcId.toString(), tenantId.toString()))
+        when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", cpcId.toString(), tenantId.toString(), false))
                 .thenReturn("access-token");
         when(jwtService.gerarRefreshToken("12345678901")).thenReturn("refresh-token");
 

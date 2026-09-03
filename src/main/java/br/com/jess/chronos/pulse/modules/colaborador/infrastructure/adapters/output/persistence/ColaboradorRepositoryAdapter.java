@@ -37,4 +37,9 @@ public class ColaboradorRepositoryAdapter implements ColaboradorRepositoryPort {
     public List<Colaborador> listarPorTenant(UUID tenantId) {
         return jpaRepository.findByTenantId(tenantId).stream().map(mapper::toModel).toList();
     }
+
+    @Override
+    public List<Colaborador> listarTodos() {
+        return jpaRepository.findAll().stream().map(mapper::toModel).toList();
+    }
 }

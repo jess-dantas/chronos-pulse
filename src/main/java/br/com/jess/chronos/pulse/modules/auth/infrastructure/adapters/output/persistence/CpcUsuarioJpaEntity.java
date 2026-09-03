@@ -20,6 +20,7 @@ public class CpcUsuarioJpaEntity {
     @Column(name = "senha_hash", nullable = false) private String senhaHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Column(name = "tenant_id") private UUID tenantId;
+    @Column(name = "acesso_estoque") private boolean acessoEstoque;
     private boolean ativo;
     @Column(name = "criado_em") private Instant criadoEm;
 
@@ -45,6 +46,8 @@ public class CpcUsuarioJpaEntity {
     public void setRole(Role role) { this.role = role; }
     public UUID getTenantId() { return tenantId; }
     public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }
+    public boolean isAcessoEstoque() { return acessoEstoque; }
+    public void setAcessoEstoque(boolean acessoEstoque) { this.acessoEstoque = acessoEstoque; }
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public Instant getCriadoEm() { return criadoEm; }

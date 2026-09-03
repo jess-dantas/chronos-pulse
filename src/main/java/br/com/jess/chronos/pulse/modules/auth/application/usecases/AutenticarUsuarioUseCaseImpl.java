@@ -36,10 +36,18 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
         String tenantId = usuario.getTenantId() != null ? usuario.getTenantId().toString() : null;
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
-                usuario.getCpcId().toString(), tenantId);
+                usuario.getCpcId().toString(), tenantId, usuario.isAcessoEstoque());
         String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
 
-        return new Resultado(accessToken, refreshToken, usuario.getRole().name(),
-                usuario.getCpcId().toString());
+        return new Resultado(
+                accessToken,
+                refreshToken,
+                usuario.getRole().name(),
+                usuario.getCpcId().toString(),
+                usuario.getNome(),
+                usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
+                tenantId,
+                usuario.isAcessoEstoque()
+        );
     }
 }
