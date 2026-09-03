@@ -313,6 +313,177 @@ collection:
             send: true
             store: true
           rebuildPath: true
+  - name: CP Estoque & Almoxarifado
+    meta:
+      id: fld_estoque_chronos_pulse_05
+      created: 1725278400000
+      modified: 1725278400000
+      sortKey: -1788352684570
+      description: "Gestão de Almoxarifados, Materiais CATMAT, Movimentações PMP (MCASP) e Requisições Públicas."
+    children:
+      - url: "{{ _.base_url }}/api/v1/estoque/materiais"
+        name: Listar Materiais
+        meta:
+          id: req_estoque_listar_materiais
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          sortKey: -1725278400000
+        method: GET
+        headers:
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/estoque/saldos"
+        name: Consultar Saldos de Estoque (PMP)
+        meta:
+          id: req_estoque_consultar_saldos
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          sortKey: -1725278300000
+        method: GET
+        headers:
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/estoque/movimentacoes/entrada"
+        name: Registrar Entrada (NFe / Empenho)
+        meta:
+          id: req_estoque_registrar_entrada
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          sortKey: -1725278200000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "almoxarifadoId": "66666666-6666-6666-6666-666666666661",
+              "materialId": "77777777-7777-7777-7777-777777777771",
+              "quantidade": 100.000,
+              "valorUnitario": 12.5000,
+              "lote": "LOTE-2026-A",
+              "dataValidade": "2027-12-31",
+              "documentoReferencia": "NFe-998877"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/estoque/movimentacoes/saida"
+        name: Registrar Saída Avulsa
+        meta:
+          id: req_estoque_registrar_saida
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          sortKey: -1725278100000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "almoxarifadoId": "66666666-6666-6666-6666-666666666661",
+              "materialId": "77777777-7777-7777-7777-777777777771",
+              "quantidade": 10.000,
+              "lote": "LOTE-2026-A",
+              "documentoReferencia": "BAIXA-001",
+              "observacao": "Uso interno secretaria"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/estoque/requisicoes"
+        name: Criar Requisição de Almoxarifado
+        meta:
+          id: req_estoque_criar_requisicao
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          sortKey: -1725278000000
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "almoxarifadoId": "66666666-6666-6666-6666-666666666661",
+              "departamento": "Secretaria de Educação",
+              "justificativa": "Suprimento de materiais escolares para o semestre",
+              "itens": [
+                {
+                  "materialId": "77777777-7777-7777-7777-777777777771",
+                  "quantidadeSolicitada": 20.000
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: Authorization
+            value: "Bearer {{ _.token_colaborador }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/api/v1/estoque/requisicoes"
+        name: Listar Requisições
+        meta:
+          id: req_estoque_listar_requisicoes
+          created: 1725278400000
+          modified: 1725278400000
+          isPrivate: false
+          sortKey: -1725277900000
+        method: GET
+        headers:
+          - name: Authorization
+            value: "Bearer {{ _.token_admin_empresa }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
