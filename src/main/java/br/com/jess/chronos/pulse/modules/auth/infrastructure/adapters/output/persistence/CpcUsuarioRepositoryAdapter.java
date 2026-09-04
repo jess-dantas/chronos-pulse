@@ -36,4 +36,17 @@ public class CpcUsuarioRepositoryAdapter implements CpcUsuarioRepositoryPort {
     public boolean existePorCpf(String cpf) {
         return jpaRepository.existsByCpf(cpf);
     }
+
+    @Override
+    public CpcUsuario atualizar(CpcUsuario usuario) {
+        return mapper.toModel(jpaRepository.save(mapper.toEntity(usuario)));
+    }
+
+    @Override
+    public void desativarPorId(UUID id) {
+        jpaRepository.findById(id).ifPresent(entity -> {
+            entity.setAtivo(false);
+            jpaRepository.save(entity);
+        });
+    }
 }

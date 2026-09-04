@@ -42,4 +42,17 @@ public class ColaboradorRepositoryAdapter implements ColaboradorRepositoryPort {
     public List<Colaborador> listarTodos() {
         return jpaRepository.findAll().stream().map(mapper::toModel).toList();
     }
+
+    @Override
+    public Colaborador atualizar(Colaborador colaborador) {
+        return mapper.toModel(jpaRepository.save(mapper.toEntity(colaborador)));
+    }
+
+    @Override
+    public void desativarPorId(UUID id) {
+        jpaRepository.findById(id).ifPresent(entity -> {
+            entity.setAtivo(false);
+            jpaRepository.save(entity);
+        });
+    }
 }

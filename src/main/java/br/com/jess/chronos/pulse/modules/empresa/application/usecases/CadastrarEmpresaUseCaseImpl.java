@@ -3,6 +3,7 @@ package br.com.jess.chronos.pulse.modules.empresa.application.usecases;
 import br.com.jess.chronos.pulse.modules.empresa.domain.model.Empresa;
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.input.CadastrarEmpresaUseCase;
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
+import br.com.jess.chronos.pulse.shared.util.CnpjValidator;
 
 public class CadastrarEmpresaUseCaseImpl implements CadastrarEmpresaUseCase {
 
@@ -14,9 +15,13 @@ public class CadastrarEmpresaUseCaseImpl implements CadastrarEmpresaUseCase {
 
     @Override
     public Empresa executar(Comando comando) {
-        if (repositoryPort.existePorCnpj(comando.cnpj())) {
-            throw new IllegalArgumentException("CNPJ já cadastrado: " + comando.cnpj());
+        String cnpj = CnpjValidator.normalizar(comando.cnpj());
+        if (!CnpjValidator.validar(cnpj)) {
+            throw new IllegalArgumentException("CNPJ inválido: " + comando.cnpj());
         }
-        return repositoryPort.salvar(new Empresa(null, comando.cnpj(), comando.nome()));
+        if (repositoryPort.existePorCnpj(cnpj)) {
+            throw new IllegalArgumentException("CNPJ já cadastrado: " + cnpj);
+        }
+        return repositoryPort.salvar(new Empresa(null, cnpj, comando.nome()));
     }
 }

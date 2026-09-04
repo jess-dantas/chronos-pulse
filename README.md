@@ -2,14 +2,14 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker](https://img.shields.io/badge/Docker%20Compose-Ready-2496ED)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Plataforma escalável e multi-tenant para controle de registro de ponto eletrônico, autenticação JWT por perfil (RBAC), ciclo automático de batidas de jornada, sincronização em lote offline, integridade criptográfica SHA-256 e exportação fiscal AEJ (Arquivo Eletrônico de Jornada - Portaria 671 MTE).
+Plataforma escalável e multi-tenant para gestão pública integrada: controle de registro de ponto eletrônico, gestão de estoque/almoxarifado com Custo Médio Ponderado (PMP), autenticação JWT por perfil (RBAC), cadastro público de empresas e sincronização offline-first.
 
 </div>
 
@@ -38,14 +38,19 @@ Plataforma escalável e multi-tenant para controle de registro de ponto eletrôn
 
 ## Visão Geral e Funcionalidades
 
-- **Multi-Tenant Nativo**: Segregação de empresas clientes, colaboradores e registros com isolamento contextual.
-- **Autenticação e Autorização JWT**: Emissão de tokens Bearer com extração segura de `usuarioId`, `colaboradorId`, `tenantId` e `role`.
+- **Multi-Tenant Nativo**: Segregação de empresas clientes, colaboradores e registros com isolamento contextual por `tenant_id`.
+- **Cadastro Público de Empresas**: Novas empresas podem se auto-cadastrar na plataforma via tela pública, criando automaticamente o tenant, o administrador (ADMIN_EMPRESA) e o registro de colaborador.
+- **Autenticação e Autorização JWT**: Emissão de tokens Bearer (access token 1h + refresh token limitado a 8h) com extração segura de `cpcId`, `tenantId` e `role`.
+- **Refresh Token**: Renovação automática do access token usando refresh token, evitando logout involuntário ao atualizar a página.
+- **Tempo de Sessão (Idle + Absoluto)**: Sessão encerrada após 15 minutos de inatividade e com limite absoluto de 8 horas desde o login (verificado no backend pela validade do refresh token e no app pelo temporizador de ociosidade).
 - **Ciclo Sequencial Inteligente**: Detecção automática da próxima batida da jornada (`ENTRADA` → `INTERVALO` → `RETORNO` → `SAIDA` → `ENTRADA`), eliminando divergências manuais.
 - **Disparo de Comprovante de Ponto por E-mail**: Notificação instantânea e assíncrona por e-mail a cada batida de ponto ou ajuste manual, com layout HTML estilizado contendo NSR, Hash SHA-256 e dados legais (Portaria MTP nº 671/2021).
 - **Sincronização Offline e em Lote**: Suporte à recepção de batidas coletadas em modo offline pelo aplicativo móvel com coordenadas GPS, precisão e hash local.
 - **Integridade Criptográfica & NSR**: Cálculo de hash SHA-256 encadeado e geração de Número Sequencial de Registro (NSR) contínuo.
 - **Conformidade Fiscal (Portaria 671 MTE)**: Geração e download do Arquivo Eletrônico de Jornada (AEJ) para auditoria trabalhista.
-- **Migrations com Flyway**: Versionamento automático da estrutura relacional e carga de dados de desenvolvimento (`V1` a `V6`).
+- **CRUD Completo de Colaboradores**: Cadastro, listagem, edição e exclusão (soft delete) de colaboradores com controle granular de acesso ao módulo de estoque.
+- **Módulo de Estoque & Almoxarifado**: Catálogo de materiais (CATMAT), Custo Médio Ponderado (PMP/MCASP), entradas por NF-e/Empenho, saídas e requisições públicas com ciclo de aprovação.
+- **Migrations com Flyway**: Versionamento automático da estrutura relacional e carga de dados de desenvolvimento (`V1` a `V7`).
 
 ---
 
@@ -56,25 +61,38 @@ O sistema adota a **Arquitetura Hexagonal (Ports & Adapters)** dividida em módu
 ```
 src/main/java/br/com/jess/chronos/pulse/
 ├── modules/
-│   ├── auth/                # Módulo de Autenticação e Segurança JWT
+│   ├── auth/                # Módulo de Autenticação, Cadastro e Segurança JWT
 │   │   ├── application/usecases/
+│   │   │   ├── AutenticarUsuarioUseCaseImpl       # Login com JWT
+│   │   │   ├── CadastrarEmpresaCompletoUseCaseImpl # Cadastro público empresa+admin
+│   │   │   ├── RefreshTokenUseCaseImpl             # Renovação de access token
+│   │   │   └── BuscarPerfilUseCaseImpl             # Perfil do usuário logado
 │   │   ├── domain/model/ & ports/
 │   │   └── infrastructure/adapters/ (REST, Security, JWT)
 │   ├── empresa/             # Módulo de Gestão de Empresas (Tenants)
 │   │   ├── application/usecases/
 │   │   ├── domain/model/ & ports/
 │   │   └── infrastructure/adapters/ (REST, JPA Persistence)
-│   ├── colaborador/         # Módulo de Gestão de Colaboradores
+│   ├── colaborador/         # Módulo de Gestão de Colaboradores (CRUD completo)
 │   │   ├── application/usecases/
+│   │   │   ├── CadastrarColaboradorUseCaseImpl
+│   │   │   ├── ListarColaboradoresUseCaseImpl
+│   │   │   ├── AtualizarColaboradorUseCaseImpl
+│   │   │   └── ExcluirColaboradorUseCaseImpl
 │   │   ├── domain/model/ & ports/
 │   │   └── infrastructure/adapters/ (REST, JPA Persistence)
-│   └── ponto/               # Módulo de Controle de Ponto e Fiscal
-│       ├── domain/model/ & ports/ & service/
-│       ├── application/usecases/
-│       └── infrastructure/adapters/
-│           ├── input/rest/
-│           ├── output/persistence/
-│           └── output/fiscal/
+│   ├── ponto/               # Módulo de Controle de Ponto e Fiscal
+│   │   ├── domain/model/ & ports/ & service/
+│   │   ├── application/usecases/
+│   │   └── infrastructure/adapters/
+│   │       ├── input/rest/
+│   │       ├── output/persistence/
+│   │       └── output/fiscal/
+│   ├── estoque/             # Módulo de Estoque & Almoxarifado (MCASP/PMP)
+│   │   ├── domain/entity/ & service/
+│   │   ├── repository/ & service/
+│   │   └── web/ (Controllers e DTOs)
+│   └── notificacao/         # Módulo de Notificações por E-mail
 └── infrastructure/          # Componentes transversais (Config, Flyway)
 ```
 
@@ -84,7 +102,8 @@ src/main/java/br/com/jess/chronos/pulse/
 
 | Perfil (`Role`) | Escopo | Ações Permitidas | Acesso ao Módulo de Estoque |
 |---|---|---|---|
-| `ADMIN_PLATAFORMA` | Global / SaaS | Criação de novos tenants (empresas) e administração irrestrita da plataforma | Sim (Irrestrito) |
+| `SUPORTE_N1` | Global / SaaS | Suporte técnico de nível 1 para tenants | Conforme configurado |
+| `SUPORTE_N2` | Global / SaaS | Suporte técnico de nível 2 (avançado) | Conforme configurado |
 | `ADMIN_EMPRESA` | Específico do Tenant | Cadastro/gestão completa de colaboradores, jornadas e relatórios fiscais | Sim (Irrestrito) |
 | `GESTOR_RH` | Específico do Tenant | Gestão irrestrita de colaboradores, parametrização de permissão de estoque | Sim (Irrestrito) |
 | `COLABORADOR` | Individual | Registro de ponto online e sincronização de batidas offline | Condicional (via flag `acessoEstoque`) |
@@ -108,10 +127,10 @@ graph LR
 
 ## Endpoints da API
 
-### 1. Autenticação
+### 1. Autenticação & Cadastro
 
 #### `POST /api/v1/auth/login`
-Autentica o usuário pelo CPF e senha, retornando o token JWT.
+Autentica o usuário pelo CPF e senha, retornando tokens JWT.
 
 ```bash
 curl --request POST \
@@ -126,14 +145,54 @@ curl --request POST \
 **Resposta:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "tipo": "Bearer",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiJ9...",
+  "role": "COLABORADOR",
+  "cpcId": "33333333-3333-3333-3333-333333333333",
   "nome": "Colaborador Teste",
   "email": "colaborador@empresa.com.br",
-  "role": "COLABORADOR",
   "tenantId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-  "colaboradorId": "44444444-4444-4444-4444-444444444444"
+  "acessoEstoque": false
 }
+```
+
+#### `POST /api/v1/auth/cadastrar-empresa` *(Público)*
+Cadastro completo: cria empresa (tenant) + administrador + colaborador. Retorna tokens JWT (login automático).
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/auth/cadastrar-empresa \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "cnpj": "98765432000188",
+    "nomeEmpresa": "Tech Solutions Brasil LTDA",
+    "responsavelNome": "João Silva",
+    "responsavelCpf": "11122233344",
+    "responsavelEmail": "joao@techsolutions.com.br",
+    "responsavelCelular": "(11) 99999-0000",
+    "responsavelSenha": "senha123"
+  }'
+```
+
+#### `POST /api/v1/auth/refresh` *(Público)*
+Renova o access token usando um refresh token válido (validade máxima: 8 horas desde o login — limite absoluto da sessão).
+
+```bash
+curl --request POST \
+  --url http://localhost:8080/api/v1/auth/refresh \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiJ9..."
+  }'
+```
+
+#### `GET /api/v1/auth/me` *(Autenticado)*
+Retorna o perfil completo do usuário logado.
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/api/v1/auth/me \
+  --header 'Authorization: Bearer <TOKEN>'
 ```
 
 ---
@@ -141,12 +200,12 @@ curl --request POST \
 ### 2. Gestão de Empresas (Tenant)
 
 #### `POST /api/v1/empresas`
-Cadastra uma nova empresa na plataforma. Requer token com perfil `ADMIN_PLATAFORMA`.
+Cadastra uma nova empresa na plataforma. Uso restrito à administração da plataforma.
 
 ```bash
 curl --request POST \
   --url http://localhost:8080/api/v1/empresas \
-  --header 'Authorization: Bearer <TOKEN_ADMIN_PLATAFORMA>' \
+  --header 'Authorization: Bearer <TOKEN>' \
   --header 'Content-Type: application/json' \
   --data '{
     "cnpj": "98765432000188",
@@ -159,12 +218,12 @@ curl --request POST \
 ### 3. Gestão de Colaboradores
 
 #### `POST /api/v1/colaboradores`
-Cadastra um colaborador vinculado a um tenant. Requer token com perfil `ADMIN_EMPRESA`.
+Cadastra um colaborador vinculado a um tenant. Requer `ADMIN_EMPRESA` ou `GESTOR_RH`.
 
 ```bash
 curl --request POST \
   --url http://localhost:8080/api/v1/colaboradores \
-  --header 'Authorization: Bearer <TOKEN_ADMIN_EMPRESA>' \
+  --header 'Authorization: Bearer <TOKEN>' \
   --header 'Content-Type: application/json' \
   --data '{
     "cpf": "98765432100",
@@ -177,8 +236,37 @@ curl --request POST \
     "dataNascimento": "1994-06-20",
     "dataAdmissao": "2026-09-01",
     "tenantId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-    "configuracaoJornadaId": null
+    "acessoEstoque": true
   }'
+```
+
+#### `GET /api/v1/colaboradores`
+Lista todos os colaboradores do tenant autenticado.
+
+#### `PUT /api/v1/colaboradores/{id}`
+Atualiza os dados de um colaborador (nome, email, cargo, departamento, acesso ao estoque).
+
+```bash
+curl --request PUT \
+  --url http://localhost:8080/api/v1/colaboradores/{UUID_COLABORADOR} \
+  --header 'Authorization: Bearer <TOKEN>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "nome": "Mariana Souza Lima",
+    "emailCorporativo": "mariana.lima@empresa.com.br",
+    "cargo": "Coordenadora de Qualidade",
+    "departamento": "Engenharia de Software",
+    "acessoEstoque": true
+  }'
+```
+
+#### `DELETE /api/v1/colaboradores/{id}`
+Desativa um colaborador e seu usuário (soft delete).
+
+```bash
+curl --request DELETE \
+  --url http://localhost:8080/api/v1/colaboradores/{UUID_COLABORADOR} \
+  --header 'Authorization: Bearer <TOKEN>'
 ```
 
 ---
@@ -208,16 +296,6 @@ curl --request POST \
   }'
 ```
 
-**Resposta:**
-```json
-{
-  "idsSucesso": [
-    "f47ac10b-58cc-4372-a567-0e02b2c3d479"
-  ],
-  "idsFalha": []
-}
-```
-
 #### `GET /api/v1/pontos/espelho`
 Consulta o demonstrativo mensal/espelho de ponto com todas as batidas e registros de ajustes manuais.
 
@@ -244,14 +322,14 @@ curl --request POST \
 ```
 
 **Justificativas Padronizadas:**
-1. `Esquecimento de marcação`: quando o colaborador esquece de registrar entrada, saída ou intervalo.
-2. `Falha técnica`: problemas no equipamento de ponto ou no crachá/biometria.
-3. `Atividade externa`: reuniões, visitas a clientes, treinamentos fora da empresa.
-4. `Viagem a trabalho`: deslocamentos que impossibilitam a marcação no sistema.
-5. `Trabalho remoto`: ajustes necessários quando o registro não é feito automaticamente.
-6. `Atendimento médico`: consultas ou exames que impactam o horário de entrada/saída.
-7. `Autorização da liderança`: situações excepcionais aprovadas pelo gestor.
-8. `Plantão ou sobreaviso`: quando há necessidade de ajuste por horas extras ou chamadas fora do expediente.
+1. `Esquecimento de marcação`
+2. `Falha técnica`
+3. `Atividade externa`
+4. `Viagem a trabalho`
+5. `Trabalho remoto`
+6. `Atendimento médico`
+7. `Autorização da liderança`
+8. `Plantão ou sobreaviso`
 
 ---
 
@@ -272,50 +350,23 @@ curl --request GET \
 #### `GET /api/v1/estoque/saldos`
 Consulta os saldos físicos e patrimoniais valorados pelo Custo Médio Ponderado (PMP).
 
-```bash
-curl --request GET \
-  --url 'http://localhost:8080/api/v1/estoque/saldos' \
-  --header 'Authorization: Bearer <TOKEN_JWT>'
-```
-
 #### `POST /api/v1/estoque/movimentacoes/entrada`
 Registra entrada de material por NF-e/Empenho com recálculo automático do PMP.
 
-```bash
-curl --request POST \
-  --url 'http://localhost:8080/api/v1/estoque/movimentacoes/entrada' \
-  --header 'Authorization: Bearer <TOKEN_JWT>' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "materialId": "UUID_DO_MATERIAL",
-    "almoxarifadoId": "UUID_DO_ALMOXARIFADO",
-    "quantidade": 100.0,
-    "valorUnitario": 25.50,
-    "numeroDocumento": "NF-10293",
-    "numeroEmpenho": "2026NE00142",
-    "tipoDocumento": "NOTA_FISCAL"
-  }'
-```
+#### `POST /api/v1/estoque/movimentacoes/saida`
+Registra saída/baixa de material com validação de saldo.
+
+#### `GET /api/v1/estoque/requisicoes`
+Lista requisições públicas de materiais (paginado, filtrável por status).
 
 #### `POST /api/v1/estoque/requisicoes`
 Cria uma requisição de materiais para um departamento/secretaria.
 
-```bash
-curl --request POST \
-  --url 'http://localhost:8080/api/v1/estoque/requisicoes' \
-  --header 'Authorization: Bearer <TOKEN_JWT>' \
-  --header 'Content-Type: application/json' \
-  --data '{
-    "departamentoDestino": "Secretaria de Obras",
-    "justificativa": "Materiais para manutenção predial",
-    "itens": [
-      {
-        "materialId": "UUID_DO_MATERIAL",
-        "quantidadeRequisitada": 5.0
-      }
-    ]
-  }'
-```
+#### `POST /api/v1/estoque/requisicoes/{id}/aprovar`
+Aprova uma requisição pendente.
+
+#### `POST /api/v1/estoque/requisicoes/{id}/atender`
+Atende (baixa em estoque) uma requisição aprovada.
 
 ---
 
@@ -323,8 +374,6 @@ curl --request POST \
 
 - **Ambiente Containerizado (Docker & Docker Compose)**:
   - Docker 24+ e Docker Compose v2 (nativo em Linux puro ou via WSL2 Ubuntu / Docker Desktop no Windows).
-  - Em ambientes **Linux Puro**, certifique-se de que o daemon do Docker esteja ativo via `systemctl`.
-  - No **Windows com WSL2 Ubuntu** (Docker CLI sem Docker Desktop), certifique-se de iniciar o serviço (`wsl sudo service docker start`).
 - **Ambiente de Desenvolvimento Local (Opcional / Sem Docker)**:
   - Java JDK 25+
   - Maven 3.9+ (ou utilizar o wrapper `./mvnw` / `.\mvnw.cmd`)
@@ -334,106 +383,47 @@ curl --request POST \
 
 ## Executando a Aplicação com Docker
 
----
-
 ### Cenário 1: Linux Puro (Servidores / VPS / Distribuições Linux)
-
-Para executar a aplicação diretamente em uma máquina Linux (Ubuntu Server, Debian, CentOS, AlmaLinux, Rocky Linux, Fedora, Arch Linux ou instâncias em nuvem AWS EC2, GCP, Azure, DigitalOcean):
 
 #### 1. Garantir que o serviço do Docker esteja ativo
 ```bash
-# Iniciar e habilitar o daemon do Docker no boot do sistema:
 sudo systemctl enable --now docker
-
-# (Recomendado) Adicionar seu usuário ao grupo docker para executar comandos sem 'sudo':
 sudo usermod -aG docker $USER
-
-# Aplicar a nova permissão de grupo na sessão atual:
 newgrp docker
 ```
 
 #### 2. Subir os Contêineres
-Navegue até o diretório do projeto e execute o build e inicialização dos serviços em segundo plano:
 ```bash
-# Clone ou acesse a pasta do projeto:
 cd /caminho/para/chronos-pulse
-
-# Constrói a imagem da aplicação e sobe os contêineres:
 docker compose up --build -d
 ```
 
-- A API estará disponível em: `http://localhost:8080` (ou `http://IP_DO_SERVIDOR:8080`)
+- A API estará disponível em: `http://localhost:8080`
 - O banco PostgreSQL estará exposto na porta: `5432`
 
-#### 3. Gerenciamento e Monitoramento no Linux
+#### 3. Gerenciamento
 ```bash
-# Acompanhar logs em tempo real da aplicação Spring Boot:
-docker compose logs -f app
-
-# Acompanhar logs do PostgreSQL:
-docker compose logs -f postgres
-
-# Verificar status de saúde dos contêineres:
-docker compose ps
-
-# Parar e remover contêineres (os dados do PostgreSQL permanecem salvos no volume):
-docker compose down
-
-# Reiniciar os serviços:
-docker compose restart
-```
-
-#### 4. Liberação de Firewall (Opcional para Servidores / VPS)
-Se o servidor possuir firewall ativo e você precisar de acesso externo à API:
-```bash
-# UFW (Ubuntu / Debian):
-sudo ufw allow 8080/tcp
-sudo ufw reload
-
-# Firewalld (CentOS / RHEL / AlmaLinux / Rocky Linux / Fedora):
-sudo firewall-cmd --permanent --add-port=8080/tcp
-sudo firewall-cmd --reload
+docker compose logs -f app     # Logs da aplicação
+docker compose logs -f postgres # Logs do PostgreSQL
+docker compose ps              # Status dos contêineres
+docker compose down            # Parar contêineres
+docker compose restart         # Reiniciar serviços
 ```
 
 ---
 
 ### Cenário 2: Windows com Docker CLI via WSL2 Ubuntu
 
-Se você utiliza Windows com **Docker CLI instalado nativamente no WSL2 Ubuntu** (sem a interface gráfica do Docker Desktop ou Rancher Desktop):
-
-#### 1. Pré-requisito: Iniciar o Daemon do Docker no WSL
-O daemon precisa ser iniciado previamente antes de invocar o compose:
-
-**Pelo terminal do Ubuntu (WSL):**
-```bash
-sudo service docker start
-```
-
-**Ou diretamente pelo PowerShell / Terminal do Windows:**
+#### 1. Iniciar o Daemon do Docker no WSL
 ```powershell
 wsl sudo service docker start
 ```
 
 #### 2. Subindo os Contêineres
-Você pode optar por executar pelo PowerShell ou dentro do terminal WSL:
-
-**Opção A: Diretamente no PowerShell (Recomendado)**
 ```powershell
-# Executa o compose delegando ao WSL:
 wsl docker compose up --build -d
-
-# Acompanhar logs:
 wsl docker compose logs -f app
-
-# Encerrar contêineres:
 wsl docker compose down
-```
-
-**Opção B: Dentro do Terminal WSL Ubuntu**
-```bash
-cd /mnt/c/app/chronos-pulse
-docker compose up --build -d
-docker compose logs -f app
 ```
 
 ---
@@ -442,24 +432,20 @@ docker compose logs -f app
 
 | Sintoma / Erro | Causa Provável | Solução |
 |---|---|---|
-| `Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?` | O serviço do Docker não está ativo na máquina Linux ou no WSL Ubuntu. | **Linux Puro:** `sudo systemctl start docker`<br>**WSL Ubuntu:** `wsl sudo service docker start` |
-| `permission denied while trying to connect to the Docker daemon socket` | O usuário atual não possui permissão para acessar o socket do Docker sem `sudo`. | Adicione o usuário ao grupo docker: `sudo usermod -aG docker $USER && newgrp docker` |
-| `dial tcp 127.0.0.1:2375: connectex: No connection could be made because the target machine actively refused it` | O comando `docker compose` foi executado diretamente no PowerShell do Windows sem o Docker Desktop nativo do Windows estar ativo. | Utilize o prefixo `wsl docker compose up --build -d` para executar via WSL. |
-| Porta 8080 ou 5432 já em uso (`address already in use`) | Outro processo local (ex: PostgreSQL local ou outra API) está ocupando as portas. | Pare os serviços locais ou altere as portas de mapeamento no arquivo `docker-compose.yml`. |
+| `Cannot connect to the Docker daemon` | O serviço do Docker não está ativo | **Linux:** `sudo systemctl start docker` / **WSL:** `wsl sudo service docker start` |
+| `permission denied` | Usuário sem permissão no socket Docker | `sudo usermod -aG docker $USER && newgrp docker` |
+| `dial tcp 127.0.0.1:2375: connectex` | Docker CLI executado direto no PowerShell sem Docker Desktop | Utilize `wsl docker compose up --build -d` |
+| Porta 8080 ou 5432 em uso | Outro processo ocupa as portas | Pare os serviços ou altere as portas no `docker-compose.yml` |
 
 ---
 
 ## Execução Local com Maven
 
-Caso deseje executar a aplicação sem contêineres, certifique-se de que o PostgreSQL esteja em execução e inicie o Spring Boot:
-
-**Linux / macOS / WSL:**
 ```bash
+# Linux / macOS / WSL
 ./mvnw spring-boot:run
-```
 
-**Windows (PowerShell / CMD):**
-```powershell
+# Windows (PowerShell / CMD)
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -467,11 +453,10 @@ Caso deseje executar a aplicação sem contêineres, certifique-se de que o Post
 
 ## Dados Iniciais de Teste (Seeds)
 
-Ao inicializar o banco de dados pela primeira vez, as migrations Flyway (`V3__seed_initial_data.sql`, `V4__create_modulo_estoque_almoxarifado.sql` e `V5__add_gestor_rh_and_acesso_estoque.sql`) populam automaticamente os seguintes usuários e dados de teste:
+As migrations Flyway (`V3`, `V4`, `V5`) populam automaticamente os seguintes dados:
 
 | Usuário | Perfil | CPF | Senha | Acesso Estoque | Tenant |
 |---|---|---|---|---|---|
-| **Admin Plataforma** | `ADMIN_PLATAFORMA` | `00000000000` | `admin123` | Sim (Irrestrito) | Global (N/A) |
 | **Admin Empresa** | `ADMIN_EMPRESA` | `11111111111` | `admin123` | Sim (Irrestrito) | Chronos Pulse Tech LTDA |
 | **Gestor de RH** | `GESTOR_RH` | `22222222222` | `admin123` | Sim (Irrestrito) | Chronos Pulse Tech LTDA |
 | **Colaborador Padrão** | `COLABORADOR` | `12345678901` | `senha123` | Não (Apenas Ponto) | Chronos Pulse Tech LTDA |
@@ -481,27 +466,20 @@ Ao inicializar o banco de dados pela primeira vez, as migrations Flyway (`V3__se
 
 ## Coleção Insomnia
 
-A coleção de requisições completa com rotas, variáveis e fluxos de autenticação JWT está localizada em:
+A coleção de requisições completa está localizada em:
 `src/test/resources/collections/Insomnia.yaml`
 
-### Como importar:
-1. Abra o **Insomnia**.
-2. Vá em **Application** → **Preferences** → **Data** → **Import Data** (ou clique em **Import** na tela inicial).
-3. Selecione o arquivo `src/test/resources/collections/Insomnia.yaml`.
-
 ### Pastas organizadas na coleção:
-- `Autenticação & Acesso`: Login para Admin Plataforma, Admin Empresa, Gestor de RH, Colaborador Padrão e Colaborador Almoxarife.
+- `Autenticação & Acesso`: Login, cadastro de empresa, refresh token e perfil.
 - `Empresas (Multi-Tenant)`: Cadastro de novos tenants.
-- `Colaboradores`: Listagem e cadastro de colaboradores com parametrização de permissão de estoque.
-- `Gestão de Ponto`: Registro de batida individual com ciclo automático e sincronização em lote offline.
+- `Colaboradores`: CRUD completo (listar, cadastrar, atualizar, excluir).
+- `Gestão de Ponto`: Registro de batida, sincronização em lote e ajustes manuais.
 - `Fiscal & Auditoria`: Download do arquivo AEJ.
-- `Estoque & Almoxarifado`: Catálogo de materiais, consulta de saldos físicos/patrimoniais (PMP), entradas por NF-e/empenho, saídas e requisições públicas.
+- `Estoque & Almoxarifado`: Materiais, saldos PMP, entradas, saídas e requisições.
 
 ---
 
 ## Testes Automatizados
-
-A aplicação conta com **53 testes automatizados** no backend Spring Boot e **18 testes** no app Flutter, todos cobrindo integralmente as regras de negócio:
 
 ```bash
 # Executar no Linux / macOS / WSL
@@ -524,14 +502,14 @@ A aplicação conta com **53 testes automatizados** no backend Spring Boot e **1
 | **Ponto** | `GeradorHashServiceTest` | 5 | Consistência e determinismo do cálculo SHA-256 |
 | **Ponto** | `SincronizacaoPontoControllerTest` | 3 | Endpoints REST de sincronização e segurança |
 | **Ponto** | `RegistroPontoRepositoryAdapterTest` | 4 | Mapeamento e persistência de registros |
-| **Ponto** | `ConsultarEspelhoPontoUseCaseImplTest` | 2 | Consulta de espelho de ponto mensal por colaborador/tenant |
-| **Ponto** | `AjustarPontoManualUseCaseImplTest` | 2 | Validação e registro de ajustes manuais com justificativa |
-| **Notificação** | `EmailComprovantePontoServiceTest` | 4 | Envio de comprovante por e-mail, resiliência e fallback assíncrono |
+| **Ponto** | `ConsultarEspelhoPontoUseCaseImplTest` | 2 | Consulta de espelho de ponto mensal |
+| **Ponto** | `AjustarPontoManualUseCaseImplTest` | 2 | Validação e registro de ajustes manuais |
+| **Notificação** | `EmailComprovantePontoServiceTest` | 4 | Envio de comprovante por e-mail e fallback |
 | **Fiscal** | `GeradorArquivoAEJAdapterTest` | 5 | Formatação e integridade do arquivo fiscal AEJ |
-| **Estoque** | `CalculadoraPmpServiceTest` | 5 | Cálculo do Custo Médio Ponderado (PMP - MCASP) e arredondamentos |
-| **Estoque** | `EstoqueMovimentacaoServiceTest` | 4 | Entradas, saídas com validação de saldo e recálculo contábil |
-| **Estoque** | `RequisicaoServiceTest` | 4 | Ciclo de vida de requisições públicas e baixa de estoque |
-| **Estoque** | `MaterialServiceTest` | 3 | Catalogação de materiais e almoxarifados multi-tenant |
+| **Estoque** | `CalculadoraPmpServiceTest` | 5 | Cálculo do Custo Médio Ponderado (PMP) |
+| **Estoque** | `EstoqueMovimentacaoServiceTest` | 4 | Entradas, saídas com validação de saldo |
+| **Estoque** | `RequisicaoServiceTest` | 4 | Ciclo de vida de requisições públicas |
+| **Estoque** | `MaterialServiceTest` | 3 | Catalogação de materiais e almoxarifados |
 
 ---
 
@@ -541,8 +519,8 @@ A aplicação conta com **53 testes automatizados** no backend Spring Boot e **1
 |---|---|---|
 | **Linguagem** | Java | 25 |
 | **Framework Base** | Spring Boot | 4.1.1 |
-| **E-mail & SMTP** | Spring Mail (`spring-boot-starter-mail`) / Gmail SMTP | 4.1.1 |
-| **Segurança & JWT** | Spring Security & JJWT (`io.jsonwebtoken`) | 0.12.6 |
+| **E-mail & SMTP** | Spring Mail / Gmail SMTP | 4.1.1 |
+| **Segurança & JWT** | Spring Security & JJWT | 0.12.6 |
 | **Persistência Relacional** | Spring Data JPA / Hibernate | 7.x |
 | **Banco de Dados** | PostgreSQL | 16 |
 | **Migrations** | Flyway Migration | Gerenciado |

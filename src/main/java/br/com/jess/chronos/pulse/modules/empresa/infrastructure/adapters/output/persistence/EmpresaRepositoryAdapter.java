@@ -3,6 +3,7 @@ package br.com.jess.chronos.pulse.modules.empresa.infrastructure.adapters.output
 import br.com.jess.chronos.pulse.modules.empresa.domain.model.Empresa;
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
 import org.springframework.stereotype.Component;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,5 +36,10 @@ public class EmpresaRepositoryAdapter implements EmpresaRepositoryPort {
     @Override
     public boolean existePorCnpj(String cnpj) {
         return jpaRepository.existsByCnpj(cnpj);
+    }
+
+    @Override
+    public List<Empresa> listarTodos() {
+        return jpaRepository.findAll().stream().map(mapper::toModel).toList();
     }
 }
