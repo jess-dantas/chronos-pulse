@@ -46,4 +46,4 @@ chronos:
     from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}
     remetente-nome: ${CHRONOS_MAIL_NAME:Chronos Pulse}
   cors:
-    allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:https://chronos-pulse.netlify.app}
+    allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:4200,https://chronos-pulse.netlify.app,https://*.netlify.app}
