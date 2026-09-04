@@ -45,3 +45,5 @@ chronos:
     enabled: ${CHRONOS_MAIL_ENABLED:true}
     from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}
     remetente-nome: ${CHRONOS_MAIL_NAME:Chronos Pulse}
+  cors:
+    allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:https://chronos-pulse.netlify.app}
