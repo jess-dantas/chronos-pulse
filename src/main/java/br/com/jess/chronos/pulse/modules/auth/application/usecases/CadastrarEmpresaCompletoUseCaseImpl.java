@@ -51,7 +51,11 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
         Empresa empresa = empresaRepository.salvar(new Empresa(
                 null, cnpj, comando.nomeEmpresa(),
                 comando.responsavelNome(), comando.responsavelCpf(),
-                comando.responsavelEmail(), comando.responsavelCelular()));
+                comando.responsavelEmail(), comando.responsavelCelular(),
+                comando.responsavelTelefone(), comando.enderecoLogradouro(),
+                comando.enderecoNumero(), comando.enderecoComplemento(),
+                comando.enderecoBairro(), comando.enderecoCidade(),
+                comando.enderecoUf(), comando.enderecoCep()));
 
         CpcUsuario usuario = usuarioRepository.salvar(new CpcUsuario(
                 null, null, comando.responsavelCpf(), comando.responsavelNome(),
@@ -77,6 +81,7 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
                 usuario.getNome(),
                 usuario.getEmailCorporativo(),
                 empresa.getId().toString(),
-                usuario.isAcessoEstoque());
+                usuario.isAcessoEstoque(),
+                usuario.getFoto());
     }
 }

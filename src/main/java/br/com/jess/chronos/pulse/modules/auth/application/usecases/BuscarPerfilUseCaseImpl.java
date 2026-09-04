@@ -26,6 +26,7 @@ public class BuscarPerfilUseCaseImpl implements BuscarPerfilUseCase {
                 usuario.getRole().name(),
                 tenantId,
                 usuario.getCpcId().toString(),
-                usuario.isAcessoEstoque());
+                usuario.isAcessoEstoque(),
+                usuario.getFoto());
     }
 }

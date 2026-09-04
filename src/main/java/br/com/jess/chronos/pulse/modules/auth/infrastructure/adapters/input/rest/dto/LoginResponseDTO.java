@@ -8,5 +8,6 @@ public record LoginResponseDTO(
         String nome,
         String email,
         String tenantId,
-        boolean acessoEstoque
+        boolean acessoEstoque,
+        String foto
 ) {}

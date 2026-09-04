@@ -11,7 +11,8 @@ public interface RefreshTokenUseCase {
             String nome,
             String email,
             String tenantId,
-            boolean acessoEstoque
+            boolean acessoEstoque,
+            String foto
     ) {}
 
     Resultado executar(Comando comando);

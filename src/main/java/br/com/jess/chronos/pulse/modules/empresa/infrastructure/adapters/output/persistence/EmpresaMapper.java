@@ -15,6 +15,10 @@ public interface EmpresaMapper {
     default Empresa criarEmpresa(EmpresaJpaEntity e) {
         return new Empresa(e.getId(), e.getCnpj(), e.getNome(),
                 e.getResponsavelNome(), e.getResponsavelCpf(),
-                e.getResponsavelEmail(), e.getResponsavelCelular());
+                e.getResponsavelEmail(), e.getResponsavelCelular(),
+                e.getResponsavelTelefone(), e.getEnderecoLogradouro(),
+                e.getEnderecoNumero(), e.getEnderecoComplemento(),
+                e.getEnderecoBairro(), e.getEnderecoCidade(),
+                e.getEnderecoUf(), e.getEnderecoCep());
     }
 }

@@ -47,7 +47,8 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
                 usuario.getNome(),
                 usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
                 tenantId,
-                usuario.isAcessoEstoque()
+                usuario.isAcessoEstoque(),
+                usuario.getFoto()
         );
     }
 }

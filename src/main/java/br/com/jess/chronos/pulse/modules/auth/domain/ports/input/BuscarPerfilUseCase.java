@@ -9,7 +9,8 @@ public interface BuscarPerfilUseCase {
             String role,
             String tenantId,
             String cpcId,
-            boolean acessoEstoque
+            boolean acessoEstoque,
+            String foto
     ) {}
 
     Resultado executar(String cpf);
