@@ -2,8 +2,11 @@ package br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.in
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
+import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.AtualizarColaboradorUseCase;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.CadastrarColaboradorUseCase;
+import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ExcluirColaboradorUseCase;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ListarColaboradoresUseCase;
+import br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest.dto.AtualizarColaboradorRequestDTO;
 import br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest.dto.CadastrarColaboradorRequestDTO;
 import br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest.dto.ColaboradorResponseDTO;
 import jakarta.validation.Valid;
@@ -13,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -21,11 +25,17 @@ public class ColaboradorController {
 
     private final CadastrarColaboradorUseCase cadastrarColaboradorUseCase;
     private final ListarColaboradoresUseCase listarColaboradoresUseCase;
+    private final AtualizarColaboradorUseCase atualizarColaboradorUseCase;
+    private final ExcluirColaboradorUseCase excluirColaboradorUseCase;
 
     public ColaboradorController(CadastrarColaboradorUseCase cadastrarColaboradorUseCase,
-                                 ListarColaboradoresUseCase listarColaboradoresUseCase) {
+                                 ListarColaboradoresUseCase listarColaboradoresUseCase,
+                                 AtualizarColaboradorUseCase atualizarColaboradorUseCase,
+                                 ExcluirColaboradorUseCase excluirColaboradorUseCase) {
         this.cadastrarColaboradorUseCase = cadastrarColaboradorUseCase;
         this.listarColaboradoresUseCase = listarColaboradoresUseCase;
+        this.atualizarColaboradorUseCase = atualizarColaboradorUseCase;
+        this.excluirColaboradorUseCase = excluirColaboradorUseCase;
     }
 
     @PostMapping
@@ -64,5 +74,31 @@ public class ColaboradorController {
 
         var lista = listarColaboradoresUseCase.executar(tenantId);
         return ResponseEntity.ok(lista);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    public ResponseEntity<Map<String, String>> atualizar(
+            @PathVariable UUID id,
+            @RequestBody @Valid AtualizarColaboradorRequestDTO request,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+
+        atualizarColaboradorUseCase.executar(new AtualizarColaboradorUseCase.Comando(
+                id, request.nome(), request.emailCorporativo(),
+                request.matricula(), request.cargo(), request.departamento(),
+                request.dataNascimento(), request.dataAdmissao(),
+                Boolean.TRUE.equals(request.acessoEstoque())));
+
+        return ResponseEntity.ok(Map.of("mensagem", "Colaborador atualizado com sucesso"));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    public ResponseEntity<Map<String, String>> excluir(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+
+        excluirColaboradorUseCase.executar(id);
+        return ResponseEntity.ok(Map.of("mensagem", "Colaborador removido com sucesso"));
     }
 }

@@ -12,7 +12,7 @@ server:
 chronos:
   jwt:
     secret: ${JWT_SECRET:chronos-pulse-secret-key-must-be-at-least-256-bits-long-for-hs256}
-    expiration-ms: 3600000        # 1 hora
-    refresh-expiration-ms: 604800000  # 7 dias
+    expiration-ms: 3600000        # 1 hora (access token)
+    refresh-expiration-ms: 28800000  # 8 horas (limite absoluto da sessão)
   cors:
     allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:4200,https://chronos-pulse.netlify.app,https://*.netlify.app}

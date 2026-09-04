@@ -40,7 +40,7 @@ chronos:
   jwt:
     secret: ${JWT_SECRET:chronos-pulse-secret-key-must-be-at-least-256-bits-long-for-hs256}
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
-    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:28800000}
   mail:
     enabled: ${CHRONOS_MAIL_ENABLED:true}
     from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}

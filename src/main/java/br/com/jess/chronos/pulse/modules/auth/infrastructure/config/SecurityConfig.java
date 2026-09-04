@@ -45,8 +45,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/cadastrar-empresa").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN_PLATAFORMA")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN_PLATAFORMA", "SUPORTE_N1", "SUPORTE_N2")
                         .requestMatchers("/api/v1/suporte/**").hasAnyRole("SUPORTE_N1", "SUPORTE_N2")
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas/**").hasRole("ADMIN_PLATAFORMA")
                         .requestMatchers("/api/v1/colaboradores/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH")

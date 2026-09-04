@@ -9,4 +9,6 @@ public interface CpcUsuarioRepositoryPort {
     Optional<CpcUsuario> buscarPorCpf(String cpf);
     Optional<CpcUsuario> buscarPorId(UUID id);
     boolean existePorCpf(String cpf);
+    CpcUsuario atualizar(CpcUsuario usuario);
+    void desativarPorId(UUID id);
 }

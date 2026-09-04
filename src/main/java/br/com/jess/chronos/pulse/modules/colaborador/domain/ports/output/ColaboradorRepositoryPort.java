@@ -11,4 +11,6 @@ public interface ColaboradorRepositoryPort {
     Optional<Colaborador> buscarPorCpcUsuarioId(UUID cpcUsuarioId);
     List<Colaborador> listarPorTenant(UUID tenantId);
     List<Colaborador> listarTodos();
+    Colaborador atualizar(Colaborador colaborador);
+    void desativarPorId(UUID id);
 }

@@ -177,7 +177,7 @@ collection:
           mimeType: application/json
           text: |-
             {
-              "cnpj": "98765432000188",
+              "cnpj": "98765432000198",
               "nome": "Tech Solutions Brasil LTDA"
             }
         headers:
