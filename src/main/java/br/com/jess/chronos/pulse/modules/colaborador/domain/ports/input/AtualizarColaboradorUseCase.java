@@ -14,7 +14,11 @@ public interface AtualizarColaboradorUseCase {
             String departamento,
             LocalDate dataNascimento,
             LocalDate dataAdmissao,
-            boolean acessoEstoque
+            LocalDate dataDesligamento,
+            boolean acessoEstoque,
+            boolean acessoPatrimonio,
+            boolean acessoFrota,
+            boolean acessoProtocolo
     ) {}
 
     void executar(Comando comando);

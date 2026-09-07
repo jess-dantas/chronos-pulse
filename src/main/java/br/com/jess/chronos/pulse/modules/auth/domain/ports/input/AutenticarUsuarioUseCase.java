@@ -8,11 +8,15 @@ public interface AutenticarUsuarioUseCase {
             String accessToken,
             String refreshToken,
             String role,
+            String cpf,
             String cpcId,
             String nome,
             String email,
             String tenantId,
             boolean acessoEstoque,
+            boolean acessoPatrimonio,
+            boolean acessoFrota,
+            boolean acessoProtocolo,
             String foto,
             List<String> modulos
     ) {}

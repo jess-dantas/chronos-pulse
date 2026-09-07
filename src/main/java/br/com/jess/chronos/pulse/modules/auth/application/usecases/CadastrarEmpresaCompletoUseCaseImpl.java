@@ -79,7 +79,9 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
                 usuario.getCpcId().toString(),
-                empresa.getId().toString(), usuario.isAcessoEstoque());
+                empresa.getId().toString(),
+                usuario.isAcessoEstoque(), usuario.isAcessoPatrimonio(),
+                usuario.isAcessoFrota(), usuario.isAcessoProtocolo());
         String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
 
         List<String> modulos = modulosPort.listarCodigosAtivos(empresa.getId());
@@ -92,6 +94,9 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
                 usuario.getEmailCorporativo(),
                 empresa.getId().toString(),
                 usuario.isAcessoEstoque(),
+                usuario.isAcessoPatrimonio(),
+                usuario.isAcessoFrota(),
+                usuario.isAcessoProtocolo(),
                 usuario.getFoto(),
                 modulos);
     }

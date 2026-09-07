@@ -11,4 +11,5 @@ public interface EmpresaRepositoryPort {
     Optional<Empresa> buscarPorCnpj(String cnpj);
     boolean existePorCnpj(String cnpj);
     List<Empresa> listarTodos();
+    Empresa atualizar(UUID id, String nome, Boolean ativo);
 }

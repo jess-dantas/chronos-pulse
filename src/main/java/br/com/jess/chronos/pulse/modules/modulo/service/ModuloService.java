@@ -16,7 +16,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ModuloService {
 
-    private static final List<String> MODULOS_PADRAO_NOVA_EMPRESA = List.of("PONTO", "RECURSOS_HUMANOS", "ESTOQUE");
+    private static final List<String> MODULOS_PADRAO_NOVA_EMPRESA = List.of("PONTO", "RECURSOS_HUMANOS");
 
     private final ModuloPlataformaRepository moduloRepository;
     private final EmpresaModuloRepository empresaModuloRepository;

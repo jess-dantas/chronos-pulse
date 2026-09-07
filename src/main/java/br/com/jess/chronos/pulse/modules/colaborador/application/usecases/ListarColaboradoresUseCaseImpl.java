@@ -42,7 +42,11 @@ public class ListarColaboradoresUseCaseImpl implements ListarColaboradoresUseCas
                         colab.getDepartamento(),
                         colab.getDataAdmissao(),
                         colab.getDataNascimento(),
+                        colab.getDataDesligamento(),
                         usuario.isAcessoEstoque(),
+                        usuario.isAcessoPatrimonio(),
+                        usuario.isAcessoFrota(),
+                        usuario.isAcessoProtocolo(),
                         colab.isAtivo()
                 ));
             });

@@ -9,14 +9,18 @@ import java.util.UUID;
 public record CadastrarColaboradorRequestDTO(
         @NotBlank @Size(min = 11, max = 11) String cpf,
         @NotBlank String nome,
-        @NotBlank String emailCorporativo,
+        String emailCorporativo,
         @NotBlank String senha,
         String matricula,
         String cargo,
         String departamento,
         @NotNull LocalDate dataNascimento,
         @NotNull LocalDate dataAdmissao,
+        LocalDate dataDesligamento,
         UUID tenantId,
         UUID configuracaoJornadaId,
-        Boolean acessoEstoque
+        Boolean acessoEstoque,
+        Boolean acessoPatrimonio,
+        Boolean acessoFrota,
+        Boolean acessoProtocolo
 ) {}

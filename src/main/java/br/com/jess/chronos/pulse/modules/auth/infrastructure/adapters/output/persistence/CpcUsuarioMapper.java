@@ -21,7 +21,8 @@ public interface CpcUsuarioMapper {
     default CpcUsuario criarCpcUsuario(CpcUsuarioJpaEntity e) {
         return new CpcUsuario(e.getId(), e.getCpcId(), e.getCpf(), e.getNome(),
                 e.getEmailCorporativo(), e.getSenhaHash(), e.getRole(), e.getTenantId(),
-                e.isAcessoEstoque(), e.getFoto());
+                e.isAcessoEstoque(), e.isAcessoPatrimonio(), e.isAcessoFrota(),
+                e.isAcessoProtocolo(), e.getFoto());
     }
 
     @AfterMapping

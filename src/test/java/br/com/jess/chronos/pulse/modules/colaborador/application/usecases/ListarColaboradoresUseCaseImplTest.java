@@ -49,7 +49,8 @@ class ListarColaboradoresUseCaseImplTest {
 
         CpcUsuario usuario = new CpcUsuario(
                 usuarioId, UUID.randomUUID(), "11122233344", "Maria Silva",
-                "maria@empresa.com", "hash", Role.COLABORADOR, tenantId, true
+                "maria@empresa.com", "hash", Role.COLABORADOR, tenantId,
+                true, true, true, true, null
         );
 
         when(colaboradorRepository.listarPorTenant(tenantId)).thenReturn(List.of(colaborador));
@@ -65,6 +66,9 @@ class ListarColaboradoresUseCaseImplTest {
         assertThat(item.cargo()).isEqualTo("Analista");
         assertThat(item.departamento()).isEqualTo("Administrativo");
         assertThat(item.acessoEstoque()).isTrue();
+        assertThat(item.acessoPatrimonio()).isTrue();
+        assertThat(item.acessoFrota()).isTrue();
+        assertThat(item.acessoProtocolo()).isTrue();
         assertThat(item.ativo()).isTrue();
     }
 }

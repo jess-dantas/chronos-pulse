@@ -22,6 +22,9 @@ public class CpcUsuarioJpaEntity {
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Column(name = "tenant_id") private UUID tenantId;
     @Column(name = "acesso_estoque") private boolean acessoEstoque;
+    @Column(name = "acesso_patrimonio") private boolean acessoPatrimonio;
+    @Column(name = "acesso_frota") private boolean acessoFrota;
+    @Column(name = "acesso_protocolo") private boolean acessoProtocolo;
     private boolean ativo;
     @Column(name = "criado_em") private Instant criadoEm;
 
@@ -51,6 +54,12 @@ public class CpcUsuarioJpaEntity {
     public void setTenantId(UUID tenantId) { this.tenantId = tenantId; }
     public boolean isAcessoEstoque() { return acessoEstoque; }
     public void setAcessoEstoque(boolean acessoEstoque) { this.acessoEstoque = acessoEstoque; }
+    public boolean isAcessoPatrimonio() { return acessoPatrimonio; }
+    public void setAcessoPatrimonio(boolean acessoPatrimonio) { this.acessoPatrimonio = acessoPatrimonio; }
+    public boolean isAcessoFrota() { return acessoFrota; }
+    public void setAcessoFrota(boolean acessoFrota) { this.acessoFrota = acessoFrota; }
+    public boolean isAcessoProtocolo() { return acessoProtocolo; }
+    public void setAcessoProtocolo(boolean acessoProtocolo) { this.acessoProtocolo = acessoProtocolo; }
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public Instant getCriadoEm() { return criadoEm; }

@@ -29,14 +29,15 @@ public class AtualizarColaboradorUseCaseImpl implements AtualizarColaboradorUseC
                 usuario.getId(), usuario.getCpcId(), usuario.getCpf(),
                 comando.nome(), comando.emailCorporativo(),
                 usuario.getSenhaHash(), usuario.getRole(), usuario.getTenantId(),
-                comando.acessoEstoque());
+                comando.acessoEstoque(), comando.acessoPatrimonio(),
+                comando.acessoFrota(), comando.acessoProtocolo(), usuario.getFoto());
         usuarioRepository.atualizar(usuarioAtualizado);
 
         Colaborador colaboradorAtualizado = new Colaborador(
                 colaborador.getId(), colaborador.getCpcUsuarioId(), colaborador.getTenantId(),
                 comando.matricula(), comando.cargo(), comando.departamento(),
                 comando.dataNascimento(), comando.dataAdmissao(),
-                colaborador.getConfiguracaoJornadaId());
+                colaborador.getConfiguracaoJornadaId(), comando.dataDesligamento());
         colaboradorRepository.atualizar(colaboradorAtualizado);
     }
 }

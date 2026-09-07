@@ -42,4 +42,17 @@ public class EmpresaRepositoryAdapter implements EmpresaRepositoryPort {
     public List<Empresa> listarTodos() {
         return jpaRepository.findAll().stream().map(mapper::toModel).toList();
     }
+
+    @Override
+    public Empresa atualizar(UUID id, String nome, Boolean ativo) {
+        var entity = jpaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Empresa não encontrada"));
+        if (nome != null && !nome.isBlank()) {
+            entity.setNome(nome);
+        }
+        if (ativo != null) {
+            entity.setAtivo(ativo);
+        }
+        return mapper.toModel(jpaRepository.save(entity));
+    }
 }

@@ -12,6 +12,9 @@ public interface BuscarPerfilUseCase {
             String tenantId,
             String cpcId,
             boolean acessoEstoque,
+            boolean acessoPatrimonio,
+            boolean acessoFrota,
+            boolean acessoProtocolo,
             String foto,
             List<String> modulos
     ) {}

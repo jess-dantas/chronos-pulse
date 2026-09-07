@@ -32,12 +32,21 @@ public class JwtService {
     }
 
     public String gerarAccessToken(String cpf, String role, String cpcId, String tenantId, boolean acessoEstoque) {
+        return gerarAccessToken(cpf, role, cpcId, tenantId, acessoEstoque, false, false, false);
+    }
+
+    public String gerarAccessToken(String cpf, String role, String cpcId, String tenantId,
+                                   boolean acessoEstoque, boolean acessoPatrimonio,
+                                   boolean acessoFrota, boolean acessoProtocolo) {
         return Jwts.builder()
                 .subject(cpf)
                 .claim("role", role)
                 .claim("cpcId", cpcId)
                 .claim("tenantId", tenantId)
                 .claim("acessoEstoque", acessoEstoque)
+                .claim("acessoPatrimonio", acessoPatrimonio)
+                .claim("acessoFrota", acessoFrota)
+                .claim("acessoProtocolo", acessoProtocolo)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(secretKey)

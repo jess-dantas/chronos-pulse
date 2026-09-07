@@ -18,7 +18,11 @@ public record AdminColaboradorResponseDTO(
         String departamento,
         LocalDate dataAdmissao,
         LocalDate dataNascimento,
+        LocalDate dataDesligamento,
         boolean acessoEstoque,
+        boolean acessoPatrimonio,
+        boolean acessoFrota,
+        boolean acessoProtocolo,
         boolean ativo
 ) {
     public static AdminColaboradorResponseDTO fromItem(
@@ -37,7 +41,11 @@ public record AdminColaboradorResponseDTO(
                 item.departamento(),
                 item.dataAdmissao(),
                 item.dataNascimento(),
+                item.dataDesligamento(),
                 item.acessoEstoque(),
+                item.acessoPatrimonio(),
+                item.acessoFrota(),
+                item.acessoProtocolo(),
                 item.ativo()
         );
     }

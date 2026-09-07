@@ -31,6 +31,9 @@ public interface CadastrarEmpresaCompletoUseCase {
             String email,
             String tenantId,
             boolean acessoEstoque,
+            boolean acessoPatrimonio,
+            boolean acessoFrota,
+            boolean acessoProtocolo,
             String foto,
             List<String> modulos
     ) {}

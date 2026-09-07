@@ -17,7 +17,11 @@ public interface ListarColaboradoresUseCase {
             String departamento,
             LocalDate dataAdmissao,
             LocalDate dataNascimento,
+            LocalDate dataDesligamento,
             boolean acessoEstoque,
+            boolean acessoPatrimonio,
+            boolean acessoFrota,
+            boolean acessoProtocolo,
             boolean ativo
     ) {}
 
