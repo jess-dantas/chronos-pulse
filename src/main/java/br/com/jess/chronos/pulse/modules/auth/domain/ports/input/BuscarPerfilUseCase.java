@@ -1,5 +1,7 @@
 package br.com.jess.chronos.pulse.modules.auth.domain.ports.input;
 
+import java.util.List;
+
 public interface BuscarPerfilUseCase {
 
     record Resultado(
@@ -10,7 +12,8 @@ public interface BuscarPerfilUseCase {
             String tenantId,
             String cpcId,
             boolean acessoEstoque,
-            String foto
+            String foto,
+            List<String> modulos
     ) {}
 
     Resultado executar(String cpf);

@@ -69,7 +69,7 @@ public class AuthController {
                 resultado.role(), resultado.cpcId(),
                 resultado.nome(), resultado.email(),
                 resultado.tenantId(), resultado.acessoEstoque(),
-                resultado.foto()));
+                resultado.foto(), resultado.modulos()));
     }
 
     @PostMapping("/cadastrar-empresa")
@@ -90,7 +90,7 @@ public class AuthController {
                 resultado.role(), resultado.cpcId(),
                 resultado.nome(), resultado.email(),
                 resultado.tenantId(), resultado.acessoEstoque(),
-                resultado.foto()));
+                resultado.foto(), resultado.modulos()));
     }
 
     @PostMapping("/refresh")
@@ -102,7 +102,7 @@ public class AuthController {
                 resultado.role(), resultado.cpcId(),
                 resultado.nome(), resultado.email(),
                 resultado.tenantId(), resultado.acessoEstoque(),
-                resultado.foto()));
+                resultado.foto(), resultado.modulos()));
     }
 
     @GetMapping("/me")

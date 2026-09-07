@@ -1,6 +1,6 @@
 package br.com.jess.chronos.pulse.modules.auth.domain.ports.input;
 
-import java.time.LocalDate;
+import java.util.List;
 
 public interface CadastrarEmpresaCompletoUseCase {
 
@@ -31,7 +31,8 @@ public interface CadastrarEmpresaCompletoUseCase {
             String email,
             String tenantId,
             boolean acessoEstoque,
-            String foto
+            String foto,
+            List<String> modulos
     ) {}
 
     Resultado executar(Comando comando);

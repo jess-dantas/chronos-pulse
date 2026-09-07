@@ -1,0 +1,238 @@
+# Referência da API
+
+Base: `http://localhost:8080/api/v1` · Formato: JSON · Autenticação: `Authorization: Bearer <accessToken>` (exceto rotas marcadas como públicas).
+
+| Notação | Significado |
+|---|---|
+| 🔓 | Pública |
+| 👤 | Qualquer usuário autenticado (tenant) |
+| 🛡️ | Restrito por `@PreAuthorize` (perfis entre parênteses) |
+| 🌐 | Perfis de plataforma (`ADMIN_PLATAFORMA`, `SUPORTE_N1`, `SUPORTE_N2`) |
+
+---
+
+## 1. Autenticação & Cadastro
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/auth/login` | 🔓 | Login por CPF/senha → `accessToken`, `refreshToken`, `role`, `modulos`, `cpcId`, `tenantId`, ... |
+| `POST` | `/auth/cadastrar-empresa` | 🔓 | Cadastro público: tenant + admin + colaborador + módulos core → já autentica |
+| `POST` | `/auth/refresh` | 🔓 | Renova o access token (limite absoluto: 8h da sessão) |
+| `POST` | `/auth/esqueci-senha` | 🔓 | Solicita recuperação de senha |
+| `POST` | `/auth/redefinir-senha` | 🔓 | Redefine a senha |
+| `GET` | `/auth/me` | 👤 | Perfil completo do usuário (inclui `modulos`) |
+| `GET` | `/auth/ping` | 🔓 | Health-check |
+
+Login — corpo e resposta resumida:
+
+```jsonc
+// Corpo
+{ "cpf": "12345678901", "senha": "senha123" }
+
+// Resposta
+{
+  "accessToken": "eyJ...", "refreshToken": "eyJ...",
+  "role": "COLABORADOR", "nome": "Colaborador Teste",
+  "tenantId": "a0eebc99-...",
+  "acessoEstoque": false,
+  "modulos": ["PONTO", "RECURSOS_HUMANOS", "ESTOQUE"]
+}
+```
+
+---
+
+## 2. Admin Plataforma (Módulos)
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/admin/modulos` | 🌐 | Catálogo de módulos disponíveis |
+| `GET` | `/admin/empresas/{tenantId}/modulos` | 🌐 | Módulos ativos da empresa |
+| `PUT` | `/admin/empresas/{tenantId}/modulos` | 🌐 | Substitui os módulos da empresa |
+
+`PUT` — corpo: `{ "modulos": ["PONTO", "PROTOCOLO"] }`.
+
+---
+
+## 3. Empresas (Tenants)
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/empresas` | 🛡️ (`ADMIN_PLATAFORMA`) | Cadastra uma empresa |
+
+---
+
+## 4. Colaboradores
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/colaboradores` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Cadastra colaborador |
+| `GET` | `/colaboradores` | 🛡️ (mesmos perfis) | Lista do tenant |
+| `PUT` | `/colaboradores/{id}` | 🛡️ (mesmos perfis) | Atualiza dados/acesso ao estoque |
+| `DELETE` | `/colaboradores/{id}` | 🛡️ (mesmos perfis) | Soft delete |
+
+---
+
+## 5. Ponto Eletrônico
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/pontos/sincronizar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Batida(s) online/offline com GPS e hash |
+| `GET` | `/pontos/espelho?mes=9&ano=2026` | 🛡️ (mesmos perfis) | Espelho de ponto mensal |
+| `POST` | `/pontos/ajustar` | 🛡️ (mesmos perfis) | Ajuste manual com justificativa obrigatória |
+
+---
+
+## 6. Fiscal
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/fiscal/aej/download?cnpj=...&razaoSocial=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do arquivo AEJ (Portaria MTP 671/2021) |
+
+---
+
+## 7. Estoque & Almoxarifado
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/estoque/saldos` | 👤 com `ROLE_ESTOQUE` ou gestor | Saldos físicos/patrimoniais (PMP) |
+| `POST` | `/estoque/movimentacoes/entrada` | 👤 com `ROLE_ESTOQUE` ou gestor | Entrada por NF-e/Empenho (recalcula PMP) |
+| `POST` | `/estoque/movimentacoes/saida` | 👤 com `ROLE_ESTOQUE` ou gestor | Saída/baixa com validação de saldo |
+| `GET` | `/estoque/requisicoes` | 👤 com `ROLE_ESTOQUE` ou gestor | Requisições (paginada, filtrável) |
+| `POST` | `/estoque/requisicoes` | 👤 com `ROLE_ESTOQUE` ou gestor | Cria requisição |
+| `POST` | `/estoque/requisicoes/{id}/aprovar` | 👤 com `ROLE_ESTOQUE` ou gestor | Aprova requisição |
+| `POST` | `/estoque/requisicoes/{id}/atender` | 👤 com `ROLE_ESTOQUE` ou gestor | Atende (baixa em estoque) |
+
+> **Acesso ao estoque:** colaboradores com `acessoEstoque=true` recebem a authority `ROLE_ESTOQUE` no token (`JwtAuthFilter`). Gestores (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) acessam diretamente.
+
+---
+
+## 8. Patrimônio Público `@RequiresModulo("PATRIMONIO")`
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada |
+| `POST` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra bem |
+| `GET` | `/patrimonio/{id}` | 🛡️ (mesmos perfis de leitura) | Busca por id |
+| `GET` | `/patrimonio/ativos` | 🛡️ (leitura) | Lista bens ativos (sem paginação) |
+
+`POST /patrimonio` — corpo:
+
+```jsonc
+{
+  "tombamento": "TOM-0004",
+  "descricao": "Mesa de escritório em madeira",
+  "categoria": "MOBILIARIO",
+  "estado": "BOM",              // NOVO | OTIMO | BOM | REGULAR | INSERVIVEL
+  "localizacao": "Secretaria de Obras",
+  "dataAquisicao": "2024-03-15", // ISO LocalDate
+  "valorAquisicao": 850.00,      // número (BigDecimal)
+  "responsavelNome": "Maria Silva",
+  "numeroNotaFiscal": "NF 1200",
+  "observacoes": "Adquirido em pregão"
+}
+```
+
+---
+
+## 9. Gestão de Frota `@RequiresModulo("FROTA")`
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada de veículos |
+| `POST` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra veículo |
+| `GET` | `/frota/veiculos/{id}` | 🛡️ (leitura) | Detalhe do veículo |
+| `GET` | `/frota/abastecimentos` | 🛡️ (leitura) | Lista paginada de abastecimentos |
+| `POST` | `/frota/abastecimentos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Registra abastecimento |
+
+`POST /frota/veiculos` — corpo:
+
+```jsonc
+{
+  "placa": "ABC-1D23", "renavam": "12345678901",
+  "marca": "Fiat", "modelo": "Palio Adventure",
+  "anoFabricacao": 2022, "anoModelo": 2023,
+  "tipo": "UTILITARIO", "combustivel": "FLEX",
+  "status": "ATIVO",          // ATIVO | MANUTENCAO | INATIVO
+  "odometroAtual": 45210.5,   // número
+  "observacoes": null
+}
+```
+
+`POST /frota/abastecimentos` — corpo:
+
+```jsonc
+{
+  "veiculoId": "99999999-9999-4999-9999-999999999991",
+  "litros": 42.5,                    // número (obrigatório)
+  "valorLitro": 6.149,               // número (obrigatório)
+  "odometroKm": 45110.0,             // número
+  "posto": "Posto Central",
+  "observacoes": null
+}
+```
+
+O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
+
+---
+
+## 10. Protocolo Eletrônico `@RequiresModulo("PROTOCOLO")`
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada |
+| `POST` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra protocolo |
+| `GET` | `/protocolo/{id}` | 🛡️ (leitura) | Detalhe |
+| `PATCH` | `/protocolo/{id}/status` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Altera status |
+
+`POST /protocolo` — corpo (`numeroProtocolo`, `tipo` e `assunto` obrigatórios):
+
+```jsonc
+{
+  "numeroProtocolo": "PROTO-2026-000003",
+  "tipo": "OFICIO",
+  "assunto": "Solicitação de manutenção da frota",
+  "descricao": "Ofício nº 013/2026 ...",
+  "remetente": "Secretaria de Obras",
+  "destinatario": "Departamento de Compras",
+  "status": "RECEBIDO",       // opcional; default RECEBIDO
+  "responsavel": "Maria Silva",
+  "observacoes": null
+}
+```
+
+`PATCH /protocolo/{id}/status` — corpo:
+
+```jsonc
+{ "status": "EM_TRAMITACAO", "responsavel": "Maria Silva", "observacoes": "..." }
+```
+
+**Status válidos:** `RECEBIDO`, `TRIAGEM`, `EM_TRAMITACAO`, `ARQUIVADO`, `CANCELADO`.
+
+---
+
+## Paginação
+
+As listagens retornam `org.springframework.data.domain.Page`:
+
+```jsonc
+{
+  "content": [ ... ],
+  "totalElements": 3,
+  "totalPages": 1,
+  "number": 0,
+  "size": 20,
+  ...
+}
+```
+
+Parâmetros suportados: `page`, `size`, `sort` (ex.: `?page=0&size=20&sort=estado,asc`). Default: `size=20`.
+
+---
+
+## Erros
+
+- `400` — validação de corpo/DTO (mensagens em PT-BR)
+- `401` — token ausente/expirado/inválido
+- `403` — perfil sem permissão **ou** módulo não contratado para a empresa
+- `404` — recurso inexistente
+- `500` — erro interno

@@ -21,6 +21,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.RecuperacaoSen
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.ColaboradorRepositoryPort;
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.notificacao.service.EmailRecuperacaoSenhaService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,8 +34,9 @@ public class AuthModuleConfig {
     public AutenticarUsuarioUseCase autenticarUsuarioUseCase(
             CpcUsuarioRepositoryPort repositoryPort,
             JwtService jwtService,
-            PasswordEncoder passwordEncoder) {
-        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder);
+            PasswordEncoder passwordEncoder,
+            ModulosPort modulosPort) {
+        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort);
     }
 
     @Bean
@@ -43,21 +45,25 @@ public class AuthModuleConfig {
             CpcUsuarioRepositoryPort usuarioRepository,
             ColaboradorRepositoryPort colaboradorRepository,
             JwtService jwtService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            ModulosPort modulosPort) {
         return new CadastrarEmpresaCompletoUseCaseImpl(
-                empresaRepository, usuarioRepository, colaboradorRepository, jwtService, passwordEncoder);
+                empresaRepository, usuarioRepository, colaboradorRepository, jwtService, passwordEncoder, modulosPort);
     }
 
     @Bean
     public RefreshTokenUseCase refreshTokenUseCase(
             CpcUsuarioRepositoryPort repositoryPort,
-            JwtService jwtService) {
-        return new RefreshTokenUseCaseImpl(repositoryPort, jwtService);
+            JwtService jwtService,
+            ModulosPort modulosPort) {
+        return new RefreshTokenUseCaseImpl(repositoryPort, jwtService, modulosPort);
     }
 
     @Bean
-    public BuscarPerfilUseCase buscarPerfilUseCase(CpcUsuarioRepositoryPort repositoryPort) {
-        return new BuscarPerfilUseCaseImpl(repositoryPort);
+    public BuscarPerfilUseCase buscarPerfilUseCase(
+            CpcUsuarioRepositoryPort repositoryPort,
+            ModulosPort modulosPort) {
+        return new BuscarPerfilUseCaseImpl(repositoryPort, modulosPort);
     }
 
     @Bean

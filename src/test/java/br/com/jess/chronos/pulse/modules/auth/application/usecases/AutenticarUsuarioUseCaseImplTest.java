@@ -6,6 +6,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuar
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuarioUseCase.Resultado;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,11 +33,14 @@ class AutenticarUsuarioUseCaseImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private ModulosPort modulosPort;
+
     private AutenticarUsuarioUseCaseImpl useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder);
+        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort);
     }
 
     @Test
@@ -51,6 +55,7 @@ class AutenticarUsuarioUseCaseImplTest {
         when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", cpcId.toString(), tenantId.toString(), false))
                 .thenReturn("access-token");
         when(jwtService.gerarRefreshToken("12345678901")).thenReturn("refresh-token");
+        when(modulosPort.listarCodigosAtivos(tenantId)).thenReturn(java.util.List.of("PONTO"));
 
         Resultado resultado = useCase.executar(new Comando("12345678901", "senha123"));
 
@@ -58,6 +63,7 @@ class AutenticarUsuarioUseCaseImplTest {
         assertThat(resultado.refreshToken()).isEqualTo("refresh-token");
         assertThat(resultado.role()).isEqualTo("COLABORADOR");
         assertThat(resultado.cpcId()).isEqualTo(cpcId.toString());
+        assertThat(resultado.modulos()).containsExactly("PONTO");
     }
 
     @Test
