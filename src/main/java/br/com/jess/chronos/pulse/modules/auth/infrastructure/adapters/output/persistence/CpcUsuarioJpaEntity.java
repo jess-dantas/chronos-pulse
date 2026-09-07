@@ -17,6 +17,7 @@ public class CpcUsuarioJpaEntity {
     @Column(name = "email_pessoal") private String emailPessoal;
     private String apelido;
     private String celular;
+    @Column(name = "foto", columnDefinition = "TEXT") private String foto;
     @Column(name = "senha_hash", nullable = false) private String senhaHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Column(name = "tenant_id") private UUID tenantId;
@@ -40,6 +41,8 @@ public class CpcUsuarioJpaEntity {
     public void setApelido(String apelido) { this.apelido = apelido; }
     public String getCelular() { return celular; }
     public void setCelular(String celular) { this.celular = celular; }
+    public String getFoto() { return foto; }
+    public void setFoto(String foto) { this.foto = foto; }
     public String getSenhaHash() { return senhaHash; }
     public void setSenhaHash(String senhaHash) { this.senhaHash = senhaHash; }
     public Role getRole() { return role; }

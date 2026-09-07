@@ -5,6 +5,7 @@ import br.com.jess.chronos.pulse.modules.estoque.service.EstoqueMovimentacaoServ
 import br.com.jess.chronos.pulse.modules.estoque.web.dto.EntradaMaterialDTO;
 import br.com.jess.chronos.pulse.modules.estoque.web.dto.SaidaMaterialDTO;
 import jakarta.validation.Valid;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/estoque/movimentacoes")
 @RequiredArgsConstructor
+@RequiresModulo(codigo = "ESTOQUE")
 public class EstoqueMovimentacaoController {
 
     private final EstoqueMovimentacaoService movimentacaoService;

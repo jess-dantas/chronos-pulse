@@ -13,6 +13,14 @@ public record EmpresaResponseDTO(
         String responsavelCpf,
         String responsavelEmail,
         String responsavelCelular,
+        String responsavelTelefone,
+        String enderecoLogradouro,
+        String enderecoNumero,
+        String enderecoComplemento,
+        String enderecoBairro,
+        String enderecoCidade,
+        String enderecoUf,
+        String enderecoCep,
         boolean ativo,
         Instant criadoEm
 ) {
@@ -21,6 +29,10 @@ public record EmpresaResponseDTO(
                 e.getId(), e.getCnpj(), e.getNome(),
                 e.getResponsavelNome(), e.getResponsavelCpf(),
                 e.getResponsavelEmail(), e.getResponsavelCelular(),
+                e.getResponsavelTelefone(), e.getEnderecoLogradouro(),
+                e.getEnderecoNumero(), e.getEnderecoComplemento(),
+                e.getEnderecoBairro(), e.getEnderecoCidade(),
+                e.getEnderecoUf(), e.getEnderecoCep(),
                 e.isAtivo(), e.getCriadoEm()
         );
     }

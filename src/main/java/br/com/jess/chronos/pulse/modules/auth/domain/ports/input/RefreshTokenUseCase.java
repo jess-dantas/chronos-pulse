@@ -1,5 +1,7 @@
 package br.com.jess.chronos.pulse.modules.auth.domain.ports.input;
 
+import java.util.List;
+
 public interface RefreshTokenUseCase {
 
     record Comando(String refreshToken) {}
@@ -11,7 +13,9 @@ public interface RefreshTokenUseCase {
             String nome,
             String email,
             String tenantId,
-            boolean acessoEstoque
+            boolean acessoEstoque,
+            String foto,
+            List<String> modulos
     ) {}
 
     Resultado executar(Comando comando);

@@ -10,7 +10,7 @@ VALUES (
     '11111111-1111-1111-1111-111111111111',
     '00000000000',
     'Admin Plataforma',
-    'admin@chronospulse.com.br',
+    'jess.dantas.it@gmail.com',
     '$2a$10$reLinwh8IlJzgTjS9RMj.ux/0bUiI0fhT7EnBzqa4LjptHD44B.1K',
     'ADMIN_PLATAFORMA',
     NULL,

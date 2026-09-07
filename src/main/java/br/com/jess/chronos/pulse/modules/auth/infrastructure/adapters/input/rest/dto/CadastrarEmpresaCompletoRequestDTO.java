@@ -11,5 +11,13 @@ public record CadastrarEmpresaCompletoRequestDTO(
         @NotBlank @Size(min = 11, max = 11) String responsavelCpf,
         @NotBlank @Email String responsavelEmail,
         String responsavelCelular,
-        @NotBlank @Size(min = 6) String responsavelSenha
+        @NotBlank @Size(min = 6) String responsavelSenha,
+        String responsavelTelefone,
+        String enderecoLogradouro,
+        String enderecoNumero,
+        String enderecoComplemento,
+        String enderecoBairro,
+        String enderecoCidade,
+        String enderecoUf,
+        String enderecoCep
 ) {}

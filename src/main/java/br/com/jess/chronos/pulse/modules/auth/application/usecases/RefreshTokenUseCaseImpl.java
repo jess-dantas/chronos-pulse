@@ -4,15 +4,23 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.RefreshTokenUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
+
+import java.util.Collections;
+import java.util.List;
 
 public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
 
     private final CpcUsuarioRepositoryPort repositoryPort;
     private final JwtService jwtService;
+    private final ModulosPort modulosPort;
 
-    public RefreshTokenUseCaseImpl(CpcUsuarioRepositoryPort repositoryPort, JwtService jwtService) {
+    public RefreshTokenUseCaseImpl(CpcUsuarioRepositoryPort repositoryPort,
+                                   JwtService jwtService,
+                                   ModulosPort modulosPort) {
         this.repositoryPort = repositoryPort;
         this.jwtService = jwtService;
+        this.modulosPort = modulosPort;
     }
 
     @Override
@@ -34,6 +42,9 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
                 usuario.getCpcId().toString(), tenantId, usuario.isAcessoEstoque());
+        List<String> modulos = usuario.getTenantId() != null
+                ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
+                : Collections.emptyList();
 
         return new Resultado(
                 accessToken,
@@ -42,6 +53,8 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
                 usuario.getNome(),
                 usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
                 tenantId,
-                usuario.isAcessoEstoque());
+                usuario.isAcessoEstoque(),
+                usuario.getFoto(),
+                modulos);
     }
 }

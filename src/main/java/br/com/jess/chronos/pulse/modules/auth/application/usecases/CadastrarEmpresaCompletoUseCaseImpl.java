@@ -9,10 +9,13 @@ import br.com.jess.chronos.pulse.modules.colaborador.domain.model.Colaborador;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.ColaboradorRepositoryPort;
 import br.com.jess.chronos.pulse.modules.empresa.domain.model.Empresa;
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.shared.util.CnpjValidator;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 
 public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaCompletoUseCase {
 
@@ -21,18 +24,21 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
     private final ColaboradorRepositoryPort colaboradorRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final ModulosPort modulosPort;
 
     public CadastrarEmpresaCompletoUseCaseImpl(
             EmpresaRepositoryPort empresaRepository,
             CpcUsuarioRepositoryPort usuarioRepository,
             ColaboradorRepositoryPort colaboradorRepository,
             JwtService jwtService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            ModulosPort modulosPort) {
         this.empresaRepository = empresaRepository;
         this.usuarioRepository = usuarioRepository;
         this.colaboradorRepository = colaboradorRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.modulosPort = modulosPort;
     }
 
     @Override
@@ -51,7 +57,11 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
         Empresa empresa = empresaRepository.salvar(new Empresa(
                 null, cnpj, comando.nomeEmpresa(),
                 comando.responsavelNome(), comando.responsavelCpf(),
-                comando.responsavelEmail(), comando.responsavelCelular()));
+                comando.responsavelEmail(), comando.responsavelCelular(),
+                comando.responsavelTelefone(), comando.enderecoLogradouro(),
+                comando.enderecoNumero(), comando.enderecoComplemento(),
+                comando.enderecoBairro(), comando.enderecoCidade(),
+                comando.enderecoUf(), comando.enderecoCep()));
 
         CpcUsuario usuario = usuarioRepository.salvar(new CpcUsuario(
                 null, null, comando.responsavelCpf(), comando.responsavelNome(),
@@ -64,11 +74,15 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
                 null, "Administrador", "Administração",
                 null, LocalDate.now(), null));
 
+        modulosPort.ativarModulosPadrao(empresa.getId());
+
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
                 usuario.getCpcId().toString(),
                 empresa.getId().toString(), usuario.isAcessoEstoque());
         String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
+
+        List<String> modulos = modulosPort.listarCodigosAtivos(empresa.getId());
 
         return new Resultado(
                 accessToken, refreshToken,
@@ -77,6 +91,8 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
                 usuario.getNome(),
                 usuario.getEmailCorporativo(),
                 empresa.getId().toString(),
-                usuario.isAcessoEstoque());
+                usuario.isAcessoEstoque(),
+                usuario.getFoto(),
+                modulos);
     }
 }

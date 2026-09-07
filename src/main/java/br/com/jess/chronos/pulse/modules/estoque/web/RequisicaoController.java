@@ -6,6 +6,7 @@ import br.com.jess.chronos.pulse.modules.estoque.service.RequisicaoService;
 import br.com.jess.chronos.pulse.modules.estoque.web.dto.CriarRequisicaoDTO;
 import br.com.jess.chronos.pulse.modules.estoque.web.dto.RequisicaoResponseDTO;
 import jakarta.validation.Valid;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/estoque/requisicoes")
 @RequiredArgsConstructor
+@RequiresModulo(codigo = "ESTOQUE")
 public class RequisicaoController {
 
     private final RequisicaoService requisicaoService;
