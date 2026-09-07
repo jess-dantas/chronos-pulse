@@ -66,9 +66,12 @@ public class AuthController {
                 new AutenticarUsuarioUseCase.Comando(request.cpf(), request.senha()));
         return ResponseEntity.ok(new LoginResponseDTO(
                 resultado.accessToken(), resultado.refreshToken(),
-                resultado.role(), resultado.cpcId(),
+                resultado.role(), resultado.cpf(),
+                resultado.cpcId(),
                 resultado.nome(), resultado.email(),
                 resultado.tenantId(), resultado.acessoEstoque(),
+                resultado.acessoPatrimonio(), resultado.acessoFrota(),
+                resultado.acessoProtocolo(),
                 resultado.foto(), resultado.modulos()));
     }
 
@@ -85,11 +88,14 @@ public class AuthController {
                         request.enderecoComplemento(), request.enderecoBairro(),
                         request.enderecoCidade(), request.enderecoUf(),
                         request.enderecoCep()));
-        return ResponseEntity.ok(new LoginResponseDTO(
+return ResponseEntity.ok(new LoginResponseDTO(
                 resultado.accessToken(), resultado.refreshToken(),
-                resultado.role(), resultado.cpcId(),
+                resultado.role(), request.responsavelCpf(),
+                resultado.cpcId(),
                 resultado.nome(), resultado.email(),
                 resultado.tenantId(), resultado.acessoEstoque(),
+                resultado.acessoPatrimonio(), resultado.acessoFrota(),
+                resultado.acessoProtocolo(),
                 resultado.foto(), resultado.modulos()));
     }
 
@@ -99,9 +105,12 @@ public class AuthController {
                 new RefreshTokenUseCase.Comando(request.refreshToken()));
         return ResponseEntity.ok(new LoginResponseDTO(
                 resultado.accessToken(), null,
-                resultado.role(), resultado.cpcId(),
+                resultado.role(), resultado.cpf(),
+                resultado.cpcId(),
                 resultado.nome(), resultado.email(),
                 resultado.tenantId(), resultado.acessoEstoque(),
+                resultado.acessoPatrimonio(), resultado.acessoFrota(),
+                resultado.acessoProtocolo(),
                 resultado.foto(), resultado.modulos()));
     }
 

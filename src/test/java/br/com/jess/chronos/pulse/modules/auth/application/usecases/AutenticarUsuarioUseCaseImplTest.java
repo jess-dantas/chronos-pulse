@@ -52,7 +52,8 @@ class AutenticarUsuarioUseCaseImplTest {
 
         when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("senha123", "hashSenha")).thenReturn(true);
-        when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", cpcId.toString(), tenantId.toString(), false))
+        when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", cpcId.toString(), tenantId.toString(),
+                false, false, false, false))
                 .thenReturn("access-token");
         when(jwtService.gerarRefreshToken("12345678901")).thenReturn("refresh-token");
         when(modulosPort.listarCodigosAtivos(tenantId)).thenReturn(java.util.List.of("PONTO"));
@@ -62,6 +63,7 @@ class AutenticarUsuarioUseCaseImplTest {
         assertThat(resultado.accessToken()).isEqualTo("access-token");
         assertThat(resultado.refreshToken()).isEqualTo("refresh-token");
         assertThat(resultado.role()).isEqualTo("COLABORADOR");
+        assertThat(resultado.cpf()).isEqualTo("12345678901");
         assertThat(resultado.cpcId()).isEqualTo(cpcId.toString());
         assertThat(resultado.modulos()).containsExactly("PONTO");
     }

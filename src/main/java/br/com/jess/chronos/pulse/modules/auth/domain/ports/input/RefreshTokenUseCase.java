@@ -9,11 +9,15 @@ public interface RefreshTokenUseCase {
     record Resultado(
             String accessToken,
             String role,
+            String cpf,
             String cpcId,
             String nome,
             String email,
             String tenantId,
             boolean acessoEstoque,
+            boolean acessoPatrimonio,
+            boolean acessoFrota,
+            boolean acessoProtocolo,
             String foto,
             List<String> modulos
     ) {}

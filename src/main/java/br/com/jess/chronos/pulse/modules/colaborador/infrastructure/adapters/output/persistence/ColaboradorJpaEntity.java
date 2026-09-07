@@ -16,6 +16,7 @@ public class ColaboradorJpaEntity {
     private String departamento;
     @Column(name = "data_nascimento") private LocalDate dataNascimento;
     @Column(name = "data_admissao", nullable = false) private LocalDate dataAdmissao;
+    @Column(name = "data_desligamento") private LocalDate dataDesligamento;
     @Column(name = "configuracao_jornada_id") private UUID configuracaoJornadaId;
     private boolean ativo;
 
@@ -35,6 +36,8 @@ public class ColaboradorJpaEntity {
     public void setDataNascimento(LocalDate dataNascimento) { this.dataNascimento = dataNascimento; }
     public LocalDate getDataAdmissao() { return dataAdmissao; }
     public void setDataAdmissao(LocalDate dataAdmissao) { this.dataAdmissao = dataAdmissao; }
+    public LocalDate getDataDesligamento() { return dataDesligamento; }
+    public void setDataDesligamento(LocalDate dataDesligamento) { this.dataDesligamento = dataDesligamento; }
     public UUID getConfiguracaoJornadaId() { return configuracaoJornadaId; }
     public void setConfiguracaoJornadaId(UUID configuracaoJornadaId) { this.configuracaoJornadaId = configuracaoJornadaId; }
     public boolean isAtivo() { return ativo; }

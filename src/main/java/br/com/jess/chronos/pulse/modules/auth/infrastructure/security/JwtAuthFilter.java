@@ -53,6 +53,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
                 authorities.add(new SimpleGrantedAuthority("ROLE_ESTOQUE"));
             }
+            if (usuario.isAcessoPatrimonio() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_PATRIMONIO"));
+            }
+            if (usuario.isAcessoFrota() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_FROTA"));
+            }
+            if (usuario.isAcessoProtocolo() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_PROTOCOLO"));
+            }
             var auth = new UsernamePasswordAuthenticationToken(usuario, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
         });

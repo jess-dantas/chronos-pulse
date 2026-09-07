@@ -43,7 +43,9 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
         String tenantId = usuario.getTenantId() != null ? usuario.getTenantId().toString() : null;
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
-                usuario.getCpcId().toString(), tenantId, usuario.isAcessoEstoque());
+                usuario.getCpcId().toString(), tenantId,
+                usuario.isAcessoEstoque(), usuario.isAcessoPatrimonio(),
+                usuario.isAcessoFrota(), usuario.isAcessoProtocolo());
         String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
         List<String> modulos = usuario.getTenantId() != null
                 ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
@@ -53,11 +55,15 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
                 accessToken,
                 refreshToken,
                 usuario.getRole().name(),
+                usuario.getCpf(),
                 usuario.getCpcId().toString(),
                 usuario.getNome(),
                 usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
                 tenantId,
                 usuario.isAcessoEstoque(),
+                usuario.isAcessoPatrimonio(),
+                usuario.isAcessoFrota(),
+                usuario.isAcessoProtocolo(),
                 usuario.getFoto(),
                 modulos
         );

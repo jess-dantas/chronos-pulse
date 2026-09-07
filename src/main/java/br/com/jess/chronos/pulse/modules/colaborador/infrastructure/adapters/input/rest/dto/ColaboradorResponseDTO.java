@@ -9,9 +9,12 @@ public record ColaboradorResponseDTO(
         String matricula,
         String cargo,
         String departamento,
-        boolean acessoEstoque
+        boolean acessoEstoque,
+        boolean acessoPatrimonio,
+        boolean acessoFrota,
+        boolean acessoProtocolo
 ) {
     public ColaboradorResponseDTO(UUID id, UUID cpcUsuarioId, UUID tenantId, String matricula, String cargo, String departamento) {
-        this(id, cpcUsuarioId, tenantId, matricula, cargo, departamento, false);
+        this(id, cpcUsuarioId, tenantId, matricula, cargo, departamento, false, false, false, false);
     }
 }

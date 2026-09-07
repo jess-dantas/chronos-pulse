@@ -18,6 +18,9 @@ public class CpcUsuario {
     private final Role role;
     private final UUID tenantId;
     private final boolean acessoEstoque;
+    private final boolean acessoPatrimonio;
+    private final boolean acessoFrota;
+    private final boolean acessoProtocolo;
     private final boolean ativo;
     private final Instant criadoEm;
 
@@ -34,6 +37,15 @@ public class CpcUsuario {
 
     public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
                       String senhaHash, Role role, UUID tenantId, boolean acessoEstoque, String foto) {
+        this(id, cpcId, cpf, nome, emailCorporativo, senhaHash, role, tenantId,
+                acessoEstoque, false, false, false, foto);
+    }
+
+    public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
+                      String senhaHash, Role role, UUID tenantId,
+                      boolean acessoEstoque, boolean acessoPatrimonio,
+                      boolean acessoFrota, boolean acessoProtocolo, String foto) {
+        boolean admin = role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA || role == Role.GESTOR_RH;
         this.id = id != null ? id : UUID.randomUUID();
         this.cpcId = cpcId != null ? cpcId : UUID.randomUUID();
         this.cpf = cpf;
@@ -42,7 +54,10 @@ public class CpcUsuario {
         this.senhaHash = senhaHash;
         this.role = role;
         this.tenantId = tenantId;
-        this.acessoEstoque = (role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA || role == Role.GESTOR_RH) || acessoEstoque;
+        this.acessoEstoque = admin || acessoEstoque;
+        this.acessoPatrimonio = admin || acessoPatrimonio;
+        this.acessoFrota = admin || acessoFrota;
+        this.acessoProtocolo = admin || acessoProtocolo;
         this.foto = foto;
         this.ativo = true;
         this.criadoEm = Instant.now();
@@ -60,7 +75,8 @@ public class CpcUsuario {
 
     public CpcUsuario comSenha(String novaSenhaHash) {
         CpcUsuario copia = new CpcUsuario(id, cpcId, cpf, nome, emailCorporativo,
-                novaSenhaHash, role, tenantId, acessoEstoque, foto);
+                novaSenhaHash, role, tenantId,
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo, foto);
         copia.emailPessoal = this.emailPessoal;
         copia.apelido = this.apelido;
         copia.celular = this.celular;
@@ -69,7 +85,8 @@ public class CpcUsuario {
 
     public CpcUsuario comFoto(String novaFoto) {
         CpcUsuario copia = new CpcUsuario(id, cpcId, cpf, nome, emailCorporativo,
-                senhaHash, role, tenantId, acessoEstoque, novaFoto);
+                senhaHash, role, tenantId,
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo, novaFoto);
         copia.emailPessoal = this.emailPessoal;
         copia.apelido = this.apelido;
         copia.celular = this.celular;
@@ -89,6 +106,9 @@ public class CpcUsuario {
     public Role getRole() { return role; }
     public UUID getTenantId() { return tenantId; }
     public boolean isAcessoEstoque() { return acessoEstoque; }
+    public boolean isAcessoPatrimonio() { return acessoPatrimonio; }
+    public boolean isAcessoFrota() { return acessoFrota; }
+    public boolean isAcessoProtocolo() { return acessoProtocolo; }
     public boolean isAtivo() { return ativo; }
     public Instant getCriadoEm() { return criadoEm; }
 }

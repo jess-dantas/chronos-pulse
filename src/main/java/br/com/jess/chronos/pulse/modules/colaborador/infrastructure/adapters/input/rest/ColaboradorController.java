@@ -50,17 +50,21 @@ public class ColaboradorController {
         }
 
         boolean acessoEstoque = Boolean.TRUE.equals(request.acessoEstoque());
+        boolean acessoPatrimonio = Boolean.TRUE.equals(request.acessoPatrimonio());
+        boolean acessoFrota = Boolean.TRUE.equals(request.acessoFrota());
+        boolean acessoProtocolo = Boolean.TRUE.equals(request.acessoProtocolo());
 
         var colaborador = cadastrarColaboradorUseCase.executar(new CadastrarColaboradorUseCase.Comando(
                 request.cpf(), request.nome(), request.emailCorporativo(), request.senha(),
                 request.matricula(), request.cargo(), request.departamento(),
-                request.dataNascimento(), request.dataAdmissao(),
-                tenantId, request.configuracaoJornadaId(), acessoEstoque));
+                request.dataNascimento(), request.dataAdmissao(), request.dataDesligamento(),
+                tenantId, request.configuracaoJornadaId(),
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo));
 
         return ResponseEntity.ok(new ColaboradorResponseDTO(
                 colaborador.getId(), colaborador.getCpcUsuarioId(), colaborador.getTenantId(),
                 colaborador.getMatricula(), colaborador.getCargo(), colaborador.getDepartamento(),
-                acessoEstoque));
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo));
     }
 
     @GetMapping
@@ -86,8 +90,11 @@ public class ColaboradorController {
         atualizarColaboradorUseCase.executar(new AtualizarColaboradorUseCase.Comando(
                 id, request.nome(), request.emailCorporativo(),
                 request.matricula(), request.cargo(), request.departamento(),
-                request.dataNascimento(), request.dataAdmissao(),
-                Boolean.TRUE.equals(request.acessoEstoque())));
+                request.dataNascimento(), request.dataAdmissao(), request.dataDesligamento(),
+                Boolean.TRUE.equals(request.acessoEstoque()),
+                Boolean.TRUE.equals(request.acessoPatrimonio()),
+                Boolean.TRUE.equals(request.acessoFrota()),
+                Boolean.TRUE.equals(request.acessoProtocolo())));
 
         return ResponseEntity.ok(Map.of("mensagem", "Colaborador atualizado com sucesso"));
     }

@@ -21,7 +21,7 @@ public class Empresa {
     private String enderecoUf;
     private String enderecoCep;
     private boolean ativo;
-    private final Instant criadoEm;
+    private Instant criadoEm;
 
     public Empresa(UUID id, String cnpj, String nome) {
         this(id, cnpj, nome, null, null, null, null);
@@ -74,4 +74,16 @@ public class Empresa {
     public String getEnderecoCep() { return enderecoCep; }
     public boolean isAtivo() { return ativo; }
     public Instant getCriadoEm() { return criadoEm; }
+
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    public void setCriadoEm(Instant criadoEm) { this.criadoEm = criadoEm; }
+
+    public void atualizar(String nome, Boolean ativo) {
+        if (nome != null && !nome.isBlank()) {
+            this.nome = nome;
+        }
+        if (ativo != null) {
+            this.ativo = ativo;
+        }
+    }
 }

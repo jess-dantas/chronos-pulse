@@ -1,7 +1,9 @@
 package br.com.jess.chronos.pulse.modules.empresa.infrastructure.adapters.output.persistence;
 
 import br.com.jess.chronos.pulse.modules.empresa.domain.model.Empresa;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ObjectFactory;
 
 @Mapper(componentModel = "spring")
@@ -20,5 +22,11 @@ public interface EmpresaMapper {
                 e.getEnderecoNumero(), e.getEnderecoComplemento(),
                 e.getEnderecoBairro(), e.getEnderecoCidade(),
                 e.getEnderecoUf(), e.getEnderecoCep());
+    }
+
+    @AfterMapping
+    default void aplicarEstado(EmpresaJpaEntity entity, @MappingTarget Empresa model) {
+        model.setAtivo(entity.isAtivo());
+        model.setCriadoEm(entity.getCriadoEm());
     }
 }

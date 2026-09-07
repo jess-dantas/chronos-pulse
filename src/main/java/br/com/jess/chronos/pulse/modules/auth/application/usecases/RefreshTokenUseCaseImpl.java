@@ -41,7 +41,9 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
         String tenantId = usuario.getTenantId() != null ? usuario.getTenantId().toString() : null;
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
-                usuario.getCpcId().toString(), tenantId, usuario.isAcessoEstoque());
+                usuario.getCpcId().toString(), tenantId,
+                usuario.isAcessoEstoque(), usuario.isAcessoPatrimonio(),
+                usuario.isAcessoFrota(), usuario.isAcessoProtocolo());
         List<String> modulos = usuario.getTenantId() != null
                 ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
                 : Collections.emptyList();
@@ -49,11 +51,15 @@ public class RefreshTokenUseCaseImpl implements RefreshTokenUseCase {
         return new Resultado(
                 accessToken,
                 usuario.getRole().name(),
+                usuario.getCpf(),
                 usuario.getCpcId().toString(),
                 usuario.getNome(),
                 usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
                 tenantId,
                 usuario.isAcessoEstoque(),
+                usuario.isAcessoPatrimonio(),
+                usuario.isAcessoFrota(),
+                usuario.isAcessoProtocolo(),
                 usuario.getFoto(),
                 modulos);
     }

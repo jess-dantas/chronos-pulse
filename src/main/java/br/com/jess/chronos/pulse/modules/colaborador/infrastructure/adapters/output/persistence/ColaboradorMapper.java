@@ -15,6 +15,7 @@ public interface ColaboradorMapper {
     default Colaborador criarColaborador(ColaboradorJpaEntity e) {
         return new Colaborador(e.getId(), e.getCpcUsuarioId(), e.getTenantId(),
                 e.getMatricula(), e.getCargo(), e.getDepartamento(),
-                e.getDataNascimento(), e.getDataAdmissao(), e.getConfiguracaoJornadaId());
+                e.getDataNascimento(), e.getDataAdmissao(), e.getConfiguracaoJornadaId(),
+                e.getDataDesligamento());
     }
 }
