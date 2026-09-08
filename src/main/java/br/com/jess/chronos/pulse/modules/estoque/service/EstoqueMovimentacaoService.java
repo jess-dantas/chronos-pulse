@@ -38,6 +38,20 @@ public class EstoqueMovimentacaoService {
 
         String lote = dto.lote() != null && !dto.lote().isBlank() ? dto.lote().trim() : null;
 
+        boolean perecivel = Boolean.TRUE.equals(material.getControlaLoteValidade());
+        if (perecivel && (lote == null || dto.dataValidade() == null)) {
+            throw new IllegalArgumentException(
+                    "Material perecível com rastreabilidade por lote: informe lote e data de validade na entrada");
+        }
+
+        String tipoTermo = dto.tipoTermo() != null && !dto.tipoTermo().isBlank()
+                ? dto.tipoTermo().trim().toUpperCase() : "DEFINITIVO";
+        String numeroTermo = dto.numeroTermo() != null && !dto.numeroTermo().isBlank()
+                ? dto.numeroTermo().trim() : null;
+        if ("PROVISORIO".equals(tipoTermo) && numeroTermo == null) {
+            throw new IllegalArgumentException("Número do termo é obrigatório para recebimento provisório");
+        }
+
         EstoqueSaldo saldo = saldoRepository.findByTenantIdAndAlmoxarifadoIdAndMaterialIdAndLote(
                         tenantId, dto.almoxarifadoId(), dto.materialId(), lote)
                 .orElseGet(() -> EstoqueSaldo.builder()
@@ -80,6 +94,8 @@ public class EstoqueMovimentacaoService {
                 .lote(lote)
                 .dataValidade(dto.dataValidade())
                 .documentoReferencia(dto.documentoReferencia())
+                .tipoTermo(tipoTermo)
+                .numeroTermo(numeroTermo)
                 .usuarioCpcId(usuarioCpcId)
                 .build();
 
@@ -95,6 +111,9 @@ public class EstoqueMovimentacaoService {
                 .orElseThrow(() -> new IllegalArgumentException("Material não encontrado"));
 
         String lote = dto.lote() != null && !dto.lote().isBlank() ? dto.lote().trim() : null;
+
+        String motivoBaixa = dto.motivoBaixa() != null && !dto.motivoBaixa().isBlank()
+                ? dto.motivoBaixa().trim().toUpperCase() : "USO";
 
         // Busca o saldo atual do material/lote
         EstoqueSaldo saldo = saldoRepository.findByTenantIdAndAlmoxarifadoIdAndMaterialIdAndLote(
@@ -116,18 +135,31 @@ public class EstoqueMovimentacaoService {
         saldo.setQuantidadeAtual(novaQuantidade);
         saldoRepository.save(saldo);
 
-        // Registro da movimentação auditável de saída
+        // Provisão para perdas (MCASP): baixas por vencimento/obsolescência/avaria
+        // geram movimentação própria para apuração do valor reconhecido como perda.
+        String tipoMovimento = switch (motivoBaixa) {
+            case "VENCIMENTO" -> "SAIDA_PERDA_VENCIMENTO";
+            case "OBSOLESCENCIA" -> "SAIDA_PERDA_OBSOLESCENCIA";
+            case "PERDA" -> "SAIDA_PERDA";
+            case "QUEBRA" -> "SAIDA_QUEBRA";
+            case "OUTROS" -> "SAIDA_OUTROS";
+            default -> "SAIDA_REQUISICAO";
+        };
+
         EstoqueMovimentacao movimentacao = EstoqueMovimentacao.builder()
                 .tenantId(tenantId)
                 .almoxarifado(almoxarifado)
                 .material(material)
-                .tipoMovimento("SAIDA_REQUISICAO")
+                .tipoMovimento(tipoMovimento)
                 .quantidade(dto.quantidade())
                 .valorUnitario(custoMedioAtual)
                 .valorTotal(valorTotalSaida)
                 .lote(lote)
                 .dataValidade(saldo.getDataValidade())
                 .documentoReferencia(dto.documentoReferencia())
+                .motivoBaixa(motivoBaixa)
+                .observacao(dto.observacao() != null && !dto.observacao().isBlank()
+                        ? dto.observacao().trim() : null)
                 .usuarioCpcId(usuarioCpcId)
                 .build();
 

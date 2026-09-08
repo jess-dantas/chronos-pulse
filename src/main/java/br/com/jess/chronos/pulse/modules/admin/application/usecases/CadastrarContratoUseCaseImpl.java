@@ -41,7 +41,11 @@ public class CadastrarContratoUseCaseImpl implements CadastrarContratoUseCase {
                 comando.valorMensal(),
                 comando.valorTotal(),
                 "ATIVO",
-                comando.observacoes()
+                comando.observacoes(),
+                comando.valorEmpenhado(),
+                comando.valorLiquidado(),
+                comando.empenhoNumero(),
+                comando.vencimentoAvisoDias()
         );
 
         return contratoRepositoryPort.salvar(contrato);

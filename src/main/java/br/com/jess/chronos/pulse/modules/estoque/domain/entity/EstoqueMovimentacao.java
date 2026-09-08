@@ -52,6 +52,18 @@ public class EstoqueMovimentacao {
     @Column(name = "documento_referencia", length = 100)
     private String documentoReferencia;
 
+    @Column(name = "tipo_termo", length = 20)
+    private String tipoTermo;
+
+    @Column(name = "numero_termo", length = 30)
+    private String numeroTermo;
+
+    @Column(name = "motivo_baixa", length = 30)
+    private String motivoBaixa;
+
+    @Column(length = 255)
+    private String observacao;
+
     @Column(name = "usuario_cpc_id", nullable = false)
     private UUID usuarioCpcId;
 

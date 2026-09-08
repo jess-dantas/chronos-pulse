@@ -15,6 +15,7 @@ public interface ContratoMapper {
     default Contrato criarContrato(ContratoJpaEntity e) {
         return new Contrato(e.getId(), e.getTenantId(), e.getNumero(), e.getObjeto(),
                 e.getDataInicio(), e.getDataFim(), e.getValorMensal(), e.getValorTotal(),
-                e.getStatus(), e.getObservacoes());
+                e.getStatus(), e.getObservacoes(), e.getValorEmpenhado(), e.getValorLiquidado(),
+                e.getEmpenhoNumero(), e.getVencimentoAvisoDias());
     }
 }
