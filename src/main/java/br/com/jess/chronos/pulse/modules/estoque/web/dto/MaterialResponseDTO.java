@@ -8,6 +8,7 @@ public record MaterialResponseDTO(
         UUID grupoId,
         String grupoNome,
         String codigoCatmat,
+        String codigoBarras,
         String descricao,
         String unidadeMedida,
         BigDecimal estoqueMinimo,

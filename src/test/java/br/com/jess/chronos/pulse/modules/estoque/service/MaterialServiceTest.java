@@ -72,7 +72,8 @@ class MaterialServiceTest {
                 "Grampeador 26/6",
                 "UN",
                 new BigDecimal("5.000"),
-                false
+                false,
+                "7890000000001"
         );
 
         MaterialResponseDTO response = materialService.cadastrarMaterial(dto, tenantId);
@@ -80,6 +81,7 @@ class MaterialServiceTest {
         assertNotNull(response.id());
         assertEquals("Grampeador 26/6", response.descricao());
         assertEquals("UN", response.unidadeMedida());
+        assertEquals("7890000000001", response.codigoBarras());
         assertEquals(grupo.getId(), response.grupoId());
     }
 

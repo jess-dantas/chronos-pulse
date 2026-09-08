@@ -20,5 +20,9 @@ public record SaidaMaterialDTO(
         @NotBlank(message = "Documento de referência ou número da requisição é obrigatório")
         String documentoReferencia,
 
-        String observacao
+        String observacao,
+
+        @Pattern(regexp = "USO|VENCIMENTO|OBSOLESCENCIA|PERDA|QUEBRA|OUTROS",
+                message = "Motivo de baixa inválido")
+        String motivoBaixa
 ) {}

@@ -100,7 +100,8 @@ public class RequisicaoService {
                     item.getQuantidadeSolicitada(),
                     null, // lote se genérico
                     "REQ-" + requisicao.getId().toString().substring(0, 8),
-                    "Atendimento da Requisição " + requisicao.getId()
+                    "Atendimento da Requisição " + requisicao.getId(),
+                    null // motivo: USO (padrão)
             );
 
             estoqueMovimentacaoService.registrarSaida(saidaDTO, tenantId, atendenteCpcId);

@@ -33,6 +33,11 @@ public class AdminModuleConfig {
     }
 
     @Bean
+    public AtualizarSaldoContratoUseCase atualizarSaldoContratoUseCase(ContratoRepositoryPort repositoryPort) {
+        return new AtualizarSaldoContratoUseCaseImpl(repositoryPort);
+    }
+
+    @Bean
     public DashboardMetricsUseCase dashboardMetricsUseCase(ContratoRepositoryPort repositoryPort) {
         return new DashboardMetricsUseCaseImpl(repositoryPort);
     }

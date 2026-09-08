@@ -24,5 +24,10 @@ public record EntradaMaterialDTO(
         LocalDate dataValidade,
 
         @NotBlank(message = "Documento de referência é obrigatório")
-        String documentoReferencia
+        String documentoReferencia,
+
+        @Pattern(regexp = "PROVISORIO|DEFINITIVO", message = "Tipo de termo deve ser PROVISORIO ou DEFINITIVO")
+        String tipoTermo,
+
+        String numeroTermo
 ) {}

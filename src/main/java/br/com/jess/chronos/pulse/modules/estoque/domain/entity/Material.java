@@ -29,6 +29,9 @@ public class Material {
     @Column(name = "codigo_catmat", length = 20)
     private String codigoCatmat;
 
+    @Column(name = "codigo_barras", length = 32)
+    private String codigoBarras;
+
     @Column(nullable = false)
     private String descricao;
 

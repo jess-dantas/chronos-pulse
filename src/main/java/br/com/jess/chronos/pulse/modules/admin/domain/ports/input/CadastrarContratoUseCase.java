@@ -14,7 +14,11 @@ public interface CadastrarContratoUseCase {
         LocalDate dataFim,
         BigDecimal valorMensal,
         BigDecimal valorTotal,
-        String observacoes
+        String observacoes,
+        BigDecimal valorEmpenhado,
+        BigDecimal valorLiquidado,
+        String empenhoNumero,
+        Integer vencimentoAvisoDias
     ) {}
     Contrato executar(Comando comando);
 }

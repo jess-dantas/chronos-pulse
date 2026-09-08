@@ -20,6 +20,10 @@ public class ContratoJpaEntity {
     @Column(name = "valor_total", nullable = false) private BigDecimal valorTotal;
     @Column(nullable = false) private String status;
     private String observacoes;
+    @Column(name = "valor_empenhado", nullable = false) private BigDecimal valorEmpenhado;
+    @Column(name = "valor_liquidado", nullable = false) private BigDecimal valorLiquidado;
+    @Column(name = "empenho_numero") private String empenhoNumero;
+    @Column(name = "vencimento_aviso_dias", nullable = false) private int vencimentoAvisoDias;
     @Column(name = "criado_em", nullable = false) private Instant criadoEm;
     @Column(name = "atualizado_em", nullable = false) private Instant atualizadoEm;
 
@@ -43,6 +47,14 @@ public class ContratoJpaEntity {
     public void setStatus(String status) { this.status = status; }
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
+    public BigDecimal getValorEmpenhado() { return valorEmpenhado; }
+    public void setValorEmpenhado(BigDecimal valorEmpenhado) { this.valorEmpenhado = valorEmpenhado; }
+    public BigDecimal getValorLiquidado() { return valorLiquidado; }
+    public void setValorLiquidado(BigDecimal valorLiquidado) { this.valorLiquidado = valorLiquidado; }
+    public String getEmpenhoNumero() { return empenhoNumero; }
+    public void setEmpenhoNumero(String empenhoNumero) { this.empenhoNumero = empenhoNumero; }
+    public int getVencimentoAvisoDias() { return vencimentoAvisoDias; }
+    public void setVencimentoAvisoDias(int vencimentoAvisoDias) { this.vencimentoAvisoDias = vencimentoAvisoDias; }
     public Instant getCriadoEm() { return criadoEm; }
     public void setCriadoEm(Instant criadoEm) { this.criadoEm = criadoEm; }
     public Instant getAtualizadoEm() { return atualizadoEm; }

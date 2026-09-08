@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.re
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,5 +16,9 @@ public record CadastrarContratoRequestDTO(
         @NotNull LocalDate dataFim,
         @NotNull BigDecimal valorMensal,
         @NotNull BigDecimal valorTotal,
-        String observacoes
+        String observacoes,
+        BigDecimal valorEmpenhado,
+        BigDecimal valorLiquidado,
+        String empenhoNumero,
+        @PositiveOrZero Integer vencimentoAvisoDias
 ) {}

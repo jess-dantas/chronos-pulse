@@ -19,5 +19,7 @@ public record CadastrarMaterialDTO(
 
         BigDecimal estoqueMinimo,
 
-        Boolean controlaLoteValidade
+        Boolean controlaLoteValidade,
+
+        String codigoBarras
 ) {}

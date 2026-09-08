@@ -106,7 +106,9 @@ class EstoqueMovimentacaoServiceTest {
                 new BigDecimal("16.0000"),
                 "LOTE-01",
                 LocalDate.now().plusMonths(12),
-                "NF-12345"
+                "NF-12345",
+                "DEFINITIVO",
+                "TERMO-001"
         );
 
         movimentacaoService.registrarEntrada(entradaDTO, tenantId, usuarioCpcId);
@@ -123,8 +125,67 @@ class EstoqueMovimentacaoServiceTest {
         EstoqueMovimentacao movSalva = movCaptor.getValue();
 
         assertEquals("ENTRADA_NFE", movSalva.getTipoMovimento());
+        assertEquals("DEFINITIVO", movSalva.getTipoTermo());
+        assertEquals("TERMO-001", movSalva.getNumeroTermo());
         assertEquals(new BigDecimal("50.000"), movSalva.getQuantidade());
         assertEquals(new BigDecimal("800.0000"), movSalva.getValorTotal());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção para entrada de material perecível sem lote e data de validade")
+    void deveLancarExcecaoParaEntradaPerecivelSemLoteOuValidade() {
+        material.setControlaLoteValidade(true);
+        when(almoxarifadoRepository.findByIdAndTenantId(almoxarifado.getId(), tenantId))
+                .thenReturn(Optional.of(almoxarifado));
+        when(materialRepository.findByIdAndTenantId(material.getId(), tenantId))
+                .thenReturn(Optional.of(material));
+
+        EntradaMaterialDTO entradaDTO = new EntradaMaterialDTO(
+                almoxarifado.getId(),
+                material.getId(),
+                new BigDecimal("10.000"),
+                new BigDecimal("5.0000"),
+                null,
+                null,
+                "NF-12346",
+                "DEFINITIVO",
+                null
+        );
+
+        assertThrows(IllegalArgumentException.class, () ->
+                movimentacaoService.registrarEntrada(entradaDTO, tenantId, usuarioCpcId)
+        );
+
+        verify(saldoRepository, never()).save(any());
+        verify(movimentacaoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção para recebimento provisório sem número do termo")
+    void deveLancarExcecaoParaRecebimentoProvisorioSemNumeroTermo() {
+        when(almoxarifadoRepository.findByIdAndTenantId(almoxarifado.getId(), tenantId))
+                .thenReturn(Optional.of(almoxarifado));
+        when(materialRepository.findByIdAndTenantId(material.getId(), tenantId))
+                .thenReturn(Optional.of(material));
+
+        EntradaMaterialDTO entradaDTO = new EntradaMaterialDTO(
+                almoxarifado.getId(),
+                material.getId(),
+                new BigDecimal("10.000"),
+                new BigDecimal("5.0000"),
+                null,
+                null,
+                "TR-440",
+                "PROVISORIO",
+                null
+        );
+
+        assertThrows(IllegalArgumentException.class, () ->
+                movimentacaoService.registrarEntrada(entradaDTO, tenantId, usuarioCpcId)
+        );
+
+        verify(saldoRepository, never()).save(any());
+        verify(movimentacaoRepository, never()).save(any());
     }
 
     @Test
@@ -155,7 +216,8 @@ class EstoqueMovimentacaoServiceTest {
                 new BigDecimal("30.000"),
                 "LOTE-01",
                 "REQ-1001",
-                "Atendimento Secretaria de Saúde"
+                "Atendimento Secretaria de Saúde",
+                "USO"
         );
 
         movimentacaoService.registrarSaida(saidaDTO, tenantId, usuarioCpcId);
@@ -204,7 +266,8 @@ class EstoqueMovimentacaoServiceTest {
                 new BigDecimal("20.000"), // Maior que saldo (10)
                 "LOTE-01",
                 "REQ-1002",
-                "Tentativa inválida"
+                "Tentativa inválida",
+                "USO"
         );
 
         assertThrows(IllegalArgumentException.class, () ->
@@ -213,5 +276,54 @@ class EstoqueMovimentacaoServiceTest {
 
         verify(saldoRepository, never()).save(any());
         verify(movimentacaoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve registrar saída por vencimento como provisão para perdas (MCASP)")
+    void deveRegistrarSaidaPorVencimentoComoPerda() {
+        when(almoxarifadoRepository.findByIdAndTenantId(almoxarifado.getId(), tenantId))
+                .thenReturn(Optional.of(almoxarifado));
+        when(materialRepository.findByIdAndTenantId(material.getId(), tenantId))
+                .thenReturn(Optional.of(material));
+
+        EstoqueSaldo saldoExistente = EstoqueSaldo.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .almoxarifado(almoxarifado)
+                .material(material)
+                .lote("LOTE-02")
+                .quantidadeAtual(new BigDecimal("40.000"))
+                .custoMedioUnitario(new BigDecimal("8.0000"))
+                .dataValidade(LocalDate.now().minusDays(1))
+                .build();
+
+        when(saldoRepository.findByTenantIdAndAlmoxarifadoIdAndMaterialIdAndLote(
+                tenantId, almoxarifado.getId(), material.getId(), "LOTE-02"))
+                .thenReturn(Optional.of(saldoExistente));
+
+        SaidaMaterialDTO saidaDTO = new SaidaMaterialDTO(
+                almoxarifado.getId(),
+                material.getId(),
+                new BigDecimal("40.000"),
+                "LOTE-02",
+                "TR-77",
+                "Medicamento vencido descartado conforme protocolo",
+                "VENCIMENTO"
+        );
+
+        movimentacaoService.registrarSaida(saidaDTO, tenantId, usuarioCpcId);
+
+        ArgumentCaptor<EstoqueMovimentacao> movCaptor = ArgumentCaptor.forClass(EstoqueMovimentacao.class);
+        verify(movimentacaoRepository).save(movCaptor.capture());
+        EstoqueMovimentacao movSalva = movCaptor.getValue();
+
+        assertEquals("SAIDA_PERDA_VENCIMENTO", movSalva.getTipoMovimento());
+        assertEquals("VENCIMENTO", movSalva.getMotivoBaixa());
+        assertEquals("Medicamento vencido descartado conforme protocolo", movSalva.getObservacao());
+        assertEquals(new BigDecimal("320.0000"), movSalva.getValorTotal());
+
+        ArgumentCaptor<EstoqueSaldo> saldoCaptor = ArgumentCaptor.forClass(EstoqueSaldo.class);
+        verify(saldoRepository).save(saldoCaptor.capture());
+        assertEquals(new BigDecimal("0.000"), saldoCaptor.getValue().getQuantidadeAtual());
     }
 }

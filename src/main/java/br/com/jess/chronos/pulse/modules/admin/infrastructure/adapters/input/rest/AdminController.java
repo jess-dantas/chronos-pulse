@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest;
 
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AdicionarEventoContratoUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AtualizarSaldoContratoUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.CadastrarContratoUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.DashboardMetricsUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.ListarContratosUseCase;
@@ -30,6 +31,7 @@ public class AdminController {
 
     private final CadastrarContratoUseCase cadastrarContratoUseCase;
     private final ListarContratosUseCase listarContratosUseCase;
+    private final AtualizarSaldoContratoUseCase atualizarSaldoContratoUseCase;
     private final AdicionarEventoContratoUseCase adicionarEventoContratoUseCase;
     private final ListarEventosContratoUseCase listarEventosContratoUseCase;
     private final DashboardMetricsUseCase dashboardMetricsUseCase;
@@ -41,6 +43,7 @@ public class AdminController {
     public AdminController(
             CadastrarContratoUseCase cadastrarContratoUseCase,
             ListarContratosUseCase listarContratosUseCase,
+            AtualizarSaldoContratoUseCase atualizarSaldoContratoUseCase,
             AdicionarEventoContratoUseCase adicionarEventoContratoUseCase,
             ListarEventosContratoUseCase listarEventosContratoUseCase,
             DashboardMetricsUseCase dashboardMetricsUseCase,
@@ -50,6 +53,7 @@ public class AdminController {
             AuditoriaService auditoriaService) {
         this.cadastrarContratoUseCase = cadastrarContratoUseCase;
         this.listarContratosUseCase = listarContratosUseCase;
+        this.atualizarSaldoContratoUseCase = atualizarSaldoContratoUseCase;
         this.adicionarEventoContratoUseCase = adicionarEventoContratoUseCase;
         this.listarEventosContratoUseCase = listarEventosContratoUseCase;
         this.dashboardMetricsUseCase = dashboardMetricsUseCase;
@@ -97,13 +101,39 @@ public class AdminController {
                 request.dataFim(),
                 request.valorMensal(),
                 request.valorTotal(),
-                request.observacoes()
+                request.observacoes(),
+                request.valorEmpenhado(),
+                request.valorLiquidado(),
+                request.empenhoNumero(),
+                request.vencimentoAvisoDias()
         ));
         auditoriaService.registrar("CADASTRO", "CONTRATO", contrato.getId(),
                 "Cadastro de contrato " + request.numero(),
                 request.tenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
                 usuarioLogado.getRole().name(), null, null, null);
         return ResponseEntity.ok(ContratoResponseDTO.fromDomain(contrato));
+    }
+
+    @PatchMapping("/contratos/{contratoId}/saldo")
+    public ResponseEntity<ContratoResponseDTO> atualizarSaldoContrato(
+            @PathVariable UUID contratoId,
+            @RequestBody @Valid AtualizarSaldoContratoRequestDTO request,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+        var contrato = atualizarSaldoContratoUseCase.executar(new AtualizarSaldoContratoUseCase.Comando(
+                contratoId,
+                request.valorEmpenhado(),
+                request.valorLiquidado(),
+                request.empenhoNumero(),
+                request.vencimentoAvisoDias()
+        ));
+        if (contrato.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        auditoriaService.registrar("ATUALIZACAO", "CONTRATO", contrato.get().getId(),
+                "Atualização de empenho/saldo do contrato " + contrato.get().getNumero(),
+                contrato.get().getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole().name(), null, null, null);
+        return ResponseEntity.ok(ContratoResponseDTO.fromDomain(contrato.get()));
     }
 
     @PostMapping("/contratos/eventos")

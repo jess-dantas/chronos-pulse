@@ -35,6 +35,8 @@ public class MaterialService {
                 .tenantId(tenantId)
                 .grupo(grupo)
                 .codigoCatmat(dto.codigoCatmat())
+                .codigoBarras(dto.codigoBarras() != null && !dto.codigoBarras().isBlank()
+                        ? dto.codigoBarras().trim() : null)
                 .descricao(dto.descricao())
                 .unidadeMedida(dto.unidadeMedida().toUpperCase())
                 .estoqueMinimo(dto.estoqueMinimo())
@@ -110,6 +112,7 @@ public class MaterialService {
                 material.getGrupo().getId(),
                 material.getGrupo().getNome(),
                 material.getCodigoCatmat(),
+                material.getCodigoBarras(),
                 material.getDescricao(),
                 material.getUnidadeMedida(),
                 material.getEstoqueMinimo(),

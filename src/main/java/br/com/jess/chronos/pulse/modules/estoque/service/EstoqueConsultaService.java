@@ -40,6 +40,7 @@ public class EstoqueConsultaService {
                     saldo.getMaterial().getId(),
                     saldo.getMaterial().getDescricao(),
                     saldo.getMaterial().getUnidadeMedida(),
+                    saldo.getMaterial().getCodigoBarras(),
                     saldo.getLote(),
                     saldo.getDataValidade(),
                     saldo.getQuantidadeAtual(),

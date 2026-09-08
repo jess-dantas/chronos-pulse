@@ -11,6 +11,7 @@ public record EstoqueSaldoResponseDTO(
         UUID materialId,
         String descricaoMaterial,
         String unidadeMedida,
+        String codigoBarras,
         String lote,
         LocalDate dataValidade,
         BigDecimal quantidadeAtual,
