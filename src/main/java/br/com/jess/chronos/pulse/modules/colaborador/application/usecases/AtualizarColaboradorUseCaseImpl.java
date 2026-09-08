@@ -19,8 +19,11 @@ public class AtualizarColaboradorUseCaseImpl implements AtualizarColaboradorUseC
 
     @Override
     public void executar(Comando comando) {
-        Colaborador colaborador = colaboradorRepository.buscarPorId(comando.colaboradorId())
-                .orElseThrow(() -> new IllegalArgumentException("Colaborador não encontrado"));
+        if (comando.tenantId() == null) {
+            throw new IllegalArgumentException("Tenant ID obrigatório.");
+        }
+        Colaborador colaborador = colaboradorRepository.buscarPorIdETenant(comando.colaboradorId(), comando.tenantId())
+                .orElseThrow(() -> new IllegalArgumentException("Colaborador não encontrado no seu tenant"));
 
         CpcUsuario usuario = usuarioRepository.buscarPorId(colaborador.getCpcUsuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário do colaborador não encontrado"));

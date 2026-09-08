@@ -63,6 +63,45 @@ public class CpcUsuario {
         this.criadoEm = Instant.now();
     }
 
+    /**
+     * Construtor completo usado pela anonimização LGPD (art. 18, VI) para
+     * preservar a identidade da entidade (cpf/hashes) removendo os dados
+     * pessoais extensos e desativando a conta.
+     */
+    public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
+                      String emailPessoal, String apelido, String celular, String foto,
+                      String senhaHash, Role role, UUID tenantId,
+                      boolean acessoEstoque, boolean acessoPatrimonio,
+                      boolean acessoFrota, boolean acessoProtocolo,
+                      boolean ativo, Instant criadoEm) {
+        this.id = id;
+        this.cpcId = cpcId;
+        this.cpf = cpf;
+        this.nome = nome;
+        this.emailCorporativo = emailCorporativo;
+        this.emailPessoal = emailPessoal;
+        this.apelido = apelido;
+        this.celular = celular;
+        this.foto = foto;
+        this.senhaHash = senhaHash;
+        this.role = role;
+        this.tenantId = tenantId;
+        this.acessoEstoque = acessoEstoque;
+        this.acessoPatrimonio = acessoPatrimonio;
+        this.acessoFrota = acessoFrota;
+        this.acessoProtocolo = acessoProtocolo;
+        this.ativo = ativo;
+        this.criadoEm = criadoEm;
+    }
+
+    public CpcUsuario anonimizar() {
+        return new CpcUsuario(id, cpcId, cpf, "Usuário Removido (LGPD)", null,
+                null, null, null, null,
+                senhaHash, role, tenantId,
+                false, false, false, false,
+                false, criadoEm);
+    }
+
     public void atualizarDadosPessoais(String apelido, String celular, String emailPessoal) {
         this.apelido = apelido;
         this.celular = celular;

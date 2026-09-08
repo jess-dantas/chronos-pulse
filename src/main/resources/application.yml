@@ -5,13 +5,15 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   flyway:
     locations: classpath:db/migration
+  jpa:
+    open-in-view: false
 
 server:
   port: ${PORT:8080}
 
 chronos:
   jwt:
-    secret: ${JWT_SECRET:chronos-pulse-secret-key-must-be-at-least-256-bits-long-for-hs256}
+    secret: ${JWT_SECRET}
     expiration-ms: 3600000        # 1 hora (access token)
     refresh-expiration-ms: 28800000  # 8 horas (limite absoluto da sessão)
   cors:

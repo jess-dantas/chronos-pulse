@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest;
 
+import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.notificacao.service.EmailComprovantePontoService;
@@ -23,13 +24,16 @@ public class EspelhoPontoController {
     private final ConsultarEspelhoPontoUseCase consultarEspelhoPontoUseCase;
     private final AjustarPontoManualUseCase ajustarPontoManualUseCase;
     private final EmailComprovantePontoService emailComprovantePontoService;
+    private final AuditoriaService auditoriaService;
 
     public EspelhoPontoController(ConsultarEspelhoPontoUseCase consultarEspelhoPontoUseCase,
                                   AjustarPontoManualUseCase ajustarPontoManualUseCase,
-                                  EmailComprovantePontoService emailComprovantePontoService) {
+                                  EmailComprovantePontoService emailComprovantePontoService,
+                                  AuditoriaService auditoriaService) {
         this.consultarEspelhoPontoUseCase = consultarEspelhoPontoUseCase;
         this.ajustarPontoManualUseCase = ajustarPontoManualUseCase;
         this.emailComprovantePontoService = emailComprovantePontoService;
+        this.auditoriaService = auditoriaService;
     }
 
     @GetMapping("/espelho")
@@ -69,6 +73,11 @@ public class EspelhoPontoController {
                 request.justificativa(),
                 request.observacao()
         ));
+
+        auditoriaService.registrar("AJUSTE_PONTO", "REGISTRO_PONTO", registro.getId(),
+                "Ajuste manual de ponto (" + request.tipoRegistro() + "): " + request.justificativa(),
+                usuarioLogado.getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole().name(), null, null, null);
 
         String email = usuarioLogado.getEmailCorporativo() != null ? usuarioLogado.getEmailCorporativo() : usuarioLogado.getEmailPessoal();
         if (emailComprovantePontoService != null && email != null && !email.isBlank()) {

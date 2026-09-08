@@ -29,6 +29,11 @@ public class ColaboradorRepositoryAdapter implements ColaboradorRepositoryPort {
     }
 
     @Override
+    public Optional<Colaborador> buscarPorIdETenant(UUID id, UUID tenantId) {
+        return jpaRepository.findByIdAndTenantId(id, tenantId).map(mapper::toModel);
+    }
+
+    @Override
     public Optional<Colaborador> buscarPorCpcUsuarioId(UUID cpcUsuarioId) {
         return jpaRepository.findByCpcUsuarioId(cpcUsuarioId).map(mapper::toModel);
     }

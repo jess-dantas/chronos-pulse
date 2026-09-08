@@ -6,6 +6,9 @@ import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.DashboardMetri
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.ListarContratosUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.ListarEventosContratoUseCase;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.*;
+import br.com.jess.chronos.pulse.modules.auditoria.domain.entity.Auditoria;
+import br.com.jess.chronos.pulse.modules.auditoria.repository.AuditoriaRepository;
+import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ListarColaboradoresUseCase;
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
@@ -15,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +35,8 @@ public class AdminController {
     private final DashboardMetricsUseCase dashboardMetricsUseCase;
     private final ListarColaboradoresUseCase listarColaboradoresUseCase;
     private final EmpresaRepositoryPort empresaRepositoryPort;
+    private final AuditoriaRepository auditoriaRepository;
+    private final AuditoriaService auditoriaService;
 
     public AdminController(
             CadastrarContratoUseCase cadastrarContratoUseCase,
@@ -39,7 +45,9 @@ public class AdminController {
             ListarEventosContratoUseCase listarEventosContratoUseCase,
             DashboardMetricsUseCase dashboardMetricsUseCase,
             ListarColaboradoresUseCase listarColaboradoresUseCase,
-            EmpresaRepositoryPort empresaRepositoryPort) {
+            EmpresaRepositoryPort empresaRepositoryPort,
+            AuditoriaRepository auditoriaRepository,
+            AuditoriaService auditoriaService) {
         this.cadastrarContratoUseCase = cadastrarContratoUseCase;
         this.listarContratosUseCase = listarContratosUseCase;
         this.adicionarEventoContratoUseCase = adicionarEventoContratoUseCase;
@@ -47,6 +55,8 @@ public class AdminController {
         this.dashboardMetricsUseCase = dashboardMetricsUseCase;
         this.listarColaboradoresUseCase = listarColaboradoresUseCase;
         this.empresaRepositoryPort = empresaRepositoryPort;
+        this.auditoriaRepository = auditoriaRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @GetMapping("/dashboard")
@@ -77,7 +87,8 @@ public class AdminController {
 
     @PostMapping("/contratos")
     public ResponseEntity<ContratoResponseDTO> cadastrarContrato(
-            @RequestBody @Valid CadastrarContratoRequestDTO request) {
+            @RequestBody @Valid CadastrarContratoRequestDTO request,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
         var contrato = cadastrarContratoUseCase.executar(new CadastrarContratoUseCase.Comando(
                 request.tenantId(),
                 request.numero(),
@@ -88,6 +99,10 @@ public class AdminController {
                 request.valorTotal(),
                 request.observacoes()
         ));
+        auditoriaService.registrar("CADASTRO", "CONTRATO", contrato.getId(),
+                "Cadastro de contrato " + request.numero(),
+                request.tenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole().name(), null, null, null);
         return ResponseEntity.ok(ContratoResponseDTO.fromDomain(contrato));
     }
 
@@ -109,5 +124,33 @@ public class AdminController {
             @PathVariable UUID contratoId) {
         var eventos = listarEventosContratoUseCase.executar(contratoId);
         return ResponseEntity.ok(eventos.stream().map(ContratoEventoResponseDTO::fromDomain).toList());
+    }
+
+    @GetMapping("/auditoria")
+    public ResponseEntity<Map<String, Object>> listarAuditoria(
+            @RequestParam(required = false) UUID tenantId) {
+        List<Auditoria> registros = tenantId != null
+                ? auditoriaRepository.findByEntidade("TENANT", tenantId.toString())
+                : auditoriaRepository.findRecentes(tenantId);
+        List<Map<String, Object>> itens = registros.stream().limit(500).map(a -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", a.getId());
+            item.put("tenantId", a.getTenantId());
+            item.put("usuarioCpf", a.getUsuarioCpf() != null && a.getUsuarioCpf().length() >= 6
+                    ? a.getUsuarioCpf().replaceAll("(?<=^.{3}).(?=.{2}$)", "*") : a.getUsuarioCpf());
+            item.put("papel", a.getPapel());
+            item.put("acao", a.getAcao());
+            item.put("entidade", a.getEntidade());
+            item.put("entidadeId", a.getEntidadeId());
+            item.put("descricao", a.getDescricao());
+            item.put("dataHora", a.getDataHora());
+            item.put("hashRegistro", a.getHashRegistro());
+            item.put("hashAnterior", a.getHashAnterior());
+            return item;
+        }).toList();
+        return ResponseEntity.ok(Map.of(
+                "total", itens.size(),
+                "itens", itens
+        ));
     }
 }

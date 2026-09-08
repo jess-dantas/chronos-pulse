@@ -8,6 +8,7 @@ import java.util.UUID;
 public interface ColaboradorRepositoryPort {
     Colaborador salvar(Colaborador colaborador);
     Optional<Colaborador> buscarPorId(UUID id);
+    Optional<Colaborador> buscarPorIdETenant(UUID id, UUID tenantId);
     Optional<Colaborador> buscarPorCpcUsuarioId(UUID cpcUsuarioId);
     List<Colaborador> listarPorTenant(UUID tenantId);
     List<Colaborador> listarTodos();

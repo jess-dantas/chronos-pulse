@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.colaborador.application.usecases;
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
+import br.com.jess.chronos.pulse.modules.auth.domain.service.PasswordPolicy;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.model.Colaborador;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.CadastrarColaboradorUseCase;
@@ -27,6 +28,11 @@ public class CadastrarColaboradorUseCaseImpl implements CadastrarColaboradorUseC
         if (usuarioRepository.existePorCpf(comando.cpf())) {
             throw new IllegalArgumentException("CPF já cadastrado: " + comando.cpf());
         }
+
+        PasswordPolicy.validar(comando.senha(), Role.COLABORADOR)
+                .ifPresent(mensagem -> {
+                    throw new IllegalArgumentException(mensagem);
+                });
 
         CpcUsuario usuario = usuarioRepository.salvar(new CpcUsuario(
                 null, null, comando.cpf(), comando.nome(), comando.emailCorporativo(),

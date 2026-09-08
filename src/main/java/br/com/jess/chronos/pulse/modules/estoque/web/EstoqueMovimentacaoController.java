@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.estoque.web;
 
+import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.estoque.service.EstoqueMovimentacaoService;
 import br.com.jess.chronos.pulse.modules.estoque.web.dto.EntradaMaterialDTO;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class EstoqueMovimentacaoController {
 
     private final EstoqueMovimentacaoService movimentacaoService;
+    private final AuditoriaService auditoriaService;
 
     @PostMapping("/entrada")
     @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
@@ -33,6 +35,11 @@ public class EstoqueMovimentacaoController {
         UUID usuarioCpcId = usuario.getCpcId();
 
         movimentacaoService.registrarEntrada(dto, tenantId, usuarioCpcId);
+        auditoriaService.registrar("ENTRADA_ESTOQUE", "MOVIMENTACAO", null,
+                "Entrada de " + dto.quantidade() + " do material " + dto.materialId()
+                        + (dto.documentoReferencia() != null ? " (doc " + dto.documentoReferencia() + ")" : ""),
+                tenantId, usuarioCpcId, usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
 
         return ResponseEntity.ok().build();
     }
@@ -48,6 +55,11 @@ public class EstoqueMovimentacaoController {
         UUID usuarioCpcId = usuario.getCpcId();
 
         movimentacaoService.registrarSaida(dto, tenantId, usuarioCpcId);
+        auditoriaService.registrar("SAIDA_ESTOQUE", "MOVIMENTACAO", null,
+                "Saída de " + dto.quantidade() + " do material " + dto.materialId()
+                        + (dto.documentoReferencia() != null ? " (doc " + dto.documentoReferencia() + ")" : ""),
+                tenantId, usuarioCpcId, usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
 
         return ResponseEntity.ok().build();
     }

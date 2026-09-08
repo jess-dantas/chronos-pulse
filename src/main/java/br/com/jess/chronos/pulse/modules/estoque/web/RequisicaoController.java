@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.estoque.web;
 
+import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.estoque.domain.entity.RequisicaoStatus;
 import br.com.jess.chronos.pulse.modules.estoque.service.RequisicaoService;
@@ -26,6 +27,7 @@ import java.util.UUID;
 public class RequisicaoController {
 
     private final RequisicaoService requisicaoService;
+    private final AuditoriaService auditoriaService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
@@ -35,6 +37,10 @@ public class RequisicaoController {
 
         CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
         RequisicaoResponseDTO response = requisicaoService.criarRequisicao(dto, usuario.getTenantId(), usuario.getCpcId());
+        auditoriaService.registrar("REQUISICAO", "REQUISICAO", response.id(),
+                "Criação de requisição: " + dto.justificativa(),
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -69,6 +75,10 @@ public class RequisicaoController {
 
         CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
         RequisicaoResponseDTO response = requisicaoService.aprovarRequisicao(id, usuario.getTenantId());
+        auditoriaService.registrar("REQUISICAO_APROVADA", "REQUISICAO", id,
+                "Aprovação de requisição",
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
         return ResponseEntity.ok(response);
     }
 
@@ -80,6 +90,10 @@ public class RequisicaoController {
 
         CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
         RequisicaoResponseDTO response = requisicaoService.atenderRequisicao(id, usuario.getTenantId(), usuario.getCpcId());
+        auditoriaService.registrar("REQUISICAO_ATENDIDA", "REQUISICAO", id,
+                "Atendimento de requisição com baixa de estoque",
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
         return ResponseEntity.ok(response);
     }
 }

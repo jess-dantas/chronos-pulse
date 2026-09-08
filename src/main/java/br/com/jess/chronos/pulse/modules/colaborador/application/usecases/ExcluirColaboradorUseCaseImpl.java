@@ -19,9 +19,12 @@ public class ExcluirColaboradorUseCaseImpl implements ExcluirColaboradorUseCase 
     }
 
     @Override
-    public void executar(UUID colaboradorId) {
-        Colaborador colaborador = colaboradorRepository.buscarPorId(colaboradorId)
-                .orElseThrow(() -> new IllegalArgumentException("Colaborador não encontrado"));
+    public void executar(UUID colaboradorId, UUID tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID obrigatório.");
+        }
+        Colaborador colaborador = colaboradorRepository.buscarPorIdETenant(colaboradorId, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Colaborador não encontrado no seu tenant"));
 
         colaboradorRepository.desativarPorId(colaboradorId);
         usuarioRepository.desativarPorId(colaborador.getCpcUsuarioId());

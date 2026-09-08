@@ -21,8 +21,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:jess.dantas.it@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:aiurmmwtmyugaaql}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -36,6 +36,6 @@ spring:
 
 chronos:
   mail:
-    enabled: ${CHRONOS_MAIL_ENABLED:true}
-    from: ${CHRONOS_MAIL_FROM:jess.dantas.it@gmail.com}
+    enabled: ${CHRONOS_MAIL_ENABLED:false}
+    from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}
     remetente-nome: ${CHRONOS_MAIL_NAME:Chronos Pulse}

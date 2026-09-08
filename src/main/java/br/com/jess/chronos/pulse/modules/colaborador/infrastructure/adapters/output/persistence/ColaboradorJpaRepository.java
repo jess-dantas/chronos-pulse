@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface ColaboradorJpaRepository extends JpaRepository<ColaboradorJpaEntity, UUID> {
     Optional<ColaboradorJpaEntity> findByCpcUsuarioId(UUID cpcUsuarioId);
     List<ColaboradorJpaEntity> findByTenantId(UUID tenantId);
+    Optional<ColaboradorJpaEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 }

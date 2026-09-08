@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest;
 
+import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AlterarFotoPerfilUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AlterarSenhaUseCase;
@@ -36,6 +37,7 @@ public class AuthController {
     private final SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase;
     private final RedefinirSenhaUseCase redefinirSenhaUseCase;
     private final AlterarFotoPerfilUseCase alterarFotoPerfilUseCase;
+    private final AuditoriaService auditoriaService;
 
     public AuthController(AutenticarUsuarioUseCase autenticarUsuarioUseCase,
                           CadastrarEmpresaCompletoUseCase cadastrarEmpresaCompletoUseCase,
@@ -44,7 +46,8 @@ public class AuthController {
                           AlterarSenhaUseCase alterarSenhaUseCase,
                           SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase,
                           RedefinirSenhaUseCase redefinirSenhaUseCase,
-                          AlterarFotoPerfilUseCase alterarFotoPerfilUseCase) {
+                          AlterarFotoPerfilUseCase alterarFotoPerfilUseCase,
+                          AuditoriaService auditoriaService) {
         this.autenticarUsuarioUseCase = autenticarUsuarioUseCase;
         this.cadastrarEmpresaCompletoUseCase = cadastrarEmpresaCompletoUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
@@ -53,6 +56,7 @@ public class AuthController {
         this.solicitarRecuperacaoSenhaUseCase = solicitarRecuperacaoSenhaUseCase;
         this.redefinirSenhaUseCase = redefinirSenhaUseCase;
         this.alterarFotoPerfilUseCase = alterarFotoPerfilUseCase;
+        this.auditoriaService = auditoriaService;
     }
 
     @GetMapping("/ping")
@@ -64,6 +68,11 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO request) {
         var resultado = autenticarUsuarioUseCase.executar(
                 new AutenticarUsuarioUseCase.Comando(request.cpf(), request.senha()));
+        auditoriaService.registrar("LOGIN", "USUARIO", null,
+                "Acesso realizado",
+                resultado.tenantId() != null ? java.util.UUID.fromString(resultado.tenantId()) : null,
+                resultado.cpcId() != null ? java.util.UUID.fromString(resultado.cpcId()) : null,
+                request.cpf(), resultado.role(), null, null, null);
         return ResponseEntity.ok(new LoginResponseDTO(
                 resultado.accessToken(), resultado.refreshToken(),
                 resultado.role(), resultado.cpf(),
