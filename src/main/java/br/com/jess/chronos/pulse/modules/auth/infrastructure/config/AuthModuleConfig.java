@@ -26,6 +26,7 @@ import br.com.jess.chronos.pulse.modules.notificacao.service.EmailRecuperacaoSen
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 @Configuration
 public class AuthModuleConfig {
@@ -40,6 +41,7 @@ public class AuthModuleConfig {
     }
 
     @Bean
+    @Transactional
     public CadastrarEmpresaCompletoUseCase cadastrarEmpresaCompletoUseCase(
             EmpresaRepositoryPort empresaRepository,
             CpcUsuarioRepositoryPort usuarioRepository,
@@ -67,6 +69,7 @@ public class AuthModuleConfig {
     }
 
     @Bean
+    @Transactional
     public AlterarSenhaUseCase alterarSenhaUseCase(
             CpcUsuarioRepositoryPort repositoryPort,
             PasswordEncoder passwordEncoder) {
@@ -74,6 +77,7 @@ public class AuthModuleConfig {
     }
 
     @Bean
+    @Transactional
     public SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase(
             CpcUsuarioRepositoryPort usuarioRepository,
             RecuperacaoSenhaRepositoryPort recuperacaoSenhaRepository,
@@ -84,6 +88,7 @@ public class AuthModuleConfig {
     }
 
     @Bean
+    @Transactional
     public RedefinirSenhaUseCase redefinirSenhaUseCase(
             CpcUsuarioRepositoryPort usuarioRepository,
             RecuperacaoSenhaRepositoryPort recuperacaoSenhaRepository,
@@ -93,6 +98,7 @@ public class AuthModuleConfig {
     }
 
     @Bean
+    @Transactional
     public AlterarFotoPerfilUseCase alterarFotoPerfilUseCase(CpcUsuarioRepositoryPort repositoryPort) {
         return new AlterarFotoPerfilUseCaseImpl(repositoryPort);
     }

@@ -31,6 +31,9 @@ public class RegistroPontoJpaEntity {
     private String justificativa;
     private String observacao;
 
+    @Version
+    private Long version;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
     public UUID getColaboradorId() { return colaboradorId; }

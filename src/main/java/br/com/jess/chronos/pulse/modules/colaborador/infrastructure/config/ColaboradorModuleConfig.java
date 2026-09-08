@@ -13,11 +13,13 @@ import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.Colabor
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 @Configuration
 public class ColaboradorModuleConfig {
 
     @Bean
+    @Transactional
     public CadastrarColaboradorUseCase cadastrarColaboradorUseCase(
             ColaboradorRepositoryPort colaboradorRepository,
             CpcUsuarioRepositoryPort usuarioRepository,
@@ -33,6 +35,7 @@ public class ColaboradorModuleConfig {
     }
 
     @Bean
+    @Transactional
     public AtualizarColaboradorUseCase atualizarColaboradorUseCase(
             ColaboradorRepositoryPort colaboradorRepository,
             CpcUsuarioRepositoryPort usuarioRepository) {
@@ -40,6 +43,7 @@ public class ColaboradorModuleConfig {
     }
 
     @Bean
+    @Transactional
     public ExcluirColaboradorUseCase excluirColaboradorUseCase(
             ColaboradorRepositoryPort colaboradorRepository,
             CpcUsuarioRepositoryPort usuarioRepository) {

@@ -7,6 +7,7 @@ public interface AtualizarColaboradorUseCase {
 
     record Comando(
             UUID colaboradorId,
+            UUID tenantId,
             String nome,
             String emailCorporativo,
             String matricula,

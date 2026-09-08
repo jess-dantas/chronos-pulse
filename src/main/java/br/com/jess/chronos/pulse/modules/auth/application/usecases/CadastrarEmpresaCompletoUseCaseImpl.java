@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.auth.application.usecases;
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
+import br.com.jess.chronos.pulse.modules.auth.domain.service.PasswordPolicy;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.CadastrarEmpresaCompletoUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
@@ -53,6 +54,11 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
         if (usuarioRepository.existePorCpf(comando.responsavelCpf())) {
             throw new IllegalArgumentException("CPF já cadastrado: " + comando.responsavelCpf());
         }
+
+        PasswordPolicy.validar(comando.responsavelSenha(), Role.ADMIN_EMPRESA)
+                .ifPresent(mensagem -> {
+                    throw new IllegalArgumentException(mensagem);
+                });
 
         Empresa empresa = empresaRepository.salvar(new Empresa(
                 null, cnpj, comando.nomeEmpresa(),

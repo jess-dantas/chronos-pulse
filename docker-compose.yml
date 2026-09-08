@@ -29,10 +29,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: chronos_pass
       SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
       SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
-      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-jess.dantas.it@gmail.com}
-      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-aiurmmwtmyugaaql}
-      CHRONOS_MAIL_ENABLED: ${CHRONOS_MAIL_ENABLED:-true}
-      CHRONOS_MAIL_FROM: ${CHRONOS_MAIL_FROM:-jess.dantas.it@gmail.com}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:?SPRING_MAIL_USERNAME deve ser informado}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:?SPRING_MAIL_PASSWORD deve ser informado}
+      CHRONOS_MAIL_ENABLED: ${CHRONOS_MAIL_ENABLED:-false}
+      CHRONOS_MAIL_FROM: ${CHRONOS_MAIL_FROM:-no-reply@chronospulse.com.br}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET deve ser informado}
     depends_on:
       postgres:
         condition: service_healthy

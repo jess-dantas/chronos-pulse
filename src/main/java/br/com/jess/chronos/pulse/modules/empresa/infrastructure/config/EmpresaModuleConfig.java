@@ -10,11 +10,13 @@ import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepo
 import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.Transactional;
 
 @Configuration
 public class EmpresaModuleConfig {
 
     @Bean
+    @Transactional
     public CadastrarEmpresaUseCase cadastrarEmpresaUseCase(
             EmpresaRepositoryPort repositoryPort,
             ModulosPort modulosPort) {

@@ -4,6 +4,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.RecuperacaoSenha;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.RedefinirSenhaUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.RecuperacaoSenhaRepositoryPort;
+import br.com.jess.chronos.pulse.modules.auth.domain.service.PasswordPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class RedefinirSenhaUseCaseImpl implements RedefinirSenhaUseCase {
@@ -35,6 +36,11 @@ public class RedefinirSenhaUseCaseImpl implements RedefinirSenhaUseCase {
 
         var usuario = usuarioRepository.buscarPorCpf(cpf)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+        PasswordPolicy.validar(comando.novaSenha(), usuario.getRole())
+                .ifPresent(mensagem -> {
+                    throw new IllegalArgumentException(mensagem);
+                });
 
         usuarioRepository.atualizar(usuario.comSenha(passwordEncoder.encode(comando.novaSenha())));
 

@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest;
 
+import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.AtualizarColaboradorUseCase;
@@ -27,15 +28,18 @@ public class ColaboradorController {
     private final ListarColaboradoresUseCase listarColaboradoresUseCase;
     private final AtualizarColaboradorUseCase atualizarColaboradorUseCase;
     private final ExcluirColaboradorUseCase excluirColaboradorUseCase;
+    private final AuditoriaService auditoriaService;
 
     public ColaboradorController(CadastrarColaboradorUseCase cadastrarColaboradorUseCase,
                                  ListarColaboradoresUseCase listarColaboradoresUseCase,
                                  AtualizarColaboradorUseCase atualizarColaboradorUseCase,
-                                 ExcluirColaboradorUseCase excluirColaboradorUseCase) {
+                                 ExcluirColaboradorUseCase excluirColaboradorUseCase,
+                                 AuditoriaService auditoriaService) {
         this.cadastrarColaboradorUseCase = cadastrarColaboradorUseCase;
         this.listarColaboradoresUseCase = listarColaboradoresUseCase;
         this.atualizarColaboradorUseCase = atualizarColaboradorUseCase;
         this.excluirColaboradorUseCase = excluirColaboradorUseCase;
+        this.auditoriaService = auditoriaService;
     }
 
     @PostMapping
@@ -47,6 +51,10 @@ public class ColaboradorController {
         UUID tenantId = request.tenantId() != null ? request.tenantId() : (usuarioLogado != null ? usuarioLogado.getTenantId() : null);
         if (tenantId == null) {
             throw new IllegalArgumentException("Tenant ID obrigatório para cadastro de colaborador.");
+        }
+        boolean isPlataforma = usuarioLogado != null && usuarioLogado.getRole() == Role.ADMIN_PLATAFORMA;
+        if (!isPlataforma && !tenantId.equals(usuarioLogado.getTenantId())) {
+            throw new IllegalArgumentException("Não é permitido cadastrar colaborador em outro tenant.");
         }
 
         boolean acessoEstoque = Boolean.TRUE.equals(request.acessoEstoque());
@@ -60,6 +68,12 @@ public class ColaboradorController {
                 request.dataNascimento(), request.dataAdmissao(), request.dataDesligamento(),
                 tenantId, request.configuracaoJornadaId(),
                 acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo));
+
+        auditoriaService.registrar("CADASTRO", "COLABORADOR", colaborador.getId(),
+                "Cadastro de colaborador " + request.cpf(),
+                tenantId, usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole().name(), null,
+                "cpf=" + request.cpf(), null);
 
         return ResponseEntity.ok(new ColaboradorResponseDTO(
                 colaborador.getId(), colaborador.getCpcUsuarioId(), colaborador.getTenantId(),
@@ -87,14 +101,24 @@ public class ColaboradorController {
             @RequestBody @Valid AtualizarColaboradorRequestDTO request,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
+        UUID tenantId = usuarioLogado != null ? usuarioLogado.getTenantId() : null;
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID obrigatório.");
+        }
+
         atualizarColaboradorUseCase.executar(new AtualizarColaboradorUseCase.Comando(
-                id, request.nome(), request.emailCorporativo(),
+                id, tenantId, request.nome(), request.emailCorporativo(),
                 request.matricula(), request.cargo(), request.departamento(),
                 request.dataNascimento(), request.dataAdmissao(), request.dataDesligamento(),
                 Boolean.TRUE.equals(request.acessoEstoque()),
                 Boolean.TRUE.equals(request.acessoPatrimonio()),
                 Boolean.TRUE.equals(request.acessoFrota()),
                 Boolean.TRUE.equals(request.acessoProtocolo())));
+
+        auditoriaService.registrar("ATUALIZACAO", "COLABORADOR", id,
+                "Atualização de colaborador",
+                tenantId, usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole().name(), null, null, null);
 
         return ResponseEntity.ok(Map.of("mensagem", "Colaborador atualizado com sucesso"));
     }
@@ -105,7 +129,16 @@ public class ColaboradorController {
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
-        excluirColaboradorUseCase.executar(id);
+        UUID tenantId = usuarioLogado != null ? usuarioLogado.getTenantId() : null;
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID obrigatório.");
+        }
+
+        excluirColaboradorUseCase.executar(id, tenantId);
+        auditoriaService.registrar("EXCLUSAO", "COLABORADOR", id,
+                "Desativação de colaborador",
+                tenantId, usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole().name(), null, null, null);
         return ResponseEntity.ok(Map.of("mensagem", "Colaborador removido com sucesso"));
     }
 }

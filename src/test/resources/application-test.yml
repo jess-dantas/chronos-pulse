@@ -12,5 +12,9 @@ spring:
     enabled: false
 
 chronos:
+  jwt:
+    secret: chronos-pulse-test-secret-key-must-be-at-least-256-bits-long-hs256
+    expiration-ms: 3600000
+    refresh-expiration-ms: 28800000
   mail:
     enabled: false

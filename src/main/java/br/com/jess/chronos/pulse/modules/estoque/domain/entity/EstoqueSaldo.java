@@ -41,4 +41,7 @@ public class EstoqueSaldo {
 
     @Column(name = "custo_medio_unitario", nullable = false, precision = 15, scale = 4)
     private BigDecimal custoMedioUnitario;
+
+    @Version
+    private Long version;
 }

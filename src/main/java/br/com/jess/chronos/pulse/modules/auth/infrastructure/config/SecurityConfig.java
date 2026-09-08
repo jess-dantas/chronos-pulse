@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/redefinir-senha").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/privacidade/politica").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN_PLATAFORMA", "SUPORTE_N1", "SUPORTE_N2")
                         .requestMatchers("/api/v1/suporte/**").hasAnyRole("SUPORTE_N1", "SUPORTE_N2")
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas/**").hasRole("ADMIN_PLATAFORMA")
