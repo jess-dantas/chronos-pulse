@@ -54,6 +54,19 @@ public class Patrimonio {
     @Column(columnDefinition = "TEXT")
     private String observacoes;
 
+    @Column(name = "vida_util_meses")
+    private Integer vidaUtilMeses;
+
+    @Column(name = "taxa_depreciacao_mensal", precision = 5, scale = 4)
+    private BigDecimal taxaDepreciacaoMensal;
+
+    @Column(name = "valor_depreciado", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal valorDepreciado = BigDecimal.ZERO;
+
+    @Column(name = "data_inicio_depreciacao")
+    private LocalDate dataInicioDepreciacao;
+
     @Builder.Default
     private Boolean ativo = true;
 }

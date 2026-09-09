@@ -16,4 +16,5 @@ public interface PatrimonioRepository extends JpaRepository<Patrimonio, UUID> {
     List<Patrimonio> findAllByTenantId(UUID tenantId);
     List<Patrimonio> findAllByTenantIdAndAtivoTrue(UUID tenantId);
     Page<Patrimonio> findAllByTenantId(UUID tenantId, Pageable pageable);
+    Optional<Patrimonio> findByTombamentoAndTenantId(String tombamento, UUID tenantId);
 }

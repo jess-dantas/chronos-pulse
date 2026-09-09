@@ -26,5 +26,9 @@ public record CadastrarPatrimonioDTO(
 
         String numeroNotaFiscal,
 
-        String observacoes
+        String observacoes,
+
+        Integer vidaUtilMeses,
+
+        LocalDate dataInicioDepreciacao
 ) {}

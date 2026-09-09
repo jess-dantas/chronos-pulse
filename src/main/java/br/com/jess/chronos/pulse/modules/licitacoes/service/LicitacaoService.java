@@ -1,0 +1,341 @@
+package br.com.jess.chronos.pulse.modules.licitacoes.service;
+
+import br.com.jess.chronos.pulse.modules.compras.domain.entity.Fornecedor;
+import br.com.jess.chronos.pulse.modules.compras.repository.FornecedorRepository;
+import br.com.jess.chronos.pulse.modules.compras.service.ComprasService;
+import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraItemDTO;
+import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO;
+import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
+import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class LicitacaoService {
+
+    private final LicitacaoRepository licitacaoRepository;
+    private final LicitacaoPropostaRepository propostaRepository;
+    private final FornecedorRepository fornecedorRepository;
+    private final MaterialRepository materialRepository;
+    private final ComprasService comprasService;
+
+    @Transactional(readOnly = true)
+    public List<LicitacaoResponseDTO> listarLicitacoes(UUID tenantId) {
+        Map<UUID, Material> materiais = mapaMateriais(tenantId);
+        return licitacaoRepository.findAllByTenantIdOrderByCriadoEmDesc(tenantId).stream()
+                .map(l -> mapearLicitacao(l, materiais))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public LicitacaoResponseDTO buscarLicitacao(UUID id, UUID tenantId) {
+        return mapearLicitacao(buscarLicitacaoDoTenant(id, tenantId), mapaMateriais(tenantId));
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO criarLicitacao(CadastrarLicitacaoDTO dto, UUID tenantId) {
+        LicitacaoModalidade modalidade = validarModalidade(dto.modalidade());
+        LicitacaoTipoJulgamento julgamento = validarJulgamento(dto.tipoJulgamento());
+
+        Map<UUID, Material> materiais = mapaMateriais(tenantId);
+        Map<String, String> descricoes = new HashMap<>();
+        List<LicitacaoItem> itens = new ArrayList<>();
+        BigDecimal valorEstimado = BigDecimal.ZERO;
+        for (LicitacaoItemDTO itemDTO : dto.itens()) {
+            Material material = materiais.get(itemDTO.materialId());
+            if (material == null) {
+                throw new IllegalArgumentException("Material não encontrado para um dos itens");
+            }
+            String chave = itemDTO.materialId().toString();
+            if (descricoes.containsKey(chave)) {
+                throw new IllegalArgumentException("Material duplicado na licitação: " + material.getDescricao());
+            }
+            descricoes.put(chave, material.getDescricao());
+
+            LicitacaoItem item = LicitacaoItem.builder()
+                    .tenantId(tenantId)
+                    .materialId(itemDTO.materialId())
+                    .descricao(material.getDescricao())
+                    .quantidade(itemDTO.quantidade())
+                    .valorEstimadoUnitario(itemDTO.valorEstimadoUnitario())
+                    .build();
+            itens.add(item);
+            valorEstimado = valorEstimado.add(item.getValorEstimadoTotal());
+        }
+
+        Licitacao licitacao = Licitacao.builder()
+                .tenantId(tenantId)
+                .numero(proximoNumeroLicitacao(tenantId))
+                .modalidade(modalidade)
+                .tipoJulgamento(julgamento)
+                .objeto(dto.objeto())
+                .dataAbertura(dto.dataAbertura())
+                .valorEstimado(valorEstimado.setScale(2, RoundingMode.HALF_UP))
+                .observacoes(dto.observacoes())
+                .status(LicitacaoStatus.EM_ELABORACAO)
+                .build();
+
+        itens.forEach(licitacao::adicionarItem);
+        licitacao = licitacaoRepository.save(licitacao);
+
+        return mapearLicitacao(licitacao, materiais);
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO publicarLicitacao(UUID id, PublicarLicitacaoDTO dto, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(id, tenantId);
+        if (licitacao.getStatus() != LicitacaoStatus.EM_ELABORACAO) {
+            throw new IllegalArgumentException("Somente licitações em elaboração podem ser publicadas");
+        }
+        if (dto.fornecedoresIds().stream().distinct().count() != dto.fornecedoresIds().size()) {
+            throw new IllegalArgumentException("Fornecedor duplicado na lista de habilitados");
+        }
+        for (UUID fornecedorId : dto.fornecedoresIds()) {
+            Fornecedor fornecedor = buscarFornecedorDoTenant(fornecedorId, tenantId);
+            if (!Boolean.TRUE.equals(fornecedor.getAtivo())) {
+                throw new IllegalArgumentException("Fornecedor inativo não pode participar: " + fornecedor.getRazaoSocial());
+            }
+            licitacao.adicionarParticipante(LicitacaoParticipante.builder()
+                    .tenantId(tenantId)
+                    .fornecedor(fornecedor)
+                    .build());
+        }
+        licitacao.setStatus(LicitacaoStatus.PUBLICADA);
+        licitacao = licitacaoRepository.save(licitacao);
+        return mapearLicitacao(licitacao, mapaMateriais(tenantId));
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO registrarPropostas(UUID licitacaoId, RegistrarPropostasLicitacaoDTO dto, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(licitacaoId, tenantId);
+        validarEmDisputa(licitacao);
+
+        List<UUID> participanteIds = licitacao.getParticipantes().stream()
+                .map(p -> p.getFornecedor().getId())
+                .toList();
+        if (!participanteIds.contains(dto.fornecedorId())) {
+            throw new IllegalArgumentException("Fornecedor não habilitado para esta licitação");
+        }
+
+        Set<UUID> materiaisLicitacao = new HashSet<>();
+        licitacao.getItens().forEach(item -> materiaisLicitacao.add(item.getMaterialId()));
+
+        Map<UUID, BigDecimal> porMaterial = new HashMap<>();
+        for (LicitacaoPropostaDTO itemDTO : dto.itens()) {
+            if (!materiaisLicitacao.contains(itemDTO.materialId())) {
+                throw new IllegalArgumentException("Material proposto não pertence à licitação");
+            }
+            if (porMaterial.containsKey(itemDTO.materialId())) {
+                throw new IllegalArgumentException("Material duplicado na proposta: " + itemDTO.materialId());
+            }
+            porMaterial.put(itemDTO.materialId(), itemDTO.valorUnitario());
+        }
+
+        List<LicitacaoProposta> atuais = propostaRepository.findAllByLicitacaoId(licitacaoId).stream()
+                .filter(p -> p.getFornecedorId().equals(dto.fornecedorId()))
+                .toList();
+        licitacao.getPropostas().removeAll(atuais);
+
+        for (Map.Entry<UUID, BigDecimal> item : porMaterial.entrySet()) {
+            licitacao.adicionarProposta(LicitacaoProposta.builder()
+                    .tenantId(tenantId)
+                    .fornecedorId(dto.fornecedorId())
+                    .materialId(item.getKey())
+                    .valorUnitario(item.getValue())
+                    .vencedor(Boolean.FALSE)
+                    .build());
+        }
+
+        licitacao = licitacaoRepository.save(licitacao);
+        return mapearLicitacao(licitacao, mapaMateriais(tenantId));
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO adjudicarLicitacao(UUID licitacaoId, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(licitacaoId, tenantId);
+        validarEmDisputa(licitacao);
+        if (licitacao.getTipoJulgamento() != LicitacaoTipoJulgamento.MENOR_PRECO) {
+            throw new IllegalArgumentException(
+                    "Julgamento automático disponível apenas para o critério menor preço; "
+                            + licitacao.getTipoJulgamento() + " exige análise técnica da comissão");
+        }
+
+        List<UUID> materiais = licitacao.getItens().stream()
+                .map(LicitacaoItem::getMaterialId)
+                .toList();
+
+        licitacao.getPropostas().forEach(proposta -> proposta.setVencedor(Boolean.FALSE));
+        for (UUID materialId : materiais) {
+            LicitacaoProposta melhor = licitacao.getPropostas().stream()
+                    .filter(p -> p.getMaterialId().equals(materialId))
+                    .min(Comparator.comparing(LicitacaoProposta::getValorUnitario))
+                    .orElse(null);
+            if (melhor == null) {
+                throw new IllegalArgumentException(
+                        "Todos os itens da licitação precisam de ao menos uma proposta para adjudicar");
+            }
+            melhor.setVencedor(Boolean.TRUE);
+        }
+
+        licitacao.setStatus(LicitacaoStatus.ADJUDICADA);
+        licitacao = licitacaoRepository.save(licitacao);
+        return mapearLicitacao(licitacao, mapaMateriais(tenantId));
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO homologarLicitacao(UUID licitacaoId, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(licitacaoId, tenantId);
+        if (licitacao.getStatus() != LicitacaoStatus.ADJUDICADA) {
+            throw new IllegalArgumentException("Somente licitações adjudicadas podem ser homologadas");
+        }
+        licitacao.setStatus(LicitacaoStatus.HOMOLOGADA);
+        licitacao = licitacaoRepository.save(licitacao);
+        return mapearLicitacao(licitacao, mapaMateriais(tenantId));
+    }
+
+    @Transactional
+    public void cancelarLicitacao(UUID id, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(id, tenantId);
+        if (licitacao.getStatus() == LicitacaoStatus.ADJUDICADA
+                || licitacao.getStatus() == LicitacaoStatus.HOMOLOGADA
+                || licitacao.getStatus() == LicitacaoStatus.CANCELADA) {
+            throw new IllegalArgumentException(
+                    "Licitação " + licitacao.getNumero() + " não pode ser cancelada "
+                            + "após julgamento (" + licitacao.getStatus().name() + ")");
+        }
+        licitacao.setStatus(LicitacaoStatus.CANCELADA);
+        licitacaoRepository.save(licitacao);
+    }
+
+    @Transactional
+    public List<PedidoCompraResponseDTO> gerarPedidos(UUID licitacaoId, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(licitacaoId, tenantId);
+        if (licitacao.getStatus() != LicitacaoStatus.HOMOLOGADA) {
+            throw new IllegalArgumentException("Somente licitações homologadas geram pedido de compra");
+        }
+        if (Boolean.TRUE.equals(licitacao.getPedidoGerado())) {
+            throw new IllegalArgumentException("Pedido(s) já gerado(s) para esta licitação");
+        }
+
+        Map<UUID, BigDecimal> quantidadePorMaterial = new HashMap<>();
+        licitacao.getItens().forEach(item -> quantidadePorMaterial.put(item.getMaterialId(), item.getQuantidade()));
+
+        Map<UUID, List<LicitacaoProposta>> vencedoresPorFornecedor = new LinkedHashMap<>();
+        for (LicitacaoProposta proposta : licitacao.getPropostas()) {
+            if (Boolean.TRUE.equals(proposta.getVencedor())) {
+                vencedoresPorFornecedor
+                        .computeIfAbsent(proposta.getFornecedorId(), k -> new ArrayList<>())
+                        .add(proposta);
+            }
+        }
+        if (vencedoresPorFornecedor.isEmpty()) {
+            throw new IllegalArgumentException("Nenhum vencedor definido na licitação");
+        }
+
+        String objeto = "Fornecimento referente à " + licitacao.getNumero() + " — " + licitacao.getObjeto();
+        List<PedidoCompraResponseDTO> pedidos = new ArrayList<>();
+        for (Map.Entry<UUID, List<LicitacaoProposta>> grupo : vencedoresPorFornecedor.entrySet()) {
+            List<PedidoCompraItemDTO> itensDTO = grupo.getValue().stream()
+                    .map(p -> new PedidoCompraItemDTO(
+                            p.getMaterialId(),
+                            quantidadePorMaterial.getOrDefault(p.getMaterialId(), BigDecimal.ZERO),
+                            p.getValorUnitario()))
+                    .toList();
+            pedidos.add(comprasService.criarPedidoPorItens(
+                    grupo.getKey(), objeto, null, null, null, licitacao.getObservacoes(), itensDTO, tenantId));
+        }
+
+        licitacao.setPedidoGerado(Boolean.TRUE);
+        licitacaoRepository.save(licitacao);
+        return pedidos;
+    }
+
+    // ============================ AUXILIARES ============================
+
+    private LicitacaoModalidade validarModalidade(String valor) {
+        try {
+            return LicitacaoModalidade.valueOf(valor);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Modalidade inválida: " + valor);
+        }
+    }
+
+    private LicitacaoTipoJulgamento validarJulgamento(String valor) {
+        try {
+            return LicitacaoTipoJulgamento.valueOf(valor);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Critério de julgamento inválido: " + valor);
+        }
+    }
+
+    private Licitacao buscarLicitacaoDoTenant(UUID id, UUID tenantId) {
+        return licitacaoRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Licitação não encontrada"));
+    }
+
+    private Fornecedor buscarFornecedorDoTenant(UUID id, UUID tenantId) {
+        return fornecedorRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Fornecedor não encontrado"));
+    }
+
+    private void validarEmDisputa(Licitacao licitacao) {
+        if (licitacao.getStatus() != LicitacaoStatus.PUBLICADA
+                && licitacao.getStatus() != LicitacaoStatus.ABERTA) {
+            throw new IllegalArgumentException("Licitação não está em fase de propostas");
+        }
+    }
+
+    private String proximoNumeroLicitacao(UUID tenantId) {
+        long proximo = licitacaoRepository.findAllByTenantIdOrderByCriadoEmDesc(tenantId).size() + 1;
+        return "LIC-" + LocalDate.now().getYear() + "-" + String.format("%06d", proximo);
+    }
+
+    private Map<UUID, Material> mapaMateriais(UUID tenantId) {
+        Map<UUID, Material> mapa = new HashMap<>();
+        materialRepository.findAllByTenantId(tenantId).forEach(m -> mapa.put(m.getId(), m));
+        return mapa;
+    }
+
+    private LicitacaoResponseDTO mapearLicitacao(Licitacao licitacao, Map<UUID, Material> materiais) {
+        Map<UUID, String> nomesFornecedores = new HashMap<>();
+        List<LicitacaoParticipanteResponseDTO> participantes = licitacao.getParticipantes().stream()
+                .map(p -> {
+                    nomesFornecedores.put(p.getFornecedor().getId(), p.getFornecedor().getRazaoSocial());
+                    return new LicitacaoParticipanteResponseDTO(
+                            p.getFornecedor().getId(), p.getFornecedor().getRazaoSocial(), p.getHabilitado());
+                })
+                .toList();
+
+        List<LicitacaoItemResponseDTO> itens = licitacao.getItens().stream()
+                .map(item -> {
+                    Material material = materiais.get(item.getMaterialId());
+                    return LicitacaoItemResponseDTO.from(
+                            item,
+                            material != null ? material.getUnidadeMedida() : "");
+                })
+                .toList();
+
+        List<LicitacaoPropostaResponseDTO> propostas = licitacao.getPropostas().stream()
+                .map(p -> {
+                    Material material = materiais.get(p.getMaterialId());
+                    return LicitacaoPropostaResponseDTO.from(
+                            p,
+                            nomesFornecedores.getOrDefault(p.getFornecedorId(), ""),
+                            material != null ? material.getDescricao() : "Material");
+                })
+                .toList();
+
+        return LicitacaoResponseDTO.from(licitacao, itens, participantes, propostas);
+    }
+}

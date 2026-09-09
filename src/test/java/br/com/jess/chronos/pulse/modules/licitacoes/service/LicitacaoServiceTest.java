@@ -1,0 +1,360 @@
+package br.com.jess.chronos.pulse.modules.licitacoes.service;
+
+import br.com.jess.chronos.pulse.modules.compras.domain.entity.Fornecedor;
+import br.com.jess.chronos.pulse.modules.compras.domain.entity.PedidoCompra;
+import br.com.jess.chronos.pulse.modules.compras.domain.entity.PedidoCompraStatus;
+import br.com.jess.chronos.pulse.modules.compras.repository.FornecedorRepository;
+import br.com.jess.chronos.pulse.modules.compras.service.ComprasService;
+import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO;
+import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
+import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class LicitacaoServiceTest {
+
+    @Mock
+    private LicitacaoRepository licitacaoRepository;
+
+    @Mock
+    private LicitacaoPropostaRepository propostaRepository;
+
+    @Mock
+    private FornecedorRepository fornecedorRepository;
+
+    @Mock
+    private MaterialRepository materialRepository;
+
+    @Mock
+    private ComprasService comprasService;
+
+    @InjectMocks
+    private LicitacaoService service;
+
+    private UUID tenantId;
+    private Material papel;
+    private Material caneta;
+    private Fornecedor fornecedor1;
+    private Fornecedor fornecedor2;
+
+    @BeforeEach
+    void setUp() {
+        tenantId = UUID.randomUUID();
+
+        papel = Material.builder().id(UUID.randomUUID())
+                .descricao("Papel A4 - Resma").unidadeMedida("UN").build();
+        caneta = Material.builder().id(UUID.randomUUID())
+                .descricao("Caneta esferográfica azul").unidadeMedida("UN").build();
+
+        fornecedor1 = Fornecedor.builder().id(UUID.randomUUID())
+                .tenantId(tenantId).cnpj("11222333000181").razaoSocial("PapelCenter LTDA").ativo(true).build();
+        fornecedor2 = Fornecedor.builder().id(UUID.randomUUID())
+                .tenantId(tenantId).cnpj("22334455000190").razaoSocial("Suprimentos Center LTDA").ativo(true).build();
+    }
+
+    @Test
+    @DisplayName("Deve criar licitação com numeração sequencial, estimativa e status em elaboração")
+    void deveCriarLicitacao() {
+        CadastrarLicitacaoDTO dto = new CadastrarLicitacaoDTO(
+                "PREGAO", "MENOR_PRECO", "Papel A4 e canetas",
+                LocalDate.now().plusDays(20), null,
+                List.of(
+                        new LicitacaoItemDTO(papel.getId(), new BigDecimal("100"), new BigDecimal("17.5000")),
+                        new LicitacaoItemDTO(caneta.getId(), new BigDecimal("50"), new BigDecimal("1.2000"))));
+
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.findAllByTenantIdOrderByCriadoEmDesc(tenantId)).thenReturn(List.of());
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> {
+            Licitacao l = inv.getArgument(0);
+            l.setId(UUID.randomUUID());
+            return l;
+        });
+
+        LicitacaoResponseDTO resposta = service.criarLicitacao(dto, tenantId);
+
+        assertEquals("LIC-" + LocalDate.now().getYear() + "-000001", resposta.numero());
+        assertEquals("EM_ELABORACAO", resposta.status());
+        assertEquals(LicitacaoModalidade.PREGAO, resposta.modalidade());
+        assertEquals(LicitacaoTipoJulgamento.MENOR_PRECO, resposta.tipoJulgamento());
+        assertEquals(0, new BigDecimal("1810.00").compareTo(resposta.valorEstimado()));
+        assertEquals(2, resposta.itens().size());
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar material duplicado na criação da licitação")
+    void deveRejeitarMaterialDuplicado() {
+        CadastrarLicitacaoDTO dto = new CadastrarLicitacaoDTO(
+                "PREGAO", "MENOR_PRECO", "Objeto",
+                null, null,
+                List.of(
+                        new LicitacaoItemDTO(papel.getId(), new BigDecimal("10"), new BigDecimal("5.0000")),
+                        new LicitacaoItemDTO(papel.getId(), new BigDecimal("10"), new BigDecimal("5.0000"))));
+
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.criarLicitacao(dto, tenantId));
+        assertTrue(ex.getMessage().contains("duplicado"));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar modalidade inválida")
+    void deveRejeitarModalidadeInvalida() {
+        CadastrarLicitacaoDTO dto = new CadastrarLicitacaoDTO(
+                "TOMADA_DE_PRECO", "MENOR_PRECO", "Objeto",
+                null, null,
+                List.of(new LicitacaoItemDTO(papel.getId(), new BigDecimal("10"), new BigDecimal("5.0000"))));
+
+        assertThrows(IllegalArgumentException.class, () -> service.criarLicitacao(dto, tenantId));
+    }
+
+    @Test
+    @DisplayName("Deve publicar licitação habilitando fornecedores e transicionar para publicada")
+    void devePublicarLicitacao() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.EM_ELABORACAO);
+        licitacao.getParticipantes().clear();
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(fornecedorRepository.findByIdAndTenantId(fornecedor1.getId(), tenantId)).thenReturn(Optional.of(fornecedor1));
+        when(fornecedorRepository.findByIdAndTenantId(fornecedor2.getId(), tenantId)).thenReturn(Optional.of(fornecedor2));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PublicarLicitacaoDTO dto = new PublicarLicitacaoDTO(List.of(fornecedor1.getId(), fornecedor2.getId()));
+        LicitacaoResponseDTO resposta = service.publicarLicitacao(licitacao.getId(), dto, tenantId);
+
+        assertEquals("PUBLICADA", resposta.status());
+        assertEquals(2, resposta.participantes().size());
+    }
+
+    @Test
+    @DisplayName("Deve recusar publicação com fornecedor inativo")
+    void deveRecusarPublicacaoFornecedorInativo() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.EM_ELABORACAO);
+        licitacao.getParticipantes().clear();
+        fornecedor2.setAtivo(false);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(fornecedorRepository.findByIdAndTenantId(fornecedor1.getId(), tenantId)).thenReturn(Optional.of(fornecedor1));
+        when(fornecedorRepository.findByIdAndTenantId(fornecedor2.getId(), tenantId)).thenReturn(Optional.of(fornecedor2));
+
+        PublicarLicitacaoDTO dto = new PublicarLicitacaoDTO(List.of(fornecedor1.getId(), fornecedor2.getId()));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.publicarLicitacao(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("inativo"));
+    }
+
+    @Test
+    @DisplayName("Deve registrar propostas para fornecedor habilitado e substituir registros anteriores")
+    void deveRegistrarPropostas() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+        LicitacaoProposta antiga = proposta(fornecedor1.getId(), papel.getId(), "20.0000");
+        licitacao.getPropostas().add(antiga);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(propostaRepository.findAllByLicitacaoId(licitacao.getId())).thenReturn(List.of(antiga));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RegistrarPropostasLicitacaoDTO dto = new RegistrarPropostasLicitacaoDTO(
+                fornecedor1.getId(),
+                List.of(new LicitacaoPropostaDTO(papel.getId(), new BigDecimal("16.0000"), null)));
+
+        LicitacaoResponseDTO resposta = service.registrarPropostas(licitacao.getId(), dto, tenantId);
+
+        assertEquals(1, resposta.propostas().size());
+        assertEquals("16.0000", resposta.propostas().get(0).valorUnitario().toPlainString());
+        assertEquals("16.0000", resposta.propostas().get(0).valorUnitario().toPlainString());
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar propostas de fornecedor não habilitado")
+    void deveRejeitarPropostaFornecedorNaoHabilitado() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        RegistrarPropostasLicitacaoDTO dto = new RegistrarPropostasLicitacaoDTO(
+                UUID.randomUUID(),
+                List.of(new LicitacaoPropostaDTO(papel.getId(), new BigDecimal("16.0000"), null)));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.registrarPropostas(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("não habilitado"));
+    }
+
+    @Test
+    @DisplayName("Deve adjudicar por menor preço definindo o vencedor de cada item")
+    void deveAdjudicarPorMenorPreco() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        licitacao.getPropostas().add(proposta(fornecedor1.getId(), papel.getId(), "17.0000"));
+        licitacao.getPropostas().add(proposta(fornecedor1.getId(), caneta.getId(), "125.0000"));
+        licitacao.getPropostas().add(proposta(fornecedor2.getId(), papel.getId(), "16.0000"));
+        licitacao.getPropostas().add(proposta(fornecedor2.getId(), caneta.getId(), "128.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LicitacaoResponseDTO resposta = service.adjudicarLicitacao(licitacao.getId(), tenantId);
+
+        assertEquals("ADJUDICADA", resposta.status());
+        var papelVencedor = resposta.propostas().stream()
+                .filter(p -> p.materialId().equals(papel.getId()) && Boolean.TRUE.equals(p.vencedor()))
+                .findFirst().orElseThrow();
+        var canetaVencedor = resposta.propostas().stream()
+                .filter(p -> p.materialId().equals(caneta.getId()) && Boolean.TRUE.equals(p.vencedor()))
+                .findFirst().orElseThrow();
+        assertEquals(fornecedor2.getId(), papelVencedor.fornecedorId());
+        assertEquals(fornecedor1.getId(), canetaVencedor.fornecedorId());
+    }
+
+    @Test
+    @DisplayName("Deve exigir proposta para todos os itens antes de adjudicar")
+    void deveExigirPropostaParaTodosOsItens() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        licitacao.getPropostas().add(proposta(fornecedor1.getId(), papel.getId(), "17.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.adjudicarLicitacao(licitacao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("ao menos uma proposta"));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar adjudicação automática para julgamento que não seja menor preço")
+    void deveRejeitarAdjudicacaoTecnica() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        licitacao.setTipoJulgamento(LicitacaoTipoJulgamento.MELHOR_TECNICA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.adjudicarLicitacao(licitacao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("análise técnica"));
+    }
+
+    @Test
+    @DisplayName("Deve homologar somente licitação adjudicada")
+    void deveHomologar() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ADJUDICADA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LicitacaoResponseDTO resposta = service.homologarLicitacao(licitacao.getId(), tenantId);
+        assertEquals("HOMOLOGADA", resposta.status());
+
+        Licitacao emElaboracao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+        when(licitacaoRepository.findByIdAndTenantId(emElaboracao.getId(), tenantId)).thenReturn(Optional.of(emElaboracao));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.homologarLicitacao(emElaboracao.getId(), tenantId));
+    }
+
+    @Test
+    @DisplayName("Deve gerar pedido por fornecedor vencedor e marcar pedido como gerado")
+    void deveGerarPedidos() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.HOMOLOGADA);
+        licitacao.getPropostas().add(propostaVencedora(fornecedor1.getId(), caneta.getId(), "125.0000"));
+        licitacao.getPropostas().add(propostaVencedora(fornecedor2.getId(), papel.getId(), "16.0000"));
+
+        PedidoCompra pedido = PedidoCompra.builder()
+                .tenantId(tenantId).numero("PC-2026-000003")
+                .fornecedor(fornecedor1).objeto("Objeto")
+                .dataEmissao(LocalDate.now()).valorTotal(new BigDecimal("1250.00"))
+                .status(PedidoCompraStatus.EMITIDO).build();
+        PedidoCompraResponseDTO respostaPedido = PedidoCompraResponseDTO.from(
+                pedido, fornecedor1.getRazaoSocial(), List.of());
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(comprasService.criarPedidoPorItens(any(UUID.class), anyString(), isNull(), isNull(), isNull(),
+                isNull(), anyList(), eq(tenantId))).thenReturn(respostaPedido);
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        List<PedidoCompraResponseDTO> pedidos = service.gerarPedidos(licitacao.getId(), tenantId);
+
+        assertEquals(2, pedidos.size());
+        verify(comprasService, times(2)).criarPedidoPorItens(any(UUID.class), anyString(), isNull(), isNull(),
+                isNull(), isNull(), anyList(), eq(tenantId));
+        assertTrue(licitacao.getPedidoGerado());
+    }
+
+    @Test
+    @DisplayName("Deve recusar cancelamento após adjudicação")
+    void deveRecusarCancelamentoAposAdjudicacao() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ADJUDICADA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.cancelarLicitacao(licitacao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("não pode ser cancelada"));
+    }
+
+    // ============================ FIXTURES ============================
+
+    private Licitacao licitacaoBase(LicitacaoStatus status) {
+        Licitacao licitacao = Licitacao.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .numero("LIC-2026-000001")
+                .modalidade(LicitacaoModalidade.PREGAO)
+                .tipoJulgamento(LicitacaoTipoJulgamento.MENOR_PRECO)
+                .objeto("Aquisição de material de escritório")
+                .dataAbertura(LocalDate.now().plusDays(10))
+                .valorEstimado(new BigDecimal("2350.00"))
+                .status(status)
+                .build();
+
+        licitacao.adicionarItem(LicitacaoItem.builder()
+                .tenantId(tenantId).materialId(papel.getId()).descricao(papel.getDescricao())
+                .quantidade(new BigDecimal("100")).valorEstimadoUnitario(new BigDecimal("17.5000"))
+                .build());
+        licitacao.adicionarItem(LicitacaoItem.builder()
+                .tenantId(tenantId).materialId(caneta.getId()).descricao(caneta.getDescricao())
+                .quantidade(new BigDecimal("50")).valorEstimadoUnitario(new BigDecimal("1.2000"))
+                .build());
+
+        licitacao.adicionarParticipante(LicitacaoParticipante.builder()
+                .tenantId(tenantId).fornecedor(fornecedor1).build());
+        licitacao.adicionarParticipante(LicitacaoParticipante.builder()
+                .tenantId(tenantId).fornecedor(fornecedor2).build());
+
+        return licitacao;
+    }
+
+    private LicitacaoProposta proposta(UUID fornecedorId, UUID materialId, String valor) {
+        return LicitacaoProposta.builder()
+                .tenantId(tenantId).fornecedorId(fornecedorId).materialId(materialId)
+                .valorUnitario(new BigDecimal(valor)).vencedor(Boolean.FALSE).build();
+    }
+
+    private LicitacaoProposta propostaVencedora(UUID fornecedorId, UUID materialId, String valor) {
+        return LicitacaoProposta.builder()
+                .tenantId(tenantId).fornecedorId(fornecedorId).materialId(materialId)
+                .valorUnitario(new BigDecimal(valor)).vencedor(Boolean.TRUE).build();
+    }
+}

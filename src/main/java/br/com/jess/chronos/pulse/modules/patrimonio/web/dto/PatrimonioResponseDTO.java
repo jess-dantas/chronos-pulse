@@ -16,5 +16,10 @@ public record PatrimonioResponseDTO(
         String responsavelNome,
         String numeroNotaFiscal,
         String observacoes,
-        Boolean ativo
+        Boolean ativo,
+        Integer vidaUtilMeses,
+        BigDecimal taxaDepreciacaoMensal,
+        BigDecimal valorDepreciado,
+        LocalDate dataInicioDepreciacao,
+        BigDecimal valorAtual
 ) {}
