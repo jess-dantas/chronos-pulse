@@ -7,7 +7,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Ready-2496ED)
-![Tests](https://img.shields.io/badge/tests-207%20verdes-brightgreen)
+![Tests](https://img.shields.io/badge/tests-222%20verdes-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 </div>
@@ -75,7 +75,7 @@ export JWT_SECRET="um-valor-longo-e-aleatorio-troque-em-producao"
 curl http://localhost:8080/v3/api-docs
 ```
 
-O Flyway roda automaticamente na subida (28 migrations) e cria os seeds de demonstração. A documentação interativa fica em `http://localhost:8080/swagger-ui.html`.
+O Flyway roda automaticamente na subida (29 migrations) e cria os seeds de demonstração. A documentação interativa fica em `http://localhost:8080/swagger-ui.html`.
 
 ### Opção B — Com Docker (API + PostgreSQL containerizados)
 
@@ -133,7 +133,7 @@ DROP DATABASE chronos_db;
 CREATE DATABASE chronos_db OWNER chronos_user;
 ```
 
-A próxima subida reaplica as 28 migrations e os seeds.
+A próxima subida reaplica as 29 migrations e os seeds.
 
 ---
 
@@ -157,7 +157,7 @@ O tenant de demonstração possui todos os 9 módulos ativos; novas empresas rec
 ## Testes automatizados
 
 ```bash
-./mvnw test      # Windows: .\mvnw.cmd test   (207 testes)
+./mvnw test      # Windows: .\mvnw.cmd test   (222 testes)
 ```
 
 O ambiente de teste usa H2 em modo PostgreSQL (`application-test.yml`, Flyway desativado).
