@@ -23,6 +23,7 @@ import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.Colabor
 import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
 import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.notificacao.service.EmailRecuperacaoSenhaService;
+import br.com.jess.chronos.pulse.modules.telemetria.application.LoginMetricsRecorder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,8 +37,9 @@ public class AuthModuleConfig {
             CpcUsuarioRepositoryPort repositoryPort,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            ModulosPort modulosPort) {
-        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort);
+            ModulosPort modulosPort,
+            LoginMetricsRecorder loginMetricsRecorder) {
+        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder);
     }
 
     @Bean

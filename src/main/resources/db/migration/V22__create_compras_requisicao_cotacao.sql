@@ -19,8 +19,8 @@ CREATE TABLE tb_requisicao_compra (
     CONSTRAINT chk_requisicao_status CHECK (status IN ('EM_ABERTO', 'COTADA', 'CANCELADA'))
 );
 
-CREATE INDEX idx_requisicao_tenant ON tb_requisicao_compra(tenant_id);
-CREATE INDEX idx_requisicao_solicitante ON tb_requisicao_compra(solicitante_cpc_id);
+CREATE INDEX idx_req_compra_tenant ON tb_requisicao_compra(tenant_id);
+CREATE INDEX idx_req_compra_solicitante ON tb_requisicao_compra(solicitante_cpc_id);
 
 CREATE TABLE tb_requisicao_compra_item (
     id UUID PRIMARY KEY,

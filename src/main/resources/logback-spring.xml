@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <property name="CONSOLE_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] [traceId=%X{traceId:-}] [tenant=%X{tenantId:-}] [usuario=%X{usuarioId:-}] %logger{40} - %msg%n"/>
+
+    <!-- Produção: logs estruturados JSON (R27). As chaves do MDC
+         (traceId, tenantId, usuarioId, statusHttp, duracaoMs, modulo)
+         são incluídas como campos pelo LogstashEncoder. -->
+    <springProfile name="prod">
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>{"tipo_log":"app","servico":"chronos-pulse"}</customFields>
+                <includeMdcKeyName>^(traceId|tenantId|usuarioId|statusHttp|duracaoMs|modulo)$</includeMdcKeyName>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Demais perfis (dev/test): texto legível, mantendo traceId no contexto -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>${CONSOLE_PATTERN}</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>
