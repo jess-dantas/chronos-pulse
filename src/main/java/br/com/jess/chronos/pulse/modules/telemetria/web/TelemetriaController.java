@@ -127,7 +127,8 @@ public class TelemetriaController {
             }
             return new SaudeDTO("UP", versaoPostgres, ativo, idle, pendentes, max, agora);
         } catch (SQLException ex) {
-            log.error("Falha ao verificar saúde do banco. SQLState={}", ex.getSQLState(), ex);
+            log.warn("Falha ao verificar saúde do banco. SQLState={}", ex.getSQLState());
+            log.debug("Detalhes da falha de healthcheck do banco.", ex);
             return new SaudeDTO("DOWN", "indisponível", ativo, idle, pendentes, max, agora);
         }
     }
