@@ -9,6 +9,7 @@ import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO
 import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
 import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoEditalRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.*;
@@ -21,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +42,9 @@ class LicitacaoServiceTest {
     private LicitacaoPropostaRepository propostaRepository;
 
     @Mock
+    private LicitacaoEditalRepository editalRepository;
+
+    @Mock
     private FornecedorRepository fornecedorRepository;
 
     @Mock
@@ -47,6 +52,9 @@ class LicitacaoServiceTest {
 
     @Mock
     private ComprasService comprasService;
+
+    @Mock
+    private PncpService pncpService;
 
     @InjectMocks
     private LicitacaoService service;
@@ -314,7 +322,86 @@ class LicitacaoServiceTest {
         assertTrue(ex.getMessage().contains("não pode ser cancelada"));
     }
 
+    @Test
+    @DisplayName("Deve publicar o aviso no PNCP registrando protocolo e data")
+    void devePublicarAvisoNoPncp() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+        LicitacaoEdital edital = editalBase();
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(editalRepository.findByLicitacaoId(licitacao.getId())).thenReturn(Optional.of(edital));
+        when(pncpService.publicarAviso(any(Licitacao.class), any(LicitacaoEdital.class)))
+                .thenReturn(new PncpResultado("PNCP-2026-000123", Instant.parse("2026-09-09T12:00:00Z")));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LicitacaoResponseDTO resposta = service.publicarPncp(licitacao.getId(), tenantId);
+
+        assertEquals("PUBLICADO", resposta.pncpStatus());
+        assertEquals("PNCP-2026-000123", resposta.pncpProtocolo());
+        assertNotNull(resposta.pncpPublicadoEm());
+        assertNull(resposta.pncpErro());
+        verify(pncpService).publicarAviso(any(Licitacao.class), any(LicitacaoEdital.class));
+    }
+
+    @Test
+    @DisplayName("Deve registrar FALHA sem propagar exceção quando o PNCP não está disponível")
+    void deveRegistrarFalhaQuandoPncpIndisponivel() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(editalRepository.findByLicitacaoId(licitacao.getId())).thenReturn(Optional.empty());
+        when(pncpService.publicarAviso(any(Licitacao.class), isNull()))
+                .thenThrow(new IllegalArgumentException("Publicação no PNCP desabilitada. Configure a integração"));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LicitacaoResponseDTO resposta = service.publicarPncp(licitacao.getId(), tenantId);
+
+        assertEquals("FALHA", resposta.pncpStatus());
+        assertNull(resposta.pncpProtocolo());
+        assertNull(resposta.pncpPublicadoEm());
+        assertTrue(resposta.pncpErro().contains("PNCP"));
+    }
+
+    @Test
+    @DisplayName("Deve recusar publicação no PNCP para licitação fora da disputa")
+    void deveRecusarPncpForaDaDisputa() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.EM_ELABORACAO);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.publicarPncp(licitacao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("publicadas/em disputa"));
+        verifyNoInteractions(pncpService);
+    }
+
+    @Test
+    @DisplayName("Deve recusar publicação no PNCP duplicada")
+    void deveRecusarPncpDuplicado() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+        licitacao.setPncpStatus(LicitacaoPncpStatus.PUBLICADO);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.publicarPncp(licitacao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("já publicado"));
+        verifyNoInteractions(pncpService);
+    }
+
     // ============================ FIXTURES ============================
+
+    private LicitacaoEdital editalBase() {
+        return LicitacaoEdital.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .numeroProcesso("PA-2026-0001")
+                .numeroEdital("ED-2026-0001")
+                .formaEntregaPropostas("ELETRONICA")
+                .build();
+    }
 
     private Licitacao licitacaoBase(LicitacaoStatus status) {
         Licitacao licitacao = Licitacao.builder()

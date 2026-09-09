@@ -21,6 +21,10 @@ public record LicitacaoResponseDTO(
         String observacoes,
         String status,
         Boolean pedidoGerado,
+        String pncpStatus,
+        String pncpProtocolo,
+        Instant pncpPublicadoEm,
+        String pncpErro,
         List<LicitacaoItemResponseDTO> itens,
         List<LicitacaoParticipanteResponseDTO> participantes,
         List<LicitacaoPropostaResponseDTO> propostas,
@@ -35,6 +39,8 @@ public record LicitacaoResponseDTO(
                 licitacao.getModalidade(), licitacao.getTipoJulgamento(),
                 licitacao.getObjeto(), licitacao.getDataAbertura(), licitacao.getValorEstimado(),
                 licitacao.getObservacoes(), licitacao.getStatus().name(), licitacao.getPedidoGerado(),
+                licitacao.getPncpStatus() != null ? licitacao.getPncpStatus().name() : "NAO_PUBLICADO",
+                licitacao.getPncpProtocolo(), licitacao.getPncpPublicadoEm(), licitacao.getPncpErro(),
                 itens, participantes, propostas, licitacao.getCriadoEm());
     }
 }

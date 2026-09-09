@@ -60,7 +60,7 @@ public class ModuloService {
             modulos.add(modulo);
         }
 
-        empresaModuloRepository.deleteByTenantId(tenantId);
+        empresaModuloRepository.deleteAllByTenantId(tenantId);
         Instant agora = Instant.now();
         modulos.forEach(modulo -> empresaModuloRepository.save(EmpresaModulo.builder()
                 .tenantId(tenantId)
