@@ -8,6 +8,7 @@ import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO
 import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
 import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoEditalRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.*;
@@ -26,9 +27,11 @@ public class LicitacaoService {
 
     private final LicitacaoRepository licitacaoRepository;
     private final LicitacaoPropostaRepository propostaRepository;
+    private final LicitacaoEditalRepository editalRepository;
     private final FornecedorRepository fornecedorRepository;
     private final MaterialRepository materialRepository;
     private final ComprasService comprasService;
+    private final PncpService pncpService;
 
     @Transactional(readOnly = true)
     public List<LicitacaoResponseDTO> listarLicitacoes(UUID tenantId) {
@@ -112,6 +115,36 @@ public class LicitacaoService {
                     .build());
         }
         licitacao.setStatus(LicitacaoStatus.PUBLICADA);
+        licitacao = licitacaoRepository.save(licitacao);
+        return mapearLicitacao(licitacao, mapaMateriais(tenantId));
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO publicarPncp(UUID id, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(id, tenantId);
+        if (licitacao.getStatus() != LicitacaoStatus.PUBLICADA
+                && licitacao.getStatus() != LicitacaoStatus.ABERTA) {
+            throw new IllegalArgumentException(
+                    "Somente licitações publicadas/em disputa podem ter o aviso publicado no PNCP");
+        }
+        if (licitacao.getPncpStatus() == LicitacaoPncpStatus.PUBLICADO) {
+            throw new IllegalArgumentException(
+                    "Aviso da licitação " + licitacao.getNumero() + " já publicado no PNCP");
+        }
+
+        try {
+            LicitacaoEdital edital = editalRepository.findByLicitacaoId(id).orElse(null);
+            PncpResultado resultado = pncpService.publicarAviso(licitacao, edital);
+            licitacao.setPncpStatus(LicitacaoPncpStatus.PUBLICADO);
+            licitacao.setPncpProtocolo(resultado.protocolo());
+            licitacao.setPncpPublicadoEm(resultado.publicadoEm());
+            licitacao.setPncpErro(null);
+        } catch (Exception e) {
+            licitacao.setPncpStatus(LicitacaoPncpStatus.FALHA);
+            licitacao.setPncpProtocolo(null);
+            licitacao.setPncpPublicadoEm(null);
+            licitacao.setPncpErro(e.getMessage());
+        }
         licitacao = licitacaoRepository.save(licitacao);
         return mapearLicitacao(licitacao, mapaMateriais(tenantId));
     }

@@ -58,6 +58,20 @@ public class Licitacao {
     @Column(name = "pedido_gerado", nullable = false)
     private Boolean pedidoGerado = Boolean.FALSE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pncp_status", nullable = false, length = 20)
+    @Builder.Default
+    private LicitacaoPncpStatus pncpStatus = LicitacaoPncpStatus.NAO_PUBLICADO;
+
+    @Column(name = "pncp_protocolo", length = 100)
+    private String pncpProtocolo;
+
+    @Column(name = "pncp_publicado_em")
+    private Instant pncpPublicadoEm;
+
+    @Column(name = "pncp_erro", columnDefinition = "TEXT")
+    private String pncpErro;
+
     @OneToMany(mappedBy = "licitacao", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<LicitacaoItem> itens = new ArrayList<>();

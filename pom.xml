@@ -172,6 +172,26 @@
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
+			<!-- Migrations de banco via CLI no CI/deploy (goal flyway:migrate) -->
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+			</plugin>
+			<!-- OWASP Dependency-Check (segurança de dependências; execução explícita) -->
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>13.0.0</version>
+				<configuration>
+					<failBuildOnCVSS>8</failBuildOnCVSS>
+					<formats>
+						<format>HTML</format>
+						<format>JSON</format>
+					</formats>
+					<outputDirectory>target/dependency-check</outputDirectory>
+					<nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>

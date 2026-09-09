@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.modulo.repository;
 
 import br.com.jess.chronos.pulse.modules.modulo.domain.entity.EmpresaModulo;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,7 +13,14 @@ public interface EmpresaModuloRepository extends JpaRepository<EmpresaModulo, UU
 
     List<EmpresaModulo> findByTenantId(UUID tenantId);
 
-    void deleteByTenantId(UUID tenantId);
+    /**
+     * Delete em massa imediato: evita o problema do Hibernate executar INSERTs
+     * antes do DELETE derivado dentro da mesma transação, que violaria a chave
+     * única {@code uk_empresa_modulo (tenant_id, modulo_id)} ao reagendar módulos.
+     */
+    @Modifying
+    @Query("delete from EmpresaModulo em where em.tenantId = :tenantId")
+    void deleteAllByTenantId(@Param("tenantId") UUID tenantId);
 
     boolean existsByTenantIdAndModulo_Id(UUID tenantId, UUID moduloId);
 
