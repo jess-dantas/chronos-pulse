@@ -56,4 +56,27 @@ class GlobalExceptionHandlerTest {
         assertThat(resposta.getStatusCode().value()).isEqualTo(500);
         assertThat(resposta.getBody().status()).isEqualTo(500);
     }
+
+    @Test
+    void deveRetornar404ParaRotaNaoEncontrada() {
+        var resposta = handler.handleNotFound(
+                new org.springframework.web.servlet.resource.NoResourceFoundException(
+                        org.springframework.http.HttpMethod.GET, "/api/v1/teste", "/api/v1/teste"),
+                new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/teste"));
+
+        assertThat(resposta.getStatusCode().value()).isEqualTo(404);
+        assertThat(resposta.getBody().status()).isEqualTo(404);
+        assertThat(resposta.getBody().mensagem()).contains("não encontrado");
+    }
+
+    @Test
+    void deveRetornar404ParaNoHandlerFound() {
+        var resposta = handler.handleNotFound(
+                new org.springframework.web.servlet.NoHandlerFoundException("GET",
+                        "/api/v1/teste", null),
+                new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/teste"));
+
+        assertThat(resposta.getStatusCode().value()).isEqualTo(404);
+        assertThat(resposta.getBody().status()).isEqualTo(404);
+    }
 }

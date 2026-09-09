@@ -15,6 +15,8 @@ public interface CpcUsuarioMapper {
     @Mapping(target = "emailPessoal", ignore = true)
     @Mapping(target = "apelido", ignore = true)
     @Mapping(target = "celular", ignore = true)
+    @Mapping(target = "comSenha", ignore = true)
+    @Mapping(target = "comFoto", ignore = true)
     CpcUsuario toModel(CpcUsuarioJpaEntity entity);
 
     @ObjectFactory
