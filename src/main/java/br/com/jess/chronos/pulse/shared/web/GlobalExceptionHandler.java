@@ -1,9 +1,13 @@
 package br.com.jess.chronos.pulse.shared.web;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -23,6 +28,18 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final Counter dbErrorsTotal;
+
+    public GlobalExceptionHandler() {
+        this(new SimpleMeterRegistry());
+    }
+
+    public GlobalExceptionHandler(MeterRegistry meterRegistry) {
+        this.dbErrorsTotal = Counter.builder("db_erros_total")
+                .description("Total de erros de banco de dados (com SQLState no log estruturado)")
+                .register(meterRegistry);
+    }
 
     public record ApiError(int status, String mensagem, Map<String, String> campos) {}
 
@@ -59,8 +76,19 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(403, "Acesso não autorizado.", null));
     }
 
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiError> handleDataAccess(DataAccessException ex) {
+        String sqlState = extrairSqlState(ex);
+        dbErrorsTotal.increment();
+        log.error("Falha de acesso a dados. SQLState={}", sqlState, ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiError(500, "Erro interno do servidor.", null));
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
+        dbErrorsTotal.increment();
+        log.error("Conflito de integridade de dados. SQLState={}", extrairSqlState(ex), ex);
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ApiError(409, "Conflito de integridade de dados.", null));
     }
@@ -73,8 +101,23 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex, HttpServletRequest request) {
+        String sqlState = extrairSqlState(ex);
+        if (!"DESCONHECIDO".equals(sqlState)) {
+            dbErrorsTotal.increment();
+        }
         log.error("Erro não tratado em {} {}", request.getMethod(), request.getRequestURI(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ApiError(500, "Erro interno do servidor.", null));
+    }
+
+    private static String extrairSqlState(Throwable ex) {
+        Throwable causa = ex;
+        while (causa != null) {
+            if (causa instanceof SQLException sqlException && sqlException.getSQLState() != null) {
+                return sqlException.getSQLState();
+            }
+            causa = causa.getCause();
+        }
+        return "DESCONHECIDO";
     }
 }

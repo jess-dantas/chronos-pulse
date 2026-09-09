@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -48,6 +49,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String role = claims.get("role", String.class);
 
         usuarioRepository.buscarPorCpf(cpf).ifPresent(usuario -> {
+            // Contexto de observabilidade no MDC (R27) — limpo ao final da
+            // requisição pelo TelemetriaFilter, que envolve toda a cadeia.
+            if (usuario.getTenantId() != null) {
+                MDC.put("tenantId", usuario.getTenantId().toString());
+            }
+            if (usuario.getCpcId() != null) {
+                MDC.put("usuarioId", usuario.getCpcId().toString());
+            }
             var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
             authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
             if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {

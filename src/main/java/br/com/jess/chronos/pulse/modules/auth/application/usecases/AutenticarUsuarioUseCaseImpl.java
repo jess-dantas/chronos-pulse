@@ -5,6 +5,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuar
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
 import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
+import br.com.jess.chronos.pulse.modules.telemetria.application.LoginMetricsRecorder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
@@ -16,27 +17,41 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final ModulosPort modulosPort;
+    private final LoginMetricsRecorder loginMetricsRecorder;
 
     public AutenticarUsuarioUseCaseImpl(CpcUsuarioRepositoryPort repositoryPort,
                                         JwtService jwtService,
                                         PasswordEncoder passwordEncoder,
-                                        ModulosPort modulosPort) {
+                                        ModulosPort modulosPort,
+                                        LoginMetricsRecorder loginMetricsRecorder) {
         this.repositoryPort = repositoryPort;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.modulosPort = modulosPort;
+        this.loginMetricsRecorder = loginMetricsRecorder;
     }
 
     @Override
     public Resultado executar(Comando comando) {
         CpcUsuario usuario = repositoryPort.buscarPorCpf(comando.cpf())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas"));
+                .orElseGet(() -> {
+                    loginMetricsRecorder.registrarFalha(comando.cpf(), "USUARIO_NAO_ENCONTRADO", false, null, null);
+                    return null;
+                });
+
+        if (usuario == null) {
+            throw new IllegalArgumentException("Credenciais inválidas");
+        }
 
         if (!usuario.isAtivo()) {
+            loginMetricsRecorder.registrarFalha(comando.cpf(), "USUARIO_INATIVO", true,
+                    usuario.getTenantId(), usuario.getCpcId());
             throw new IllegalStateException("Usuário inativo");
         }
 
         if (!passwordEncoder.matches(comando.senha(), usuario.getSenhaHash())) {
+            loginMetricsRecorder.registrarFalha(comando.cpf(), "SENHA_INVALIDA", true,
+                    usuario.getTenantId(), usuario.getCpcId());
             throw new IllegalArgumentException("Credenciais inválidas");
         }
 
@@ -50,6 +65,9 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
         List<String> modulos = usuario.getTenantId() != null
                 ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
                 : Collections.emptyList();
+
+        loginMetricsRecorder.registrarSucesso(usuario.getTenantId(), usuario.getCpcId(),
+                usuario.getRole().name());
 
         return new Resultado(
                 accessToken,

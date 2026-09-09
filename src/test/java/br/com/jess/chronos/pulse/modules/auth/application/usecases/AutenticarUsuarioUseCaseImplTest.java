@@ -7,6 +7,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuar
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
 import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
+import br.com.jess.chronos.pulse.modules.telemetria.application.LoginMetricsRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,11 +37,14 @@ class AutenticarUsuarioUseCaseImplTest {
     @Mock
     private ModulosPort modulosPort;
 
+    @Mock
+    private LoginMetricsRecorder loginMetricsRecorder;
+
     private AutenticarUsuarioUseCaseImpl useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort);
+        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder);
     }
 
     @Test
@@ -66,6 +70,7 @@ class AutenticarUsuarioUseCaseImplTest {
         assertThat(resultado.cpf()).isEqualTo("12345678901");
         assertThat(resultado.cpcId()).isEqualTo(cpcId.toString());
         assertThat(resultado.modulos()).containsExactly("PONTO");
+        verify(loginMetricsRecorder).registrarSucesso(tenantId, cpcId, "COLABORADOR");
     }
 
     @Test
@@ -75,6 +80,8 @@ class AutenticarUsuarioUseCaseImplTest {
         assertThatThrownBy(() -> useCase.executar(new Comando("12345678901", "senha123")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Credenciais inválidas");
+
+        verify(loginMetricsRecorder).registrarFalha("12345678901", "USUARIO_NAO_ENCONTRADO", false, null, null);
     }
 
     @Test
@@ -88,5 +95,7 @@ class AutenticarUsuarioUseCaseImplTest {
         assertThatThrownBy(() -> useCase.executar(new Comando("12345678901", "senhaErrada")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Credenciais inválidas");
+
+        verify(loginMetricsRecorder).registrarFalha(eq("12345678901"), eq("SENHA_INVALIDA"), eq(true), any(), any());
     }
 }

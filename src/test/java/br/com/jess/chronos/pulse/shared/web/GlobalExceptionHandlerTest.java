@@ -46,4 +46,14 @@ class GlobalExceptionHandlerTest {
         assertThat(resposta.getStatusCode().value()).isEqualTo(400);
         assertThat(resposta.getBody().campos()).isEmpty();
     }
+
+    @Test
+    void deveRetornar500ParaFalhaDeAcessoADados() {
+        var resposta = handler.handleDataAccess(
+                new org.springframework.dao.DataAccessResourceFailureException("falha",
+                        new java.sql.SQLException("conexão recusada", "08001")));
+
+        assertThat(resposta.getStatusCode().value()).isEqualTo(500);
+        assertThat(resposta.getBody().status()).isEqualTo(500);
+    }
 }
