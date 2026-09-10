@@ -77,12 +77,23 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
+          set -o pipefail
           NVD_KEY=$(printf '%s' "$NVD_API_KEY" | tr -d '[:space:]')
-          if [ -n "$NVD_KEY" ]; then
-            sh mvnw -B dependency-check:check -DnvdApiKey="$NVD_KEY"
-          else
-            sh mvnw -B dependency-check:check
-          fi
+          ARGS=(-B dependency-check:check)
+          [ -n "$NVD_KEY" ] && ARGS+=("-DnvdApiKey=$NVD_KEY")
+          for i in 1 2 3; do
+            if sh mvnw "${ARGS[@]}" 2>&1 | tee /tmp/dc.log; then
+              exit 0
+            fi
+            if grep -Eq "NVD Returned Status Code: 5|Invalid API Key|Error updating the NVD Data" /tmp/dc.log; then
+              echo "--- NVD update transient (tentativa $i/3), repetindo ---"
+              sleep 10
+            else
+              echo "--- falha nao-transitoria do dependency-check ---"
+              exit 1
+            fi
+          done
+          exit 1
 
       - name: Upload dependency-check report
         uses: actions/upload-artifact@v7.0.1
