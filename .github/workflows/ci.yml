@@ -74,7 +74,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: OWASP Dependency-Check
-        run: sh mvnw -B dependency-check:check
+        run: sh mvnw -B dependency-check:check ${NVD_API_KEY:+-DnvdApiKey=\"$NVD_API_KEY\"}
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
