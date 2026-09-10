@@ -74,9 +74,15 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
 
       - name: OWASP Dependency-Check
-        run: sh mvnw -B dependency-check:check ${NVD_API_KEY:+-DnvdApiKey=\"$NVD_API_KEY\"}
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          NVD_KEY=$(printf '%s' "$NVD_API_KEY" | tr -d '[:space:]')
+          if [ -n "$NVD_KEY" ]; then
+            sh mvnw -B dependency-check:check -DnvdApiKey="$NVD_KEY"
+          else
+            sh mvnw -B dependency-check:check
+          fi
 
       - name: Upload dependency-check report
         uses: actions/upload-artifact@v7.0.1
