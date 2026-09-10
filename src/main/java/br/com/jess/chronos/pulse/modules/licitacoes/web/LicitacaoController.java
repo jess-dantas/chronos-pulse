@@ -82,6 +82,29 @@ public class LicitacaoController {
         return ResponseEntity.ok(resposta);
     }
 
+    @PostMapping("/{id}/publicar-pncp")
+    @PreAuthorize(ROLES_GERENCIA)
+    public ResponseEntity<LicitacaoResponseDTO> publicarPncp(
+            @PathVariable UUID id, Authentication authentication) {
+
+        CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
+        LicitacaoResponseDTO resposta = licitacaoService.publicarPncp(id, usuario.getTenantId());
+        if ("PUBLICADO".equals(resposta.pncpStatus())) {
+            auditoriaService.registrar("PUBLICACAO_PNCP", "LICITACAO", id,
+                    "Aviso da licitação " + resposta.numero() + " publicado no PNCP (protocolo "
+                            + resposta.pncpProtocolo() + ")",
+                    usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                    null, null, null);
+        } else {
+            auditoriaService.registrar("FALHA_PUBLICACAO_PNCP", "LICITACAO", id,
+                    "Falha na publicação do aviso da licitação " + resposta.numero()
+                            + " no PNCP: " + resposta.pncpErro(),
+                    usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                    null, null, null);
+        }
+        return ResponseEntity.ok(resposta);
+    }
+
     @PutMapping("/{id}/propostas")
     @PreAuthorize(ROLES_GERENCIA)
     public ResponseEntity<LicitacaoResponseDTO> registrarPropostas(

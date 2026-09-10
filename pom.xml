@@ -21,6 +21,8 @@
 		<java.version>25</java.version>
 		<org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+		<!-- Tomcat 11.0.25 corrige CVEs de 11.0.24 (CVE-2026-65905, 65637, 68525, 65182 e outros) -->
+		<tomcat.version>11.0.25</tomcat.version>
 	</properties>
 
 	<dependencies>
@@ -171,6 +173,27 @@
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
+			</plugin>
+			<!-- Migrations de banco via CLI no CI/deploy (goal flyway:migrate) -->
+			<plugin>
+				<groupId>org.flywaydb</groupId>
+				<artifactId>flyway-maven-plugin</artifactId>
+			</plugin>
+			<!-- OWASP Dependency-Check (segurança de dependências; execução explícita) -->
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>12.1.0</version>
+				<configuration>
+					<failBuildOnCVSS>8</failBuildOnCVSS>
+					<ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
+					<formats>
+						<format>HTML</format>
+						<format>JSON</format>
+					</formats>
+					<outputDirectory>target/dependency-check</outputDirectory>
+				</configuration>
+				<!-- Chave NVD opcional via linha de comando: -DnvdApiKey=... (vazia quebra o plugin) -->
 			</plugin>
 		</plugins>
 	</build>
