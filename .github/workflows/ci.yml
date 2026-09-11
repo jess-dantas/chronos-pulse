@@ -183,7 +183,24 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
+      - name: Verificar configuração da produção
+        id: gate
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -n "$DB_URL" ] && [ -n "$DB_USER" ] && [ -n "$DB_PASSWORD" ] && [ -n "$KUBE_CONFIG" ]; then
+            echo "Produção configurada. Aplicando migrações e deploy."
+            echo "infra_ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Produção ainda não configurada (faltam DB_URL/DB_USER/DB_PASSWORD/KUBE_CONFIG). Deploy de produção ignorado até a infra existir."
+            echo "infra_ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run Flyway migrations (production)
+        if: steps.gate.outputs.infra_ready == 'true'
         run: sh mvnw -B flyway:migrate -Dflyway.url="$DB_URL" -Dflyway.user="$DB_USER" -Dflyway.password="$DB_PASSWORD"
         env:
           DB_URL: ${{ secrets.DB_URL }}
@@ -191,6 +208,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
       - name: Log in to GitHub Container Registry
+        if: steps.gate.outputs.infra_ready == 'true'
         uses: docker/login-action@v4.6.0
         with:
           registry: ghcr.io
@@ -198,6 +216,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image (production)
+        if: steps.gate.outputs.infra_ready == 'true'
         uses: docker/build-push-action@v7.3.0
         with:
           context: .
@@ -208,9 +227,11 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}
 
       - name: Set up kubectl
+        if: steps.gate.outputs.infra_ready == 'true'
         uses: azure/setup-kubectl@v5.1.0
 
       - name: Deploy to Kubernetes (production)
+        if: steps.gate.outputs.infra_ready == 'true'
         env:
           KUBECONFIG: ${{ runner.temp }}/kubeconfig.yaml
         run: |
