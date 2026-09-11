@@ -60,6 +60,22 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-trivy-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2-trivy
+
+      - name: Resolve dependências (popula ~/.m2 para o Trivy)
+        run: sh mvnw -B -q dependency:go-offline -DskipTests
+
       - name: Instala Trivy
         uses: aquasecurity/setup-trivy@v0.3.1
 
