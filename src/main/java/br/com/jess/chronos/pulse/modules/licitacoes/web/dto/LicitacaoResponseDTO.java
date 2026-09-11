@@ -28,12 +28,14 @@ public record LicitacaoResponseDTO(
         List<LicitacaoItemResponseDTO> itens,
         List<LicitacaoParticipanteResponseDTO> participantes,
         List<LicitacaoPropostaResponseDTO> propostas,
+        List<LanceResponseDTO> lances,
         Instant criadoEm
 ) {
     public static LicitacaoResponseDTO from(Licitacao licitacao,
             List<LicitacaoItemResponseDTO> itens,
             List<LicitacaoParticipanteResponseDTO> participantes,
-            List<LicitacaoPropostaResponseDTO> propostas) {
+            List<LicitacaoPropostaResponseDTO> propostas,
+            List<LanceResponseDTO> lances) {
         return new LicitacaoResponseDTO(
                 licitacao.getId(), licitacao.getTenantId(), licitacao.getNumero(),
                 licitacao.getModalidade(), licitacao.getTipoJulgamento(),
@@ -41,6 +43,6 @@ public record LicitacaoResponseDTO(
                 licitacao.getObservacoes(), licitacao.getStatus().name(), licitacao.getPedidoGerado(),
                 licitacao.getPncpStatus() != null ? licitacao.getPncpStatus().name() : "NAO_PUBLICADO",
                 licitacao.getPncpProtocolo(), licitacao.getPncpPublicadoEm(), licitacao.getPncpErro(),
-                itens, participantes, propostas, licitacao.getCriadoEm());
+                itens, participantes, propostas, lances, licitacao.getCriadoEm());
     }
 }

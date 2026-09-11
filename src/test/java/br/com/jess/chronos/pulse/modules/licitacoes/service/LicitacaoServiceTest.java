@@ -10,6 +10,7 @@ import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
 import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoEditalRepository;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoLanceRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.*;
@@ -40,6 +41,9 @@ class LicitacaoServiceTest {
 
     @Mock
     private LicitacaoPropostaRepository propostaRepository;
+
+    @Mock
+    private LicitacaoLanceRepository lanceRepository;
 
     @Mock
     private LicitacaoEditalRepository editalRepository;
@@ -391,6 +395,189 @@ class LicitacaoServiceTest {
         verifyNoInteractions(pncpService);
     }
 
+    @Test
+    @DisplayName("Deve abrir disputa somente a partir de licitação publicada")
+    void deveAbrirDisputa() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.PUBLICADA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LicitacaoResponseDTO resposta = service.abrirDisputa(licitacao.getId(), tenantId);
+
+        assertEquals("ABERTA", resposta.status());
+
+        Licitacao emElaboracao = licitacaoBase(LicitacaoStatus.EM_ELABORACAO);
+        when(licitacaoRepository.findByIdAndTenantId(emElaboracao.getId(), tenantId))
+                .thenReturn(Optional.of(emElaboracao));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.abrirDisputa(emElaboracao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("publicadas"));
+    }
+
+    @Test
+    @DisplayName("Deve registrar lance novo para fornecedor habilitado em item da licitação")
+    void deveRegistrarLanceNovo() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        UUID itemId = licitacao.getItens().get(0).getId();
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(lanceRepository.findByLicitacaoIdAndLicitacaoItemIdAndFornecedorId(
+                licitacao.getId(), itemId, fornecedor1.getId())).thenReturn(Optional.empty());
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RegistrarLanceDTO dto = new RegistrarLanceDTO(itemId, fornecedor1.getId(),
+                new BigDecimal("16.0000"), "Lance inicial");
+
+        LicitacaoResponseDTO resposta = service.registrarLance(licitacao.getId(), dto, tenantId);
+
+        assertEquals(1, resposta.lances().size());
+        assertEquals(fornecedor1.getId(), resposta.lances().get(0).fornecedorId());
+        assertEquals("16.0000", resposta.lances().get(0).valorUnitario().toPlainString());
+    }
+
+    @Test
+    @DisplayName("Deve aceitar lance menor em disputa por menor preço, substituindo o atual")
+    void deveSubstituirLanceComValorMenor() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        UUID itemId = licitacao.getItens().get(0).getId();
+        LicitacaoLance atual = lance(licitacao, itemId, fornecedor1.getId(), "17.0000");
+        licitacao.getLances().add(atual);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(lanceRepository.findByLicitacaoIdAndLicitacaoItemIdAndFornecedorId(
+                licitacao.getId(), itemId, fornecedor1.getId())).thenReturn(Optional.of(atual));
+        when(lanceRepository.save(any(LicitacaoLance.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+
+        RegistrarLanceDTO dto = new RegistrarLanceDTO(itemId, fornecedor1.getId(),
+                new BigDecimal("16.0000"), "Redução");
+
+        LicitacaoResponseDTO resposta = service.registrarLance(licitacao.getId(), dto, tenantId);
+
+        verify(lanceRepository).save(atual);
+        assertEquals("16.0000", atual.getValorUnitario().toPlainString());
+    }
+
+    @Test
+    @DisplayName("Deve recusar lance não inferior ao atual em disputa por menor preço")
+    void deveRecusarLanceNaoInferior() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        UUID itemId = licitacao.getItens().get(0).getId();
+        LicitacaoLance atual = lance(licitacao, itemId, fornecedor1.getId(), "16.0000");
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(lanceRepository.findByLicitacaoIdAndLicitacaoItemIdAndFornecedorId(
+                licitacao.getId(), itemId, fornecedor1.getId())).thenReturn(Optional.of(atual));
+
+        RegistrarLanceDTO dto = new RegistrarLanceDTO(itemId, fornecedor1.getId(),
+                new BigDecimal("16.5000"), null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.registrarLance(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("inferior"));
+    }
+
+    @Test
+    @DisplayName("Deve recusar lance de fornecedor não habilitado")
+    void deveRecusarLanceFornecedorNaoHabilitado() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        RegistrarLanceDTO dto = new RegistrarLanceDTO(licitacao.getItens().get(0).getId(),
+                UUID.randomUUID(), new BigDecimal("16.0000"), null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.registrarLance(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("não habilitado"));
+    }
+
+    @Test
+    @DisplayName("Deve recusar lance em item fora da licitação")
+    void deveRecusarLanceEmItemForaDaLicitacao() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        RegistrarLanceDTO dto = new RegistrarLanceDTO(UUID.randomUUID(), fornecedor1.getId(),
+                new BigDecimal("16.0000"), null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.registrarLance(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("não pertence"));
+    }
+
+    @Test
+    @DisplayName("Deve adjudicar pela disputa de lances por menor preço")
+    void deveAdjudicarPorLancesMenorPreco() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        UUID itemPapel = licitacao.getItens().get(0).getId();
+        UUID itemCaneta = licitacao.getItens().get(1).getId();
+        licitacao.getLances().add(lance(licitacao, itemPapel, fornecedor1.getId(), "17.0000"));
+        licitacao.getLances().add(lance(licitacao, itemPapel, fornecedor2.getId(), "16.0000"));
+        licitacao.getLances().add(lance(licitacao, itemCaneta, fornecedor1.getId(), "125.0000"));
+        licitacao.getLances().add(lance(licitacao, itemCaneta, fornecedor2.getId(), "128.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(lanceRepository.findAllByLicitacaoIdOrderByAtualizadoEmDesc(licitacao.getId()))
+                .thenReturn(List.copyOf(licitacao.getLances()));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LicitacaoResponseDTO resposta = service.adjudicarLicitacao(licitacao.getId(), tenantId);
+
+        assertEquals("ADJUDICADA", resposta.status());
+        var papelVencedor = resposta.propostas().stream()
+                .filter(p -> p.materialId().equals(papel.getId()) && Boolean.TRUE.equals(p.vencedor()))
+                .findFirst().orElseThrow();
+        var canetaVencedor = resposta.propostas().stream()
+                .filter(p -> p.materialId().equals(caneta.getId()) && Boolean.TRUE.equals(p.vencedor()))
+                .findFirst().orElseThrow();
+        assertEquals(fornecedor2.getId(), papelVencedor.fornecedorId());
+        assertEquals(fornecedor1.getId(), canetaVencedor.fornecedorId());
+    }
+
+    @Test
+    @DisplayName("Deve exigir lance para todos os itens antes de adjudicar pela disputa")
+    void deveExigirLanceParaTodosOsItens() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        UUID itemPapel = licitacao.getItens().get(0).getId();
+        licitacao.getLances().add(lance(licitacao, itemPapel, fornecedor1.getId(), "16.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(lanceRepository.findAllByLicitacaoIdOrderByAtualizadoEmDesc(licitacao.getId()))
+                .thenReturn(List.copyOf(licitacao.getLances()));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.adjudicarLicitacao(licitacao.getId(), tenantId));
+        assertTrue(ex.getMessage().contains("ao menos um lance"));
+    }
+
+    @Test
+    @DisplayName("Deve listar lances com ranking por fornecedor e economia")
+    void deveListarLances() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ABERTA);
+        UUID itemPapel = licitacao.getItens().get(0).getId();
+        UUID itemCaneta = licitacao.getItens().get(1).getId();
+        LicitacaoLance lancePapel = lance(licitacao, itemPapel, fornecedor2.getId(), "16.0000");
+        LicitacaoLance lanceCaneta = lance(licitacao, itemCaneta, fornecedor1.getId(), "125.0000");
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(materialRepository.findAllByTenantId(tenantId)).thenReturn(List.of(papel, caneta));
+        when(lanceRepository.findAllByLicitacaoIdOrderByAtualizadoEmDesc(licitacao.getId()))
+                .thenReturn(List.of(lancePapel, lanceCaneta));
+
+        List<LanceResponseDTO> lances = service.listarLances(licitacao.getId(), tenantId);
+
+        assertEquals(2, lances.size());
+        assertEquals("Suprimentos Center LTDA", lances.get(0).fornecedorNome());
+        assertEquals("PapelCenter LTDA", lances.get(1).fornecedorNome());
+        assertEquals(0, new BigDecimal("1.5000").compareTo(lances.get(0).economia()));
+    }
+
     // ============================ FIXTURES ============================
 
     private LicitacaoEdital editalBase() {
@@ -417,10 +604,12 @@ class LicitacaoServiceTest {
                 .build();
 
         licitacao.adicionarItem(LicitacaoItem.builder()
+                .id(UUID.randomUUID())
                 .tenantId(tenantId).materialId(papel.getId()).descricao(papel.getDescricao())
                 .quantidade(new BigDecimal("100")).valorEstimadoUnitario(new BigDecimal("17.5000"))
                 .build());
         licitacao.adicionarItem(LicitacaoItem.builder()
+                .id(UUID.randomUUID())
                 .tenantId(tenantId).materialId(caneta.getId()).descricao(caneta.getDescricao())
                 .quantidade(new BigDecimal("50")).valorEstimadoUnitario(new BigDecimal("1.2000"))
                 .build());
@@ -443,5 +632,16 @@ class LicitacaoServiceTest {
         return LicitacaoProposta.builder()
                 .tenantId(tenantId).fornecedorId(fornecedorId).materialId(materialId)
                 .valorUnitario(new BigDecimal(valor)).vencedor(Boolean.TRUE).build();
+    }
+
+    private LicitacaoLance lance(Licitacao licitacao, UUID itemId, UUID fornecedorId, String valor) {
+        return LicitacaoLance.builder()
+                .id(UUID.randomUUID())
+                .tenantId(tenantId)
+                .licitacao(licitacao)
+                .licitacaoItemId(itemId)
+                .fornecedorId(fornecedorId)
+                .valorUnitario(new BigDecimal(valor))
+                .build();
     }
 }
