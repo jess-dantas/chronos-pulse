@@ -9,6 +9,7 @@ import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO
 import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
 import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoContratoRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoEditalRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoLanceRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
@@ -44,6 +45,9 @@ class LicitacaoServiceTest {
 
     @Mock
     private LicitacaoLanceRepository lanceRepository;
+
+    @Mock
+    private LicitacaoContratoRepository contratoRepository;
 
     @Mock
     private LicitacaoEditalRepository editalRepository;
@@ -576,6 +580,98 @@ class LicitacaoServiceTest {
         assertEquals("Suprimentos Center LTDA", lances.get(0).fornecedorNome());
         assertEquals("PapelCenter LTDA", lances.get(1).fornecedorNome());
         assertEquals(0, new BigDecimal("1.5000").compareTo(lances.get(0).economia()));
+    }
+
+    // ============================ FORMALIZAÇÃO DO CONTRATO ============================
+
+    @Test
+    @DisplayName("Deve formalizar contrato de licitação homologada somando os vencedores")
+    void deveFormalizarContrato() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.HOMOLOGADA);
+        licitacao.getPropostas().add(propostaVencedora(fornecedor1.getId(), caneta.getId(), "125.0000"));
+        licitacao.getPropostas().add(propostaVencedora(fornecedor2.getId(), papel.getId(), "16.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+        when(licitacaoRepository.save(any(Licitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(contratoRepository.save(any(ContratoLicitacao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        FormalizarContratoDTO dto = new FormalizarContratoDTO(
+                LocalDate.of(2026, 9, 20), LocalDate.of(2027, 9, 19),
+                "Vigência de 12 meses", new BigDecimal("654.17"),
+                new BigDecimal("7850.00"), BigDecimal.ZERO, "EMP-2026-0001", 30);
+
+        LicitacaoResponseDTO resposta = service.formalizarContrato(licitacao.getId(), dto, tenantId);
+
+        assertEquals(Boolean.TRUE, resposta.contratoGerado());
+        verify(contratoRepository).save(argThat(contrato ->
+                "CT-LIC-2026-000001".equals(contrato.getNumero())
+                        && 0 == new BigDecimal("7850.00").compareTo(contrato.getValorTotal())
+                        && licitacao.getId().equals(contrato.getLicitacaoId())
+                        && "ATIVO".equals(contrato.getStatus())));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar formalização de licitação não homologada")
+    void deveRejeitarFormalizacaoSemHomologacao() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.ADJUDICADA);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        FormalizarContratoDTO dto = new FormalizarContratoDTO(
+                LocalDate.of(2026, 9, 20), LocalDate.of(2027, 9, 19), null, null, null, null, null, null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.formalizarContrato(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("homologadas"));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar segunda formalização de contrato para a mesma licitação")
+    void deveRejeitarFormalizacaoDuplicada() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.HOMOLOGADA);
+        licitacao.getPropostas().add(propostaVencedora(fornecedor2.getId(), papel.getId(), "16.0000"));
+        licitacao.setContratoGerado(Boolean.TRUE);
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        FormalizarContratoDTO dto = new FormalizarContratoDTO(
+                LocalDate.of(2026, 9, 20), LocalDate.of(2027, 9, 19), null, null, null, null, null, null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.formalizarContrato(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("já formalizado"));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar formalização sem vencedores definidos")
+    void deveRejeitarFormalizacaoSemVencedores() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.HOMOLOGADA);
+        licitacao.getPropostas().add(proposta(fornecedor1.getId(), papel.getId(), "16.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        FormalizarContratoDTO dto = new FormalizarContratoDTO(
+                LocalDate.of(2026, 9, 20), LocalDate.of(2027, 9, 19), null, null, null, null, null, null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.formalizarContrato(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("Nenhum vencedor"));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar formalização com data fim anterior à data início")
+    void deveRejeitarFormalizacaoDataFimInvalida() {
+        Licitacao licitacao = licitacaoBase(LicitacaoStatus.HOMOLOGADA);
+        licitacao.getPropostas().add(propostaVencedora(fornecedor2.getId(), papel.getId(), "16.0000"));
+
+        when(licitacaoRepository.findByIdAndTenantId(licitacao.getId(), tenantId)).thenReturn(Optional.of(licitacao));
+
+        FormalizarContratoDTO dto = new FormalizarContratoDTO(
+                LocalDate.of(2027, 9, 19), LocalDate.of(2026, 9, 20), null, null, null, null, null, null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> service.formalizarContrato(licitacao.getId(), dto, tenantId));
+        assertTrue(ex.getMessage().contains("não pode ser anterior"));
     }
 
     // ============================ FIXTURES ============================

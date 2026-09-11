@@ -8,6 +8,7 @@ import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO
 import br.com.jess.chronos.pulse.modules.estoque.domain.entity.Material;
 import br.com.jess.chronos.pulse.modules.estoque.repository.MaterialRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.*;
+import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoContratoRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoEditalRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoLanceRepository;
 import br.com.jess.chronos.pulse.modules.licitacoes.repository.LicitacaoPropostaRepository;
@@ -30,6 +31,7 @@ public class LicitacaoService {
     private final LicitacaoPropostaRepository propostaRepository;
     private final LicitacaoLanceRepository lanceRepository;
     private final LicitacaoEditalRepository editalRepository;
+    private final LicitacaoContratoRepository contratoRepository;
     private final FornecedorRepository fornecedorRepository;
     private final MaterialRepository materialRepository;
     private final ComprasService comprasService;
@@ -444,6 +446,57 @@ public class LicitacaoService {
         licitacao.setPedidoGerado(Boolean.TRUE);
         licitacaoRepository.save(licitacao);
         return pedidos;
+    }
+
+    @Transactional
+    public LicitacaoResponseDTO formalizarContrato(UUID licitacaoId, FormalizarContratoDTO dto, UUID tenantId) {
+        Licitacao licitacao = buscarLicitacaoDoTenant(licitacaoId, tenantId);
+        if (licitacao.getStatus() != LicitacaoStatus.HOMOLOGADA) {
+            throw new IllegalArgumentException("Somente licitações homologadas podem ter contrato formalizado");
+        }
+        if (Boolean.TRUE.equals(licitacao.getContratoGerado())) {
+            throw new IllegalArgumentException("Contrato já formalizado para esta licitação");
+        }
+        if (dto.dataFim().isBefore(dto.dataInicio())) {
+            throw new IllegalArgumentException("A data de fim não pode ser anterior à data de início");
+        }
+
+        Map<UUID, BigDecimal> quantidadePorMaterial = new HashMap<>();
+        licitacao.getItens().forEach(item -> quantidadePorMaterial.put(item.getMaterialId(), item.getQuantidade()));
+
+        List<LicitacaoProposta> vencedores = licitacao.getPropostas().stream()
+                .filter(p -> Boolean.TRUE.equals(p.getVencedor()))
+                .toList();
+        if (vencedores.isEmpty()) {
+            throw new IllegalArgumentException("Nenhum vencedor definido na licitação");
+        }
+        BigDecimal valorTotal = vencedores.stream()
+                .map(p -> quantidadePorMaterial
+                        .getOrDefault(p.getMaterialId(), BigDecimal.ZERO)
+                        .multiply(p.getValorUnitario()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        ContratoLicitacao contrato = ContratoLicitacao.builder()
+                .tenantId(licitacao.getTenantId())
+                .numero("CT-" + licitacao.getNumero())
+                .objeto("Fornecimento referente à " + licitacao.getNumero() + " — " + licitacao.getObjeto())
+                .dataInicio(dto.dataInicio())
+                .dataFim(dto.dataFim())
+                .valorMensal(dto.valorMensal() == null ? BigDecimal.ZERO : dto.valorMensal())
+                .valorTotal(valorTotal)
+                .status("ATIVO")
+                .observacoes(dto.observacoes())
+                .valorEmpenhado(dto.valorEmpenhado() == null ? BigDecimal.ZERO : dto.valorEmpenhado())
+                .valorLiquidado(dto.valorLiquidado() == null ? BigDecimal.ZERO : dto.valorLiquidado())
+                .empenhoNumero(dto.empenhoNumero())
+                .vencimentoAvisoDias(dto.vencimentoAvisoDias() == null ? 30 : dto.vencimentoAvisoDias())
+                .licitacaoId(licitacao.getId())
+                .build();
+        contratoRepository.save(contrato);
+
+        licitacao.setContratoGerado(Boolean.TRUE);
+        licitacaoRepository.save(licitacao);
+        return mapearLicitacao(licitacao, mapaMateriais(tenantId));
     }
 
     // ============================ AUXILIARES ============================

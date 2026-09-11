@@ -5,6 +5,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.service.LicitacaoService;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.CadastrarLicitacaoDTO;
+import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.FormalizarContratoDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.LanceResponseDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.LicitacaoResponseDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.PublicarLicitacaoDTO;
@@ -206,6 +207,22 @@ public class LicitacaoController {
                 .reduce("", (a, b) -> a.isEmpty() ? b : a + ", " + b);
         auditoriaService.registrar("GERACAO_PEDIDO_LICITACAO", "LICITACAO", id,
                 "Pedido(s) " + descricao + " gerado(s) a partir da licitação " + id,
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
+        return ResponseEntity.ok(resposta);
+    }
+
+    @PostMapping("/{id}/contrato")
+    @PreAuthorize(ROLES_GERENCIA)
+    public ResponseEntity<LicitacaoResponseDTO> formalizarContrato(
+            @PathVariable UUID id,
+            @Valid @RequestBody FormalizarContratoDTO dto,
+            Authentication authentication) {
+
+        CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
+        LicitacaoResponseDTO resposta = licitacaoService.formalizarContrato(id, dto, usuario.getTenantId());
+        auditoriaService.registrar("FORMALIZACAO_CONTRATO_LICITACAO", "LICITACAO", id,
+                "Contrato CT-" + resposta.numero() + " formalizado a partir da licitação " + resposta.numero(),
                 usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
                 null, null, null);
         return ResponseEntity.ok(resposta);

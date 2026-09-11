@@ -58,6 +58,10 @@ public class Licitacao {
     @Column(name = "pedido_gerado", nullable = false)
     private Boolean pedidoGerado = Boolean.FALSE;
 
+    @Builder.Default
+    @Column(name = "contrato_gerado", nullable = false)
+    private Boolean contratoGerado = Boolean.FALSE;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "pncp_status", nullable = false, length = 20)
     @Builder.Default
