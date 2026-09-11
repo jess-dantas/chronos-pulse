@@ -58,6 +58,10 @@ public class Licitacao {
     @Column(name = "pedido_gerado", nullable = false)
     private Boolean pedidoGerado = Boolean.FALSE;
 
+    @Builder.Default
+    @Column(name = "contrato_gerado", nullable = false)
+    private Boolean contratoGerado = Boolean.FALSE;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "pncp_status", nullable = false, length = 20)
     @Builder.Default
@@ -84,6 +88,10 @@ public class Licitacao {
     @Builder.Default
     private List<LicitacaoProposta> propostas = new ArrayList<>();
 
+    @OneToMany(mappedBy = "licitacao", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<LicitacaoLance> lances = new ArrayList<>();
+
     @Column(name = "criado_em", insertable = false, updatable = false)
     private Instant criadoEm;
 
@@ -100,5 +108,10 @@ public class Licitacao {
     public void adicionarProposta(LicitacaoProposta proposta) {
         propostas.add(proposta);
         proposta.setLicitacao(this);
+    }
+
+    public void adicionarLance(LicitacaoLance lance) {
+        lances.add(lance);
+        lance.setLicitacao(this);
     }
 }

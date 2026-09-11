@@ -5,8 +5,11 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.compras.web.dto.PedidoCompraResponseDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.service.LicitacaoService;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.CadastrarLicitacaoDTO;
+import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.FormalizarContratoDTO;
+import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.LanceResponseDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.LicitacaoResponseDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.PublicarLicitacaoDTO;
+import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.RegistrarLanceDTO;
 import br.com.jess.chronos.pulse.modules.licitacoes.web.dto.RegistrarPropostasLicitacaoDTO;
 import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import jakarta.validation.Valid;
@@ -122,13 +125,50 @@ public class LicitacaoController {
         return ResponseEntity.ok(resposta);
     }
 
+    @PostMapping("/{id}/abrir-disputa")
+    @PreAuthorize(ROLES_GERENCIA)
+    public ResponseEntity<LicitacaoResponseDTO> abrirDisputa(@PathVariable UUID id, Authentication authentication) {
+        CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
+        LicitacaoResponseDTO resposta = licitacaoService.abrirDisputa(id, usuario.getTenantId());
+        auditoriaService.registrar("ABERTURA_DISPUTA_LICITACAO", "LICITACAO", id,
+                "Disputa eletrônica aberta para a licitação " + resposta.numero(),
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
+        return ResponseEntity.ok(resposta);
+    }
+
+    @PostMapping("/{id}/lances")
+    @PreAuthorize(ROLES_GERENCIA)
+    public ResponseEntity<LicitacaoResponseDTO> registrarLance(
+            @PathVariable UUID id,
+            @Valid @RequestBody RegistrarLanceDTO dto,
+            Authentication authentication) {
+
+        CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
+        LicitacaoResponseDTO resposta = licitacaoService.registrarLance(id, dto, usuario.getTenantId());
+        auditoriaService.registrar("REGISTRO_LANCE_LICITACAO", "LICITACAO", id,
+                "Lance de R$ " + dto.valorUnitario() + " do fornecedor " + dto.fornecedorId()
+                        + " no item " + dto.licitacaoItemId() + " da licitação " + resposta.numero(),
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
+        return ResponseEntity.ok(resposta);
+    }
+
+    @GetMapping("/{id}/lances")
+    @PreAuthorize(ROLES_LICITACOES)
+    public ResponseEntity<List<LanceResponseDTO>> listarLances(@PathVariable UUID id, Authentication authentication) {
+        CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
+        return ResponseEntity.ok(licitacaoService.listarLances(id, usuario.getTenantId()));
+    }
+
     @PostMapping("/{id}/adjudicar")
     @PreAuthorize(ROLES_GERENCIA)
     public ResponseEntity<LicitacaoResponseDTO> adjudicarLicitacao(@PathVariable UUID id, Authentication authentication) {
         CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
         LicitacaoResponseDTO resposta = licitacaoService.adjudicarLicitacao(id, usuario.getTenantId());
         auditoriaService.registrar("ADJUDICACAO_LICITACAO", "LICITACAO", id,
-                "Licitação " + resposta.numero() + " adjudicada — vencedor por menor preço em cada item",
+                "Licitação " + resposta.numero() + " adjudicada — vencedor em cada item"
+                        + (resposta.lances().isEmpty() ? " por menor preço das propostas" : " pela disputa de lances"),
                 usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
                 null, null, null);
         return ResponseEntity.ok(resposta);
@@ -167,6 +207,22 @@ public class LicitacaoController {
                 .reduce("", (a, b) -> a.isEmpty() ? b : a + ", " + b);
         auditoriaService.registrar("GERACAO_PEDIDO_LICITACAO", "LICITACAO", id,
                 "Pedido(s) " + descricao + " gerado(s) a partir da licitação " + id,
+                usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
+                null, null, null);
+        return ResponseEntity.ok(resposta);
+    }
+
+    @PostMapping("/{id}/contrato")
+    @PreAuthorize(ROLES_GERENCIA)
+    public ResponseEntity<LicitacaoResponseDTO> formalizarContrato(
+            @PathVariable UUID id,
+            @Valid @RequestBody FormalizarContratoDTO dto,
+            Authentication authentication) {
+
+        CpcUsuario usuario = (CpcUsuario) authentication.getPrincipal();
+        LicitacaoResponseDTO resposta = licitacaoService.formalizarContrato(id, dto, usuario.getTenantId());
+        auditoriaService.registrar("FORMALIZACAO_CONTRATO_LICITACAO", "LICITACAO", id,
+                "Contrato CT-" + resposta.numero() + " formalizado a partir da licitação " + resposta.numero(),
                 usuario.getTenantId(), usuario.getCpcId(), usuario.getCpf(), usuario.getRole().name(),
                 null, null, null);
         return ResponseEntity.ok(resposta);

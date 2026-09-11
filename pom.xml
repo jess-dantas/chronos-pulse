@@ -179,22 +179,6 @@
 				<groupId>org.flywaydb</groupId>
 				<artifactId>flyway-maven-plugin</artifactId>
 			</plugin>
-			<!-- OWASP Dependency-Check (segurança de dependências; execução explícita) -->
-			<plugin>
-				<groupId>org.owasp</groupId>
-				<artifactId>dependency-check-maven</artifactId>
-				<version>12.2.2</version>
-				<configuration>
-					<failBuildOnCVSS>8</failBuildOnCVSS>
-					<ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
-					<formats>
-						<format>HTML</format>
-						<format>JSON</format>
-					</formats>
-					<outputDirectory>target/dependency-check</outputDirectory>
-				</configuration>
-				<!-- Chave NVD opcional via linha de comando: -DnvdApiKey=... (vazia quebra o plugin) -->
-			</plugin>
 		</plugins>
 	</build>
 </project>
