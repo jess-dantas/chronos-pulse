@@ -60,47 +60,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v6.0.1
+      - name: Trivy - varredura de dependências e código (fs)
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          distribution: temurin
-          java-version: '25'
+          scan-type: fs
+          scan-ref: .
+          skip-dirs: $fresh,target
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+          cache: true
 
-      - name: Cache Maven packages
-        uses: actions/cache@v6.1.0
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-
-      - name: OWASP Dependency-Check
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: |
-          set -o pipefail
-          NVD_KEY=$(printf '%s' "$NVD_API_KEY" | tr -d '[:space:]')
-          ARGS=(-B dependency-check:check)
-          [ -n "$NVD_KEY" ] && ARGS+=("-DnvdApiKey=$NVD_KEY")
-          for i in 1 2 3; do
-            if sh mvnw "${ARGS[@]}" 2>&1 | tee /tmp/dc.log; then
-              exit 0
-            fi
-            if grep -Eq "NVD Returned Status Code: 5|Invalid API Key|Error updating the NVD Data" /tmp/dc.log; then
-              echo "--- NVD update transient (tentativa $i/3), repetindo ---"
-              sleep 10
-            else
-              echo "--- falha nao-transitoria do dependency-check ---"
-              exit 1
-            fi
-          done
-          exit 1
-
-      - name: Upload dependency-check report
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: dependency-check-report
-          path: target/dependency-check/**
+      - name: Upload relatório SARIF (Code Scanning)
         if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
 
   # ======================= DEPLOY POR AMBIENTE =======================
   # develop: branch de trabalho local — somente CI acima, sem deploy cloud.
