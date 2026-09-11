@@ -210,6 +210,141 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 ---
 
+## 11. Compras & Fornecedores `@RequiresModulo("COMPRAS")`
+
+### Fornecedores e pedidos
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/compras/fornecedores` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Lista fornecedores |
+| `GET` | `/compras/fornecedores/{id}` | 🛡️ (mesmos perfis) | Busca fornecedor |
+| `POST` | `/compras/fornecedores` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra fornecedor |
+| `PUT` | `/compras/fornecedores/{id}` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Atualiza fornecedor |
+| `DELETE` | `/compras/fornecedores/{id}` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Inativa fornecedor |
+| `GET` | `/compras/pedidos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Lista pedidos de compra |
+| `GET` | `/compras/pedidos/{id}` | 🛡️ (mesmos perfis) | Busca pedido |
+| `POST` | `/compras/pedidos` | 🛡️ (mesmos perfis) | Cria pedido de compra |
+| `POST` | `/compras/pedidos/{id}/cancelar` | 🛡️ (mesmos perfis) | Cancela pedido |
+
+### Recebimento por NFe
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/compras/nfe/receber` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Recebe NFe vinculada ao pedido (gera entrada) |
+| `GET` | `/compras/nfe` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Lista entradas por NFe |
+| `POST` | `/compras/nfe/importar-xml` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Importa XML da NFe (≤ 5 MB, `multipart/form-data` — campo `arquivo`) |
+| `POST` | `/compras/nfe/consultar-sefaz` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Consulta NFe pela chave na SEFAZ (depende de `app.compras.sefaz.consulta-enabled`) |
+
+### Banco de preços
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/compras/precos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Banco de preços para consulta |
+
+### Requisições e cotações
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/compras/requisicoes` | 🛡️ (grupo compras) | Lista requisições |
+| `GET` | `/compras/requisicoes/{id}` | 🛡️ (grupo compras) | Busca requisição |
+| `POST` | `/compras/requisicoes` | 🛡️ (grupo compras) | Cria requisição |
+| `POST` | `/compras/requisicoes/{id}/cancelar` | 🛡️ (gerência) | Cancela requisição |
+| `GET` | `/compras/cotacoes` | 🛡️ (grupo compras) | Lista cotações |
+| `GET` | `/compras/cotacoes/{id}` | 🛡️ (grupo compras) | Busca cotação |
+| `POST` | `/compras/cotacoes` | 🛡️ (gerência) | Cria cotação |
+| `PUT` | `/compras/cotacoes/{id}/propostas` | 🛡️ (gerência) | Registra propostas de fornecedor |
+| `POST` | `/compras/cotacoes/{id}/concluir` | 🛡️ (gerência) | Conclui cotação (vencedores por item) |
+| `POST` | `/compras/cotacoes/{id}/cancelar` | 🛡️ (gerência) | Cancela cotação |
+| `POST` | `/compras/cotacoes/{id}/gerar-pedidos` | 🛡️ (gerência) | Gera pedidos a partir da cotação |
+
+**Grupo compras:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+
+`POST /compras/cotacoes` — corpo:
+
+```jsonc
+{
+  "requisicaoId": "11111111-1111-4111-8111-111111111111",
+  "fornecedores": ["22222222-2222-4222-8222-222222222222"],
+  "prazoRespostaDias": 7,
+  "observacoes": null
+}
+```
+
+---
+
+## 12. Licitações & Contratações `@RequiresModulo("LICITACOES")` (Lei 14.133/2021)
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/licitacoes` | 🛡️ (grupo licitações) | Lista licitações |
+| `GET` | `/licitacoes/{id}` | 🛡️ (grupo licitações) | Busca licitação |
+| `POST` | `/licitacoes` | 🛡️ (gerência) | Cadastra licitação |
+| `POST` | `/licitacoes/{id}/publicar` | 🛡️ (gerência) | Publica a licitação (abre prazos) |
+| `POST` | `/licitacoes/{id}/publicar-pncp` | 🛡️ (gerência) | Publica aviso no PNCP |
+| `PUT` | `/licitacoes/{id}/propostas` | 🛡️ (gerência) | Registra propostas de fornecedor |
+| `POST` | `/licitacoes/{id}/abrir-disputa` | 🛡️ (gerência) | Abre disputa eletrônica |
+| `POST` | `/licitacoes/{id}/lances` | 🛡️ (gerência) | Registra lance (disputa) |
+| `GET` | `/licitacoes/{id}/lances` | 🛡️ (grupo licitações) | Lista lances |
+| `POST` | `/licitacoes/{id}/adjudicar` | 🛡️ (gerência) | Adjudica (menor preço ou disputa) |
+| `POST` | `/licitacoes/{id}/homologar` | 🛡️ (gerência) | Homologa a licitação |
+| `POST` | `/licitacoes/{id}/cancelar` | 🛡️ (gerência) | Cancela a licitação |
+| `POST` | `/licitacoes/{id}/gerar-pedidos` | 🛡️ (gerência) | Gera pedidos de compra |
+| `POST` | `/licitacoes/{id}/contrato` | 🛡️ (gerência) | Formaliza contrato da licitação |
+
+### Planejamento (ETP / TR / Edital)
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/licitacoes/{licitacaoId}/planejamento` | 🛡️ (grupo licitações) | Busca planejamento da licitação |
+| `PUT` | `/licitacoes/{licitacaoId}/planejamento/etp` | 🛡️ (gerência) | Salva ETP |
+| `POST` | `/licitacoes/{licitacaoId}/planejamento/etp/aprovar` | 🛡️ (gerência) | Aprova ETP |
+| `PUT` | `/licitacoes/{licitacaoId}/planejamento/tr` | 🛡️ (gerência) | Salva Termo de Referência |
+| `POST` | `/licitacoes/{licitacaoId}/planejamento/tr/aprovar` | 🛡️ (gerência) | Aprova TR |
+| `PUT` | `/licitacoes/{licitacaoId}/planejamento/edital` | 🛡️ (gerência) | Salva edital |
+| `POST` | `/licitacoes/{licitacaoId}/planejamento/edital/publicar` | 🛡️ (gerência) | Publica edital |
+
+**Grupo licitações:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+
+`POST /licitacoes/{id}/contrato` — corpo:
+
+```jsonc
+{
+  "numero": "CT-2026-0001",
+  "dataAssinatura": "2026-09-30",
+  "valor": 53850.00,
+  "vigenciaInicio": "2026-10-01",
+  "vigenciaFim": "2027-10-01"
+}
+```
+
+---
+
+## 13. Portal da Transparência `@RequiresModulo("TRANSPARENCIA")` (LC 131/2009)
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/transparencia/resumo` | 🛡️ (leitura) | Resumo do portal por tenant |
+| `GET` | `/transparencia/despesas-mensais?ano=2026` | 🛡️ (leitura) | Despesas mensais (default: `2026`) |
+| `GET` | `/transparencia/publicacoes` | 🛡️ (leitura) | Lista publicações |
+| `POST` | `/transparencia/publicacoes` | 🛡️ (gerência) | Cria publicação (rascunho) |
+| `POST` | `/transparencia/publicacoes/{id}/publicar` | 🛡️ (gerência) | Divulga no portal |
+| `DELETE` | `/transparencia/publicacoes/{id}` | 🛡️ (gerência) | Remove publicação em elaboração |
+
+**Leitura:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`, `COLABORADOR`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+
+`POST /transparencia/publicacoes` — corpo (resumo):
+
+```jsonc
+{
+  "competencia": "2026-09",
+  "tipoPublicacao": "DESPESAS",   // RECEITAS | DESPESAS | COMPRAS | LICITACOES | CONTRATOS | FROTA | PATRIMONIO | FOLHA
+  "descricao": "Despesas de setembro/2026",
+  "itens": [ { "descricao": "Material de escritório", "valor": 1500.00 } ]
+}
+```
+
+---
+
 ## Paginação
 
 As listagens retornam `org.springframework.data.domain.Page`:
