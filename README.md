@@ -7,7 +7,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Ready-2496ED)
-![Tests](https://img.shields.io/badge/tests-243%20verdes-brightgreen)
+![Tests](https://img.shields.io/badge/tests-257%20verdes-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 </div>
@@ -75,7 +75,7 @@ export JWT_SECRET="um-valor-longo-e-aleatorio-troque-em-producao"
 curl http://localhost:8080/v3/api-docs
 ```
 
-O Flyway roda automaticamente na subida (29 migrations) e cria os seeds de demonstração. A documentação interativa fica em `http://localhost:8080/swagger-ui.html`.
+O Flyway roda automaticamente na subida (32 migrations) e cria os seeds de demonstração. A documentação interativa fica em `http://localhost:8080/swagger-ui.html`.
 
 ### Opção B — Com Docker (API + PostgreSQL containerizados)
 
@@ -133,22 +133,17 @@ DROP DATABASE chronos_db;
 CREATE DATABASE chronos_db OWNER chronos_user;
 ```
 
-A próxima subida reaplica as 29 migrations e os seeds.
+A próxima subida reaplica as 32 migrations e os seeds.
 
 ---
 
 ## Credenciais de Teste (seeds — tenant de demonstração)
 
-> As credenciais de acesso **privilegiado** (fundador da empresa e Admin Plataforma)
-> **não ficam no repositório** — são entregues fora dos projetos (ver seção de acessos
-> do time / gestor de segredos).
-
-| Perfil | CPF | Senha |
-|---|---|---|
-| **Admin Empresa** | `11111111111` | `admin123` |
-| **Gestor de RH** | `22222222222` | `admin123` |
-| **Colaborador** | `12345678901` | `senha123` |
-| **Colaborador Almoxarife** (ponto + estoque) | `98765432100` | `senha123` |
+> As credenciais de demonstração (usuários e tenants dos seeds) estão concentradas
+> em [`docs/credenciais.md`](docs/credenciais.md). As credenciais de acesso
+> **privilegiado** (fundador da empresa e Admin Plataforma) **não são documentadas
+> em texto plano no repositório** — são entregues fora do código (ver seção de
+> acessos do time / gestor de segredos).
 
 O tenant de demonstração possui todos os 9 módulos ativos; novas empresas recebem automaticamente o trio core (`PONTO`, `RECURSOS_HUMANOS`, `ESTOQUE`).
 
@@ -157,7 +152,7 @@ O tenant de demonstração possui todos os 9 módulos ativos; novas empresas rec
 ## Testes automatizados
 
 ```bash
-./mvnw test      # Windows: .\mvnw.cmd test   (243 testes)
+./mvnw test      # Windows: .\mvnw.cmd test   (257 testes)
 ```
 
 O ambiente de teste usa H2 em modo PostgreSQL (`application-test.yml`, Flyway desativado).
@@ -178,6 +173,7 @@ O ambiente de teste usa H2 em modo PostgreSQL (`application-test.yml`, Flyway de
 - [`docs/api.md`](docs/api.md) — Referência completa de endpoints (todos os módulos)
 - [`docs/rbac.md`](docs/rbac.md) — Perfis, permissões e regras de rota
 - [`docs/dados-iniciais.md`](docs/dados-iniciais.md) — Seeds, migrations e testes automatizados
+- [`docs/credenciais.md`](docs/credenciais.md) — Credenciais de demonstração (seeds)
 
 ---
 

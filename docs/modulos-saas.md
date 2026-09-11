@@ -29,21 +29,24 @@ O Chronos Pulse é um SaaS com **módulos contratáveis por empresa (CNPJ/tenant
 
 ---
 
-## Catálogo Atual (Seed `V11`)
+## Catálogo Atual (seeds `V11`, `V21`, `V24` e `V26`)
 
-| Código | Nome | Tipo |
-|---|---|---|
-| `PONTO` | Ponto Eletrônico | Core |
-| `RECURSOS_HUMANOS` | Recursos Humanos | Core |
-| `ESTOQUE` | Estoque & Almoxarifado | Core |
-| `PATRIMONIO` | Patrimônio Público | Comercializável |
-| `FROTA` | Gestão de Frota | Comercializável |
-| `PROTOCOLO` | Protocolo & Tramitação | Comercializável |
+| Código | Nome | Tipo | Seed |
+|---|---|---|---|
+| `PONTO` | Ponto Eletrônico | Core | `V11` |
+| `RECURSOS_HUMANOS` | Recursos Humanos | Core | `V11` |
+| `ESTOQUE` | Estoque & Almoxarifado | Core | `V11` |
+| `PATRIMONIO` | Patrimônio Público | Comercializável | `V11` |
+| `FROTA` | Gestão de Frota | Comercializável | `V11` |
+| `PROTOCOLO` | Protocolo & Tramitação | Comercializável | `V11` |
+| `COMPRAS` | Compras & Fornecedores (pedidos, NFe, banco de preços) | Comercializável | `V21` |
+| `LICITACOES` | Licitações & Contratações (Lei 14.133/2021) | Comercializável | `V24` |
+| `TRANSPARENCIA` | Portal da Transparência & BI (LC 131/2009) | Comercializável | `V26` |
 
 **Regras de ativação (V11 e cadastro de empresa):**
 
 1. Toda empresa **já existente** recebe automaticamente o trio core (`PONTO`, `RECURSOS_HUMANOS`, `ESTOQUE`).
-2. O tenant de demonstração `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` recebe também `PATRIMONIO`, `FROTA` e `PROTOCOLO`.
+2. O tenant de demonstração `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` recebe **os 9 módulos** (core + comercializáveis).
 3. Toda **nova empresa** criada via `POST /api/v1/auth/cadastrar-empresa` (ou use case `CadastrarEmpresaCompletoUseCaseImpl`) tem os módulos core ativados automaticamente via `ModuloService.ativarModulosPadrao()`.
 
 ---
@@ -110,10 +113,10 @@ O app frontend (Flutter) armazena essa lista em sessão e usa para **esconder** 
 
 ## Como Criar um Novo Módulo
 
-1. **Banco**: adicionar a migração `V12_...`:
+1. **Banco**: adicionar a migração `V33_...` (próximo número livre após `V32`):
    - linha no `INSERT` de `modulo_plataforma` (novo `codigo`),
    - `CREATE TABLE` da entidade com `tenant_id`,
-   - (opcional) seeds de demonstração.
+   - (opcional) seeds de demonstração e ativação para o tenant de demonstração (`empresa_modulo`).
 2. **Entidade/Repo/Service/Controller**: seguir o padrão de `patrimonio/` (entity + repository + service + `web/dto`).
 3. **Contrato**: anotar o controller com `@RequiresModulo(codigo = "NOVO_MODULO")` e usar `@PreAuthorize` para os perfis com acesso.
 4. **Rota no SecurityConfig**: adicionar `.requestMatchers("/api/v1/novo-modulo/**")` com os perfis.
