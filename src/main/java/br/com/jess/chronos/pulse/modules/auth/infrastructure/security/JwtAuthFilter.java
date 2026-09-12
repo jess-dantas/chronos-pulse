@@ -44,6 +44,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Endpoints públicos não precisam resolver o usuário no banco:
+        // evita SELECT em cpc_usuario a cada heartbeat (/auth/ping).
+        if (isEndpointPublico(request.getRequestURI())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         Claims claims = jwtService.extrairClaims(token);
         String cpf = claims.getSubject();
         String role = claims.get("role", String.class);
@@ -76,5 +83,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         });
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isEndpointPublico(String uri) {
+        return uri != null && (uri.startsWith("/api/v1/auth/ping")
+                || uri.startsWith("/api/v1/publico/"));
     }
 }
