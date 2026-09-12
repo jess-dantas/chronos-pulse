@@ -6,6 +6,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuar
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuarioUseCase.Resultado;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
+import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
 import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.telemetria.application.LoginMetricsRecorder;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,11 +41,14 @@ class AutenticarUsuarioUseCaseImplTest {
     @Mock
     private LoginMetricsRecorder loginMetricsRecorder;
 
+    @Mock
+    private EmpresaRepositoryPort empresaRepository;
+
     private AutenticarUsuarioUseCaseImpl useCase;
 
     @BeforeEach
     void setUp() {
-        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder);
+        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder, empresaRepository);
     }
 
     @Test

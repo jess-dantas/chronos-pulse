@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/privacidade/politica").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/publico/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN_PLATAFORMA")
                         .requestMatchers(HttpMethod.POST, "/api/v1/telemetria/eventos").authenticated()

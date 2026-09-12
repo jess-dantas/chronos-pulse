@@ -15,7 +15,7 @@ public interface EmpresaMapper {
 
     @ObjectFactory
     default Empresa criarEmpresa(EmpresaJpaEntity e) {
-        return new Empresa(e.getId(), e.getCnpj(), e.getNome(),
+        return new Empresa(e.getId(), e.getCnpj(), e.getSlug(), e.getNome(),
                 e.getResponsavelNome(), e.getResponsavelCpf(),
                 e.getResponsavelEmail(), e.getResponsavelCelular(),
                 e.getResponsavelTelefone(), e.getEnderecoLogradouro(),

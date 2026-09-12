@@ -4,6 +4,8 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuarioUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
+import br.com.jess.chronos.pulse.modules.empresa.domain.model.Empresa;
+import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
 import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.telemetria.application.LoginMetricsRecorder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,17 +20,20 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
     private final PasswordEncoder passwordEncoder;
     private final ModulosPort modulosPort;
     private final LoginMetricsRecorder loginMetricsRecorder;
+    private final EmpresaRepositoryPort empresaRepository;
 
     public AutenticarUsuarioUseCaseImpl(CpcUsuarioRepositoryPort repositoryPort,
                                         JwtService jwtService,
                                         PasswordEncoder passwordEncoder,
                                         ModulosPort modulosPort,
-                                        LoginMetricsRecorder loginMetricsRecorder) {
+                                        LoginMetricsRecorder loginMetricsRecorder,
+                                        EmpresaRepositoryPort empresaRepository) {
         this.repositoryPort = repositoryPort;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.modulosPort = modulosPort;
         this.loginMetricsRecorder = loginMetricsRecorder;
+        this.empresaRepository = empresaRepository;
     }
 
     @Override
@@ -56,6 +61,9 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
         }
 
         String tenantId = usuario.getTenantId() != null ? usuario.getTenantId().toString() : null;
+        String tenantSlug = usuario.getTenantId() != null
+                ? empresaRepository.buscarPorId(usuario.getTenantId()).map(Empresa::getSlug).orElse(null)
+                : null;
         String accessToken = jwtService.gerarAccessToken(
                 usuario.getCpf(), usuario.getRole().name(),
                 usuario.getCpcId().toString(), tenantId,
@@ -77,7 +85,8 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
                 usuario.getCpcId().toString(),
                 usuario.getNome(),
                 usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
-                tenantId,
+tenantId,
+                tenantSlug,
                 usuario.isAcessoEstoque(),
                 usuario.isAcessoPatrimonio(),
                 usuario.isAcessoFrota(),

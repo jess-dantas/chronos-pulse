@@ -10,6 +10,7 @@ public class EmpresaJpaEntity {
 
     @Id private UUID id;
     @Column(unique = true, nullable = false) private String cnpj;
+    @Column(unique = true, nullable = false) private String slug;
     @Column(nullable = false) private String nome;
     @Column(name = "responsavel_nome") private String responsavelNome;
     @Column(name = "responsavel_cpf") private String responsavelCpf;
@@ -30,6 +31,8 @@ public class EmpresaJpaEntity {
     public void setId(UUID id) { this.id = id; }
     public String getCnpj() { return cnpj; }
     public void setCnpj(String cnpj) { this.cnpj = cnpj; }
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     public String getResponsavelNome() { return responsavelNome; }
