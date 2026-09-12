@@ -317,6 +317,23 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 }
 ```
 
+### Execução Contratual `@RequiresModulo("LICITACOES")`
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/contratos` | 🛡️ (grupo licitações) | Lista contratos em execução do tenant |
+| `GET` | `/contratos/{id}` | 🛡️ (grupo licitações) | Busca execução do contrato (situação, aditivos, apontamentos, medições, sanções, rescisão) |
+| `POST` | `/contratos/{id}/aditivos` | 🛡️ (gerência) | Registra termo aditivo (VALOR amplia `valorTotal`; PRAZO prorroga `vigenciaFim`) |
+| `POST` | `/contratos/{id}/apontamentos` | 🛡️ (gerência) | Registra apontamento de fiscalização |
+| `POST` | `/contratos/{id}/apontamentos/{apontamentoId}/resolver` | 🛡️ (gerência) | Resolve apontamento |
+| `POST` | `/contratos/{id}/medicoes` | 🛡️ (gerência) | Registra medição/pagamento (credita `valorLiquidado`) |
+| `POST` | `/contratos/{id}/sancoes` | 🛡️ (gerência) | Aplica sanção administrativa |
+| `POST` | `/contratos/{id}/rescindir` | 🛡️ (gerência) | Rescinde o contrato (status `RESCINDIDO`) |
+
+Situação computada: `RESCINDIDO` > `VENCIDO` (vigência expirada sem aditivo) > `EXPIRANDO` (dentro da janela de aviso de vencimento) > `VIGENTE`.
+
+**Grupo licitações:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+
 ---
 
 ## 13. Portal da Transparência `@RequiresModulo("TRANSPARENCIA")` (LC 131/2009)

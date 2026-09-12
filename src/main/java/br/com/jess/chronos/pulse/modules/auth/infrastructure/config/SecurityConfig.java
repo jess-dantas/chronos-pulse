@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/estoque/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
                         .requestMatchers("/api/v1/compras/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
                         .requestMatchers("/api/v1/licitacoes/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
+                        .requestMatchers("/api/v1/contratos/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
                         .requestMatchers("/api/v1/patrimonio/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
                         .requestMatchers("/api/v1/frota/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
                         .requestMatchers("/api/v1/protocolo/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
