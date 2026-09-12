@@ -7,6 +7,7 @@ public class Empresa {
 
     private final UUID id;
     private final String cnpj;
+    private final String slug;
     private String nome;
     private String responsavelNome;
     private String responsavelCpf;
@@ -38,8 +39,20 @@ public class Empresa {
                    String responsavelTelefone, String enderecoLogradouro, String enderecoNumero,
                    String enderecoComplemento, String enderecoBairro, String enderecoCidade,
                    String enderecoUf, String enderecoCep) {
+        this(id, cnpj, null, nome, responsavelNome, responsavelCpf, responsavelEmail, responsavelCelular,
+                responsavelTelefone, enderecoLogradouro, enderecoNumero, enderecoComplemento,
+                enderecoBairro, enderecoCidade, enderecoUf, enderecoCep);
+    }
+
+    /** Construtor completo (com slug explícito). Slug nulo/vazio gera o padrão a partir do CNPJ. */
+    public Empresa(UUID id, String cnpj, String slug, String nome, String responsavelNome,
+                   String responsavelCpf, String responsavelEmail, String responsavelCelular,
+                   String responsavelTelefone, String enderecoLogradouro, String enderecoNumero,
+                   String enderecoComplemento, String enderecoBairro, String enderecoCidade,
+                   String enderecoUf, String enderecoCep) {
         this.id = id != null ? id : UUID.randomUUID();
         this.cnpj = cnpj;
+        this.slug = slug != null && !slug.isBlank() ? slug : slugPadrao(cnpj);
         this.nome = nome;
         this.responsavelNome = responsavelNome;
         this.responsavelCpf = responsavelCpf;
@@ -59,6 +72,7 @@ public class Empresa {
 
     public UUID getId() { return id; }
     public String getCnpj() { return cnpj; }
+    public String getSlug() { return slug; }
     public String getNome() { return nome; }
     public String getResponsavelNome() { return responsavelNome; }
     public String getResponsavelCpf() { return responsavelCpf; }
@@ -85,5 +99,9 @@ public class Empresa {
         if (ativo != null) {
             this.ativo = ativo;
         }
+    }
+
+    private static String slugPadrao(String cnpj) {
+        return "empresa-" + (cnpj != null ? cnpj.replaceAll("\\D", "") : UUID.randomUUID());
     }
 }

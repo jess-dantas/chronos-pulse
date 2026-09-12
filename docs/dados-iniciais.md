@@ -17,6 +17,8 @@ Aplicados principalmente pelas migrations `V3`, `V5`, `V9`, `V11`, `V21`, `V24` 
 > **Tenant de demonstração:** `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` — possui os **9 módulos** ativos.
 > **Tenant fundador (Red Cape):** `a0eebc99-0009-0009-0009-6bb9bd380a09` — seed `V9` (Admin Empresa com hash bcrypt).
 
+**Slugs públicos (`V34`)**: endpoint público do portal usa `slug` do tenant, ex.: `/api/v1/publico/transparencia/chronos-pulse-demo/...` (demo) e `/api/v1/publico/transparencia/red-cape/...` (fundador). Novas empresas herdam `empresa-<cnpj>` automaticamente.
+
 ### Dados de demonstração
 
 - **Patrimônio (`V11`)**: 3 bens (notebook, impressora, veículo) — estados variados.
@@ -28,7 +30,7 @@ Aplicados principalmente pelas migrations `V3`, `V5`, `V9`, `V11`, `V21`, `V24` 
 
 ## Migrations
 
-Local: `src/main/resources/db/migration/` — total de **33** (`V1`–`V33`).
+Local: `src/main/resources/db/migration/` — total de **34** (`V1`–`V34`).
 
 | Migration | Conteúdo |
 |---|---|
@@ -64,6 +66,7 @@ Local: `src/main/resources/db/migration/` — total de **33** (`V1`–`V33`).
 | `V31` | Disputa eletrônica e lances |
 | `V32` | Formalização de contrato a partir da licitação |
 | `V33` | Execução contratual: aditivos, apontamentos, medições, sanções e rescisão |
+| `V34` | **Portal público (R31)**: `slug` único no tenant (`chronos-pulse-demo`, `red-cape`, padrão `empresa-<cnpj>`) |
 
 ## Testes Automatizados
 
@@ -75,11 +78,12 @@ Local: `src/main/resources/db/migration/` — total de **33** (`V1`–`V33`).
 .\mvnw.cmd test
 ```
 
-**Total: 275 testes, 0 falhas.** Principais coberturas:
+**Total: 282 testes, 0 falhas.** Principais coberturas:
 
 | Camada / Módulo | Testes | Objetivo |
 |---|---|---|
 | **Licitações** (`LicitacaoService`, `Planejamento`, `Pncp*`, `ContratoExecucao`) | 72 | Ciclo completo (planejamento ETP/TR/edital, publicação PNCP, lances, contrato, execução contratual) |
+| **Portal Público** (`PortalTransparenciaService`) | 7 | Resumo, licitações, contratos (aditivos/sanções) e publicações públicas por `slug` |
 | **Compras** (`ComprasService`, `RequisicaoCotacao`, `Nfe*`) | 48 | Fornecedores, requisições, cotações, pedidos, NFe/XML/SEFAZ |
 | **Patrimônio** (`Patrimonio`, `Inventario`, `Desfazimento`, `Transferencia`) | 28 | Tombamento, inventário, desfazimento, transferência |
 | **Ponto** (registro, hash, sincronização, espelho, ajuste, AEJ, repository) | 25 | Ciclo ENTRADA→SAIDA, NSR, hash SHA-256, espelho, AEJ (Portaria 671/2021) |

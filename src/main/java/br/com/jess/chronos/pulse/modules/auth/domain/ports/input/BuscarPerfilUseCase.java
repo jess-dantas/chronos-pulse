@@ -10,6 +10,7 @@ public interface BuscarPerfilUseCase {
             String email,
             String role,
             String tenantId,
+            String tenantSlug,
             String cpcId,
             boolean acessoEstoque,
             boolean acessoPatrimonio,

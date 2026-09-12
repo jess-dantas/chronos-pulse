@@ -362,6 +362,41 @@ Situação computada: `RESCINDIDO` > `VENCIDO` (vigência expirada sem aditivo) 
 
 ---
 
+## 13.1 Portal Público da Transparência (R31) — sem autenticação
+
+Rotas públicas por `slug` do órgão (ex.: `chronos-pulse-demo`). Requisitos: empresa ativa + módulo `TRANSPARENCIA` ativo. Fora disso → `404`.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/publico/transparencia/{slug}` | 🌐 pública | Resumo do órgão (licitações, contratos, despesas do ano, publicações) |
+| `GET` | `/publico/transparencia/{slug}/licitacoes` | 🌐 pública | Lista licitações com situação pública |
+| `GET` | `/publico/transparencia/{slug}/licitacoes/{id}` | 🌐 pública | Detalhe com itens |
+| `GET` | `/publico/transparencia/{slug}/contratos` | 🌐 pública | Lista contratos |
+| `GET` | `/publico/transparencia/{slug}/contratos/{id}` | 🌐 pública | Detalhe com aditivos e sanções |
+| `GET` | `/publico/transparencia/{slug}/despesas-mensais?ano=2026` | 🌐 pública | Despesas mensais do ano |
+| `GET` | `/publico/transparencia/{slug}/publicacoes` | 🌐 pública | Publicações divulgadas |
+
+**Situações públicas de licitação:** `PUBLICADA`, `ABERTA`, `ADJUDICADA`, `HOMOLOGADA`. Rascunhos, canceladas e encerradas não aparecem.
+
+Resposta do resumo (trecho):
+
+```jsonc
+{
+  "orgao": { "slug": "chronos-pulse-demo", "nome": "Chronos Pulse Tech", "cnpj": "49262262000113" },
+  "licitacoesPublicadas": 4,
+  "licitacoesEmAndamento": 2,
+  "licitacoesHomologadas": 1,
+  "contratosAtivos": 3,
+  "valorEmpenhado": 285000.00,
+  "valorLiquidado": 210000.00,
+  "valorDespesasAno": 96000.00,
+  "publicacoesDivulgadas": 3,
+  "ultimaCompetencia": "2026-08"
+}
+```
+
+---
+
 ## Paginação
 
 As listagens retornam `org.springframework.data.domain.Page`:

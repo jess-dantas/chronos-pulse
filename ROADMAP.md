@@ -15,7 +15,7 @@
 
 ## Requisitos (R-series)
 
-Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (275 no backend, 166 no app) refletem o estado atual.
+Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (282 no backend, 166 no app) refletem o estado atual.
 
 | Req | Entrega | Status |
 |---|---|---|
@@ -23,6 +23,7 @@ Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/
 | **R28** | Planejamento da Contratação (Fase Preparatória): ETP/TR + Editais | ✅ |
 | **R29** | Disputa Eletrônica (Pregão): lances por item, abrir disputa e adjudicação derivada | ✅ |
 | **R30** | Gestão da Execução Contratual: aditivos, fiscalização/apontamentos, medições/pagamentos, sanções e rescisão (Lei 14.133/2021) | ✅ |
+| **R31** | Portal da Transparência completo (LC 131/2009): publicização automática de licitações, contratos, aditivos, sanções e despesas + endpoints públicos por `slug` | 🚧 |
 
 ---
 
@@ -51,7 +52,7 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 | CI: build, 275 testes, security (Trivy) com upload SARIF para Code Scanning | ✅ |
 | CI app: analyze, 166 testes, build Android (APK+AppBundle), build Web (Netlify) e build iOS | ✅ |
 | Credenciais/segredos fora do código (versionadas em `docs/credenciais.md`) | ✅ |
-| Documentação sincronizada (9 módulos, 33 migrations, RBAC, API) | ✅ |
+| Documentação sincronizada (10 módulos, 34 migrations, RBAC, API) | ✅ |
 | Deploy **staging** (Render) | ✅ |
 | Deploy **produção** (infra cloud + secrets `DB_URL`/`DB_USER`/`DB_PASSWORD`/`KUBE_CONFIG`) | ⏭️ guard no-op enquanto a infra não existir |
 
@@ -59,5 +60,5 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 
 ## Próximos passos
 
-1. **R31** — definição do escopo (a preencher).
+1. **R31 (andamento)** — backend: 282 testes verdes, V34 (`slug` do tenant), endpoints públicos `/api/v1/publico/transparencia/{slug}`. Pendências: app (aba "Portal Público") + infra/produção.
 2. **Infra de produção** — provisionar infra cloud e ativar o guard de deploy quando existir.

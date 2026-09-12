@@ -9,7 +9,9 @@ public interface EmpresaRepositoryPort {
     Empresa salvar(Empresa empresa);
     Optional<Empresa> buscarPorId(UUID id);
     Optional<Empresa> buscarPorCnpj(String cnpj);
+    Optional<Empresa> buscarPorSlug(String slug);
     boolean existePorCnpj(String cnpj);
+    boolean existePorSlug(String slug);
     List<Empresa> listarTodos();
     Empresa atualizar(UUID id, String nome, Boolean ativo);
 }
