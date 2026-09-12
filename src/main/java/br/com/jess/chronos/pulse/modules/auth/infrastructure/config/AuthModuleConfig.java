@@ -38,8 +38,9 @@ public class AuthModuleConfig {
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             ModulosPort modulosPort,
-            LoginMetricsRecorder loginMetricsRecorder) {
-        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder);
+            LoginMetricsRecorder loginMetricsRecorder,
+            EmpresaRepositoryPort empresaRepository) {
+        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder, empresaRepository);
     }
 
     @Bean
@@ -59,15 +60,17 @@ public class AuthModuleConfig {
     public RefreshTokenUseCase refreshTokenUseCase(
             CpcUsuarioRepositoryPort repositoryPort,
             JwtService jwtService,
-            ModulosPort modulosPort) {
-        return new RefreshTokenUseCaseImpl(repositoryPort, jwtService, modulosPort);
+            ModulosPort modulosPort,
+            EmpresaRepositoryPort empresaRepository) {
+        return new RefreshTokenUseCaseImpl(repositoryPort, jwtService, modulosPort, empresaRepository);
     }
 
     @Bean
     public BuscarPerfilUseCase buscarPerfilUseCase(
             CpcUsuarioRepositoryPort repositoryPort,
-            ModulosPort modulosPort) {
-        return new BuscarPerfilUseCaseImpl(repositoryPort, modulosPort);
+            ModulosPort modulosPort,
+            EmpresaRepositoryPort empresaRepository) {
+        return new BuscarPerfilUseCaseImpl(repositoryPort, modulosPort, empresaRepository);
     }
 
     @Bean

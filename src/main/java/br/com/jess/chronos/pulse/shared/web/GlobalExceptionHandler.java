@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.shared.web;
 
+import br.com.jess.chronos.pulse.modules.portal.domain.exception.PortalIndisponivelException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -69,6 +70,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(new ApiError(400, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(PortalIndisponivelException.class)
+    public ResponseEntity<ApiError> handlePortalIndisponivel(PortalIndisponivelException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ApiError(404, ex.getMessage(), null));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

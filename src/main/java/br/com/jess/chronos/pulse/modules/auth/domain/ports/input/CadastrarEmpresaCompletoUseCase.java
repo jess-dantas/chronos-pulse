@@ -30,6 +30,7 @@ public interface CadastrarEmpresaCompletoUseCase {
             String nome,
             String email,
             String tenantId,
+            String tenantSlug,
             boolean acessoEstoque,
             boolean acessoPatrimonio,
             boolean acessoFrota,

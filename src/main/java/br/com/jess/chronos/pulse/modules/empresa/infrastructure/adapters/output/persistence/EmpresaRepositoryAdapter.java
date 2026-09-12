@@ -34,8 +34,18 @@ public class EmpresaRepositoryAdapter implements EmpresaRepositoryPort {
     }
 
     @Override
+    public Optional<Empresa> buscarPorSlug(String slug) {
+        return jpaRepository.findBySlug(slug).map(mapper::toModel);
+    }
+
+    @Override
     public boolean existePorCnpj(String cnpj) {
         return jpaRepository.existsByCnpj(cnpj);
+    }
+
+    @Override
+    public boolean existePorSlug(String slug) {
+        return jpaRepository.existsBySlug(slug);
     }
 
     @Override

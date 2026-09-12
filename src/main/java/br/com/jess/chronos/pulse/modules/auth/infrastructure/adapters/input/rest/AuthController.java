@@ -78,7 +78,7 @@ public class AuthController {
                 resultado.role(), resultado.cpf(),
                 resultado.cpcId(),
                 resultado.nome(), resultado.email(),
-                resultado.tenantId(), resultado.acessoEstoque(),
+                resultado.tenantId(), resultado.tenantSlug(), resultado.acessoEstoque(),
                 resultado.acessoPatrimonio(), resultado.acessoFrota(),
                 resultado.acessoProtocolo(),
                 resultado.foto(), resultado.modulos()));
@@ -102,7 +102,7 @@ return ResponseEntity.ok(new LoginResponseDTO(
                 resultado.role(), request.responsavelCpf(),
                 resultado.cpcId(),
                 resultado.nome(), resultado.email(),
-                resultado.tenantId(), resultado.acessoEstoque(),
+                resultado.tenantId(), resultado.tenantSlug(), resultado.acessoEstoque(),
                 resultado.acessoPatrimonio(), resultado.acessoFrota(),
                 resultado.acessoProtocolo(),
                 resultado.foto(), resultado.modulos()));
@@ -117,7 +117,7 @@ return ResponseEntity.ok(new LoginResponseDTO(
                 resultado.role(), resultado.cpf(),
                 resultado.cpcId(),
                 resultado.nome(), resultado.email(),
-                resultado.tenantId(), resultado.acessoEstoque(),
+                resultado.tenantId(), resultado.tenantSlug(), resultado.acessoEstoque(),
                 resultado.acessoPatrimonio(), resultado.acessoFrota(),
                 resultado.acessoProtocolo(),
                 resultado.foto(), resultado.modulos()));

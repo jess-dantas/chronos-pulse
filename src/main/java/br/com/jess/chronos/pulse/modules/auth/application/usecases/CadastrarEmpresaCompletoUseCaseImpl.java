@@ -99,6 +99,7 @@ public class CadastrarEmpresaCompletoUseCaseImpl implements CadastrarEmpresaComp
                 usuario.getNome(),
                 usuario.getEmailCorporativo(),
                 empresa.getId().toString(),
+                empresa.getSlug(),
                 usuario.isAcessoEstoque(),
                 usuario.isAcessoPatrimonio(),
                 usuario.isAcessoFrota(),
