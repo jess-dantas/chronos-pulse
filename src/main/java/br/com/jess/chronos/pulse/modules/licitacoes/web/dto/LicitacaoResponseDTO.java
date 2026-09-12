@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.licitacoes.web.dto;
 
+import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.ContratoLicitacao;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.Licitacao;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.LicitacaoModalidade;
 import br.com.jess.chronos.pulse.modules.licitacoes.domain.entity.LicitacaoTipoJulgamento;
@@ -30,13 +31,25 @@ public record LicitacaoResponseDTO(
         List<LicitacaoParticipanteResponseDTO> participantes,
         List<LicitacaoPropostaResponseDTO> propostas,
         List<LanceResponseDTO> lances,
-        Instant criadoEm
+        Instant criadoEm,
+        UUID contratoId,
+        String contratoNumero,
+        String contratoStatus
 ) {
     public static LicitacaoResponseDTO from(Licitacao licitacao,
             List<LicitacaoItemResponseDTO> itens,
             List<LicitacaoParticipanteResponseDTO> participantes,
             List<LicitacaoPropostaResponseDTO> propostas,
             List<LanceResponseDTO> lances) {
+        return from(licitacao, itens, participantes, propostas, lances, null);
+    }
+
+    public static LicitacaoResponseDTO from(Licitacao licitacao,
+            List<LicitacaoItemResponseDTO> itens,
+            List<LicitacaoParticipanteResponseDTO> participantes,
+            List<LicitacaoPropostaResponseDTO> propostas,
+            List<LanceResponseDTO> lances,
+            ContratoLicitacao contrato) {
         return new LicitacaoResponseDTO(
                 licitacao.getId(), licitacao.getTenantId(), licitacao.getNumero(),
                 licitacao.getModalidade(), licitacao.getTipoJulgamento(),
@@ -45,6 +58,9 @@ public record LicitacaoResponseDTO(
                 licitacao.getContratoGerado(),
                 licitacao.getPncpStatus() != null ? licitacao.getPncpStatus().name() : "NAO_PUBLICADO",
                 licitacao.getPncpProtocolo(), licitacao.getPncpPublicadoEm(), licitacao.getPncpErro(),
-                itens, participantes, propostas, lances, licitacao.getCriadoEm());
+                itens, participantes, propostas, lances, licitacao.getCriadoEm(),
+                contrato != null ? contrato.getId() : null,
+                contrato != null ? contrato.getNumero() : null,
+                contrato != null ? contrato.getStatus() : null);
     }
 }

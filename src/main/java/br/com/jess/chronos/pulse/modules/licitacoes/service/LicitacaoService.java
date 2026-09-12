@@ -589,6 +589,9 @@ public class LicitacaoService {
                 })
                 .toList();
 
-        return LicitacaoResponseDTO.from(licitacao, itens, participantes, propostas, lances);
+        Optional<ContratoLicitacao> contratoOptional = contratoRepository.findByLicitacaoIdAndTenantId(
+                licitacao.getId(), licitacao.getTenantId());
+        return LicitacaoResponseDTO.from(licitacao, itens, participantes, propostas, lances,
+                contratoOptional != null ? contratoOptional.orElse(null) : null);
     }
 }

@@ -23,12 +23,12 @@ Aplicados principalmente pelas migrations `V3`, `V5`, `V9`, `V11`, `V21`, `V24` 
 - **Frota (`V11`)**: 2 veículos (Palio Adventure, S10) + 3 abastecimentos.
 - **Protocolo (`V11`)**: 2 protocolos (`PROTO-2026-000001` em tramitação, `PROTO-2026-000002` recebido).
 - **Compras (`V21`–`V23`)**: fornecedores, pedidos de compra e entradas de NFe.
-- **Licitações (`V24`, `V29`–`V32`)**: licitações com planejamento (ETP/TR/edital), publicações PNCP, disputa e formalização de contrato.
+- **Licitações (`V24`, `V29`–`V33`)**: licitações com planejamento (ETP/TR/edital), publicações PNCP, disputa, formalização e execução de contrato (aditivos, fiscalização, medições, sanções, rescisão).
 - **Transparência (`V26`)**: publicações de receitas/despesas (ex.: `2026-08` — Compras R$ 20.485,00 e Licitações R$ 53.850,00).
 
 ## Migrations
 
-Local: `src/main/resources/db/migration/` — total de **32** (`V1`–`V32`).
+Local: `src/main/resources/db/migration/` — total de **33** (`V1`–`V33`).
 
 | Migration | Conteúdo |
 |---|---|
@@ -63,6 +63,7 @@ Local: `src/main/resources/db/migration/` — total de **32** (`V1`–`V32`).
 | `V30` | Publicação de licitação no PNCP |
 | `V31` | Disputa eletrônica e lances |
 | `V32` | Formalização de contrato a partir da licitação |
+| `V33` | Execução contratual: aditivos, apontamentos, medições, sanções e rescisão |
 
 ## Testes Automatizados
 
@@ -74,11 +75,11 @@ Local: `src/main/resources/db/migration/` — total de **32** (`V1`–`V32`).
 .\mvnw.cmd test
 ```
 
-**Total: 257 testes, 0 falhas.** Principais coberturas:
+**Total: 275 testes, 0 falhas.** Principais coberturas:
 
 | Camada / Módulo | Testes | Objetivo |
 |---|---|---|
-| **Licitações** (`LicitacaoService`, `Planejamento`, `Pncp*`) | 54 | Ciclo completo (planejamento ETP/TR/edital, publicação PNCP, lances, contrato) |
+| **Licitações** (`LicitacaoService`, `Planejamento`, `Pncp*`, `ContratoExecucao`) | 72 | Ciclo completo (planejamento ETP/TR/edital, publicação PNCP, lances, contrato, execução contratual) |
 | **Compras** (`ComprasService`, `RequisicaoCotacao`, `Nfe*`) | 48 | Fornecedores, requisições, cotações, pedidos, NFe/XML/SEFAZ |
 | **Patrimônio** (`Patrimonio`, `Inventario`, `Desfazimento`, `Transferencia`) | 28 | Tombamento, inventário, desfazimento, transferência |
 | **Ponto** (registro, hash, sincronização, espelho, ajuste, AEJ, repository) | 25 | Ciclo ENTRADA→SAIDA, NSR, hash SHA-256, espelho, AEJ (Portaria 671/2021) |
