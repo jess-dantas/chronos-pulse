@@ -20,7 +20,7 @@ public class CriarLeadEmpresaUseCaseImpl implements CriarLeadEmpresaUseCase {
         if (cnpj == null || cnpj.length() != CNPJ_DIGITOS) {
             throw new IllegalArgumentException("CNPJ inválido: deve conter 14 dígitos.");
         }
-        return repositoryPort.salvar(lead.comCnpj(cnpj));
+        return repositoryPort.salvar(lead.criarComCnpj(cnpj));
     }
 
     private static String somenteDigitos(String valor) {

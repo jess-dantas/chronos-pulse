@@ -56,7 +56,7 @@ public class LeadEmpresa {
         this.criadoEm = criadoEm != null ? criadoEm : Instant.now();
     }
 
-    public LeadEmpresa comCnpj(String cnpj) {
+    public LeadEmpresa criarComCnpj(String cnpj) {
         return new LeadEmpresa(this.id, cnpj, razaoSocial, contatoNome, contatoEmail, contatoTelefone,
                 contatoCelular, enderecoLogradouro, enderecoNumero, enderecoComplemento, enderecoBairro,
                 enderecoCidade, enderecoUf, enderecoCep, observacao, status, criadoEm);
