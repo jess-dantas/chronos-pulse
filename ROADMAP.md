@@ -23,7 +23,8 @@ Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/
 | **R28** | Planejamento da Contratação (Fase Preparatória): ETP/TR + Editais | ✅ |
 | **R29** | Disputa Eletrônica (Pregão): lances por item, abrir disputa e adjudicação derivada | ✅ |
 | **R30** | Gestão da Execução Contratual: aditivos, fiscalização/apontamentos, medições/pagamentos, sanções e rescisão (Lei 14.133/2021) | ✅ |
-| **R31** | Portal da Transparência completo (LC 131/2009): publicização automática de licitações, contratos, aditivos, sanções e despesas + endpoints públicos por `slug` | 🚧 |
+| **R31** | Portal da Transparência completo (LC 131/2009): publicização automática de licitações, contratos, aditivos, sanções e despesas + endpoints públicos por `slug` | ✅ |
+| **R31.1** | Ajustes pós-entrega: robustez da batida de ponto (watchdog global de 30s), voltar nas telas públicas e **onboarding comercial em 3 etapas (lead sem CPF/senha)** | ✅ |
 
 ---
 
@@ -60,5 +61,6 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 
 ## Próximos passos
 
-1. **R31 (andamento)** — backend: 282 testes verdes, V34 (`slug` do tenant), endpoints públicos `/api/v1/publico/transparencia/{slug}`. Pendências: app (aba "Portal Público") + infra/produção.
-2. **Infra de produção** — provisionar infra cloud e ativar o guard de deploy quando existir.
+1. **R31.1 (entregue)** — batida de ponto com watchdog de 30s (link: tela "Bater Ponto"); voltar nas telas de login e cadastro; cadastro público em 3 etapas (Empresa → Endereço → Contato) virou **lead** sem CPF/senha (`POST /api/v1/leads/empresas`, tabela `tb_lead_empresa`). Backend: 286 testes verdes; app: 180 testes verdes.
+2. **Acompanhamento de leads** — criar tela admin para listar/alterar status dos leads (NOVO → AGENDADO/REUNIAO/CONTRATADO).
+3. **Infra de produção** — provisionar infra cloud e ativar o guard de deploy quando existir.

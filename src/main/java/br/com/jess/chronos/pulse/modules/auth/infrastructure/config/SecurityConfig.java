@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/esqueci-senha").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/redefinir-senha").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/leads/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/privacidade/politica").permitAll()
