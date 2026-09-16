@@ -13,8 +13,14 @@ public record LeadEmpresaResponseDTO(
         String contatoEmail,
         String contatoTelefone,
         String contatoCelular,
+        String enderecoLogradouro,
+        String enderecoNumero,
+        String enderecoComplemento,
+        String enderecoBairro,
         String enderecoCidade,
         String enderecoUf,
+        String enderecoCep,
+        String observacao,
         String status,
         Instant criadoEm
 ) {
@@ -23,7 +29,9 @@ public record LeadEmpresaResponseDTO(
         return new LeadEmpresaResponseDTO(
                 lead.getId(), lead.getCnpj(), lead.getRazaoSocial(), lead.getContatoNome(),
                 lead.getContatoEmail(), lead.getContatoTelefone(), lead.getContatoCelular(),
-                lead.getEnderecoCidade(), lead.getEnderecoUf(),
+                lead.getEnderecoLogradouro(), lead.getEnderecoNumero(), lead.getEnderecoComplemento(),
+                lead.getEnderecoBairro(), lead.getEnderecoCidade(), lead.getEnderecoUf(),
+                lead.getEnderecoCep(), lead.getObservacao(),
                 lead.getStatus() != null ? lead.getStatus().name() : null,
                 lead.getCriadoEm()
         );
