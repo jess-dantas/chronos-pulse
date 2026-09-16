@@ -1,9 +1,13 @@
 package br.com.jess.chronos.pulse.modules.auth.domain.model;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
 public class CpcUsuario {
+
+    public static final int MAX_TENTATIVAS_LOGIN = 5;
+    public static final int LOCKOUT_MINUTOS = 15;
 
     private final UUID id;
     private final UUID cpcId;
@@ -23,6 +27,9 @@ public class CpcUsuario {
     private final boolean acessoProtocolo;
     private final boolean ativo;
     private final Instant criadoEm;
+    private Instant senhaAlteradaEm;
+    private int tentativasLoginFalhas;
+    private Instant bloqueioLoginAte;
 
     public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
                       String senhaHash, Role role, UUID tenantId) {
@@ -119,6 +126,9 @@ public class CpcUsuario {
         copia.emailPessoal = this.emailPessoal;
         copia.apelido = this.apelido;
         copia.celular = this.celular;
+        copia.senhaAlteradaEm = Instant.now();
+        copia.tentativasLoginFalhas = 0;
+        copia.bloqueioLoginAte = null;
         return copia;
     }
 
@@ -129,7 +139,32 @@ public class CpcUsuario {
         copia.emailPessoal = this.emailPessoal;
         copia.apelido = this.apelido;
         copia.celular = this.celular;
+        copia.senhaAlteradaEm = this.senhaAlteradaEm;
+        copia.tentativasLoginFalhas = this.tentativasLoginFalhas;
+        copia.bloqueioLoginAte = this.bloqueioLoginAte;
         return copia;
+    }
+
+    public void registrarFalhaLogin() {
+        this.tentativasLoginFalhas++;
+        if (this.tentativasLoginFalhas >= MAX_TENTATIVAS_LOGIN && this.bloqueioLoginAte == null) {
+            this.bloqueioLoginAte = Instant.now().plus(Duration.ofMinutes(LOCKOUT_MINUTOS));
+        }
+    }
+
+    public void registrarLoginSucesso() {
+        this.tentativasLoginFalhas = 0;
+        this.bloqueioLoginAte = null;
+    }
+
+    public boolean isLoginBloqueado() {
+        return this.bloqueioLoginAte != null && this.bloqueioLoginAte.isAfter(Instant.now());
+    }
+
+    public void atualizarControleAcesso(Instant senhaAlteradaEm, int tentativas, Instant bloqueioLoginAte) {
+        this.senhaAlteradaEm = senhaAlteradaEm;
+        this.tentativasLoginFalhas = tentativas;
+        this.bloqueioLoginAte = bloqueioLoginAte;
     }
 
     public UUID getId() { return id; }
@@ -150,4 +185,7 @@ public class CpcUsuario {
     public boolean isAcessoProtocolo() { return acessoProtocolo; }
     public boolean isAtivo() { return ativo; }
     public Instant getCriadoEm() { return criadoEm; }
+    public Instant getSenhaAlteradaEm() { return senhaAlteradaEm; }
+    public int getTentativasLoginFalhas() { return tentativasLoginFalhas; }
+    public Instant getBloqueioLoginAte() { return bloqueioLoginAte; }
 }

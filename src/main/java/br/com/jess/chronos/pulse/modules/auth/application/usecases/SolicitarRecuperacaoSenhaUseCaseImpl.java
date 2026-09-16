@@ -9,11 +9,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.ThreadLocalRandom;
+import java.security.SecureRandom;
 
 public class SolicitarRecuperacaoSenhaUseCaseImpl implements SolicitarRecuperacaoSenhaUseCase {
 
     private static final long VALIDADE_MINUTOS = 15;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final CpcUsuarioRepositoryPort usuarioRepository;
     private final RecuperacaoSenhaRepositoryPort recuperacaoSenhaRepository;
@@ -42,7 +44,9 @@ public class SolicitarRecuperacaoSenhaUseCaseImpl implements SolicitarRecuperaca
                 return;
             }
 
-            String codigo = String.format("%06d", ThreadLocalRandom.current().nextInt(1_000_000));
+            // Código de 8 dígitos com SecureRandom (10^8 combinações) + limite de
+            // tentativas no RedefinirSenhaUseCaseImpl (C2 - security review).
+            String codigo = String.format("%08d", SECURE_RANDOM.nextInt(90_000_000) + 10_000_000);
             String codigoHash = passwordEncoder.encode(codigo);
 
             recuperacaoSenhaRepository.salvar(new RecuperacaoSenha(

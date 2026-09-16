@@ -14,6 +14,7 @@ public class RecuperacaoSenhaJpaEntity {
     @Column(name = "expira_em", nullable = false) private Instant expiraEm;
     private boolean usado;
     @Column(name = "criado_em") private Instant criadoEm;
+    private int tentativas;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -27,4 +28,6 @@ public class RecuperacaoSenhaJpaEntity {
     public void setUsado(boolean usado) { this.usado = usado; }
     public Instant getCriadoEm() { return criadoEm; }
     public void setCriadoEm(Instant criadoEm) { this.criadoEm = criadoEm; }
+    public int getTentativas() { return tentativas; }
+    public void setTentativas(int tentativas) { this.tentativas = tentativas; }
 }

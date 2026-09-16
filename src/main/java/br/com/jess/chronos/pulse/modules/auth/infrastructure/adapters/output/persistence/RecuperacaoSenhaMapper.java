@@ -12,7 +12,7 @@ public interface RecuperacaoSenhaMapper {
     @ObjectFactory
     default RecuperacaoSenha criarRecuperacaoSenha(RecuperacaoSenhaJpaEntity e) {
         return new RecuperacaoSenha(e.getId(), e.getCpf(), e.getCodigoHash(),
-                e.getExpiraEm(), e.isUsado(), e.getCriadoEm());
+                e.getExpiraEm(), e.isUsado(), e.getTentativas(), e.getCriadoEm());
     }
 
     RecuperacaoSenha toModel(RecuperacaoSenhaJpaEntity entity);
