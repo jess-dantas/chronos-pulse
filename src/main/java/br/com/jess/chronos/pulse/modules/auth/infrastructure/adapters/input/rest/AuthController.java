@@ -141,7 +141,7 @@ return ResponseEntity.ok(new LoginResponseDTO(
             return ResponseEntity.status(401).build();
         }
         alterarSenhaUseCase.executar(new AlterarSenhaUseCase.Comando(
-                usuarioLogado.getCpf(), request.novaSenha()));
+                usuarioLogado.getCpf(), request.senhaAtual(), request.novaSenha()));
         return ResponseEntity.ok(Map.of("mensagem", "Senha alterada com sucesso."));
     }
 

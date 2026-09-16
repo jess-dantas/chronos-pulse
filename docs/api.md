@@ -397,6 +397,70 @@ Resposta do resumo (trecho):
 
 ---
 
+## 14. Leads de Prospecção (R31.1) — onboarding comercial
+
+Cadastro público em 3 etapas (Empresa → Endereço → Contato) **sem CPF e sem senha**: não cria conta, apenas registra um lead comercial (`tb_lead_empresa`) que a equipe retorna para agendar a conversa/contratação.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/leads/empresas` | 🌐 pública | Registra lead com dados da empresa, endereço e contato comercial (status inicial `NOVO`) |
+| `GET` | `/leads` | 🔒 `ADMIN_PLATAFORMA`/`SUPORTE_N1`/`SUPORTE_N2` | Lista todos os leads, do mais recente ao mais antigo (funil de prospecção) |
+| `PATCH` | `/leads/{id}/status` | 🔒 `ADMIN_PLATAFORMA`/`SUPORTE_N1`/`SUPORTE_N2` | Avança o funil do lead: `NOVO` → `AGENDADO` → `REUNIAO` → `CONTRATADO` (ou `DESCARTADO`) |
+
+Body do `PATCH /leads/{id}/status`:
+
+```json
+{ "status": "REUNIAO" }
+```
+
+O `GET /leads` retorna um array de objetos (mesmo formato da resposta do `POST`, incluindo endereço completo e `observacao`), ordenado por `criadoEm` decrescente.
+
+**Body (POST):**
+
+```jsonc
+{
+  "cnpj": "11.222.333/0001-81",        // aceita máscara; normalizado para 14 dígitos
+  "razaoSocial": "Empresa Exemplo LTDA",
+  "contatoNome": "João Silva",
+  "contatoEmail": "joao@empresa.com",
+  "contatoTelefone": "1123456789",
+  "contatoCelular": "11987654321",
+  "enderecoLogradouro": "Rua A",
+  "enderecoNumero": "100",
+  "enderecoComplemento": "Sala 1",
+  "enderecoBairro": "Centro",
+  "enderecoCidade": "São Paulo",
+  "enderecoUf": "SP",
+  "enderecoCep": "01001000",
+  "observacao": "Indicação via landing"
+}
+```
+
+**Resposta `201`:**
+
+```jsonc
+{
+  "id": "…uuid…",
+  "cnpj": "11222333000181",
+  "razaoSocial": "Empresa Exemplo LTDA",
+  "contatoNome": "João Silva",
+  "contatoEmail": "joao@empresa.com",
+  "contatoTelefone": "1123456789",
+  "contatoCelular": "11987654321",
+  "enderecoCidade": "São Paulo",
+  "enderecoUf": "SP",
+  "status": "NOVO",
+  "criadoEm": "2026-09-12T..."
+}
+```
+
+Regras:
+- `cnpj` deve conter **14 dígitos** (após remover máscara) → caso contrário `400` (`CNPJ inválido: deve conter 14 dígitos.`).
+- `razaoSocial`, `contatoNome` e `contatoEmail` obrigatórios.
+- `endereco*`, telefones e `observacao` opcionais.
+
+---
+
 ## Paginação
 
 As listagens retornam `org.springframework.data.domain.Page`:

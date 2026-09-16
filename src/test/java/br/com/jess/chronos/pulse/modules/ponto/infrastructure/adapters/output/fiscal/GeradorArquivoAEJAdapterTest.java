@@ -3,59 +3,82 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.f
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
 import org.junit.jupiter.api.Test;
+
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import static org.assertj.core.api.Assertions.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class GeradorArquivoAEJAdapterTest {
 
     private final GeradorArquivoAEJAdapter adapter = new GeradorArquivoAEJAdapter();
 
-    private RegistroPonto registro(TipoRegistro tipo, long nsr) {
+    private Instant dh(int dia, int hora) {
+        return Instant.parse(String.format("2024-01-%02dT%02d:00:00-03:00", dia, hora));
+    }
+
+    private RegistroPonto registro(TipoRegistro tipo, long nsr, int dia, int hora) {
         RegistroPonto r = new RegistroPonto(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                Instant.parse("2024-01-15T08:00:00Z"), null, tipo,
+                dh(dia, hora), null, tipo,
                 BigDecimal.ZERO, BigDecimal.ZERO, null, null, false, nsr);
         r.atribuirHash("abc123");
         return r;
     }
 
-    @Test
-    void deveGerarCabecalhoComCnpjERazaoSocial() {
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa Teste", Collections.emptyList(), "12345678901");
-        assertThat(conteudo).startsWith("1|12345678000195|Empresa Teste");
+    private GeradorArquivoAEJAdapter.GerarAEJ dados(List<GeradorArquivoAEJAdapter.AejVinculo> vinculos) {
+        return new GeradorArquivoAEJAdapter.GerarAEJ(
+                "12345678000195", "Empresa Teste", null,
+                dh(1, 8), dh(2, 18), Instant.parse("2024-01-31T18:00:00-03:00"),
+                vinculos);
     }
 
     @Test
-    void deveGerarRodapeComTotalDeRegistros() {
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", List.of(registro(TipoRegistro.ENTRADA, 1L)), "12345678901");
-        assertThat(conteudo).contains("9|TOTAL_REGISTROS=1");
+    void deveGerarCabecalhoComLayoutDoAnexoVi() {
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of()));
+        String[] linhas = conteudo.split("\\r?\\n");
+        assertThat(linhas).hasSize(1);
+        assertThat(linhas[0])
+                .startsWith("01|1|12345678000195||Empresa Teste|2024-01-01|2024-01-02|2024-01-31T18:00:00-0300|001");
     }
 
     @Test
-    void deveGerarLinhaDeRegistroComCamposCorretos() {
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", List.of(registro(TipoRegistro.ENTRADA, 1L)), "12345678901");
-        assertThat(conteudo).contains("2|1|12345678901|15012024|0800|ENTRADA|abc123");
+    void deveGerarVinculoComCpfENome() {
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "123.456.789-01", "Maria Silva", List.of()))));
+        assertThat(conteudo).contains("03|1|12345678901|Maria Silva");
     }
 
     @Test
-    void deveGerarJornadaCompletaComQuatroBatidas() {
+    void deveGerarMarcacaoComTipoFonteESeq() {
         List<RegistroPonto> jornada = List.of(
-                registro(TipoRegistro.ENTRADA, 1L),
-                registro(TipoRegistro.INTERVALO, 2L),
-                registro(TipoRegistro.RETORNO, 3L),
-                registro(TipoRegistro.SAIDA, 4L)
-        );
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", jornada, "12345678901");
-        assertThat(conteudo).contains("ENTRADA", "INTERVALO", "RETORNO", "SAIDA");
-        assertThat(conteudo).contains("9|TOTAL_REGISTROS=4");
+                registro(TipoRegistro.ENTRADA, 1L, 15, 8),
+                registro(TipoRegistro.SAIDA, 2L, 15, 18));
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "12345678901", "Maria Silva", jornada))));
+        assertThat(conteudo)
+                .contains("05|1|2024-01-15T08:00:00-0300||E|001|O||")
+                .contains("05|1|2024-01-15T18:00:00-0300||S|002|O||");
     }
 
     @Test
-    void deveGerarArquivoVazioComApenasHeaderEFooter() {
-        String conteudo = adapter.gerarConteudoAEJ("12345678000195", "Empresa", Collections.emptyList(), "12345678901");
-        assertThat(conteudo.lines().count()).isEqualTo(2);
+    void deveMarcarInclusaoManualComoFonteIComMotivo() {
+        RegistroPonto ajuste = registro(TipoRegistro.SAIDA, 2L, 15, 18);
+        ajuste.atribuirAjusteManual(true, "Esqueceu de bater o ponto", null);
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "12345678901", "Maria Silva",
+                        List.of(registro(TipoRegistro.ENTRADA, 1L, 15, 8), ajuste)))));
+        assertThat(conteudo).contains("05|1|2024-01-15T18:00:00-0300||S|002|I||Esqueceu de bater o ponto");
+    }
+
+    @Test
+    void naoDeveConterLinhasEmBranco() {
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "12345678901", "Maria Silva",
+                        List.of(registro(TipoRegistro.ENTRADA, 1L, 15, 8))))));
+        for (String linha : conteudo.split("\\r?\\n")) {
+            assertThat(linha).isNotBlank();
+        }
     }
 }

@@ -29,8 +29,17 @@ public class RedefinirSenhaUseCaseImpl implements RedefinirSenhaUseCase {
                 .orElseThrow(() -> new IllegalArgumentException("Codigo de recuperacao invalido ou expirado."));
 
         if (recuperacaoSenha.isUsado()
-                || recuperacaoSenha.isExpirada()
-                || !passwordEncoder.matches(comando.codigo(), recuperacaoSenha.getCodigoHash())) {
+                || recuperacaoSenha.isExpirada()) {
+            throw new IllegalArgumentException("Codigo de recuperacao invalido ou expirado.");
+        }
+
+        if (!passwordEncoder.matches(comando.codigo(), recuperacaoSenha.getCodigoHash())) {
+            recuperacaoSenha.registrarTentativa();
+            recuperacaoSenhaRepository.atualizar(recuperacaoSenha);
+            throw new IllegalArgumentException("Codigo de recuperacao invalido ou expirado.");
+        }
+
+        if (recuperacaoSenha.isTentativasEsgotadas()) {
             throw new IllegalArgumentException("Codigo de recuperacao invalido ou expirado.");
         }
 

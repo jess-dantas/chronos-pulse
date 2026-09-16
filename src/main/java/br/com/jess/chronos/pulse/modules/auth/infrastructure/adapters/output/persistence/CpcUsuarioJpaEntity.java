@@ -27,6 +27,9 @@ public class CpcUsuarioJpaEntity {
     @Column(name = "acesso_protocolo") private boolean acessoProtocolo;
     private boolean ativo;
     @Column(name = "criado_em") private Instant criadoEm;
+    @Column(name = "senha_alterada_em") private Instant senhaAlteradaEm;
+    @Column(name = "tentativas_login_falhas") private int tentativasLoginFalhas;
+    @Column(name = "bloqueio_login_ate") private Instant bloqueioLoginAte;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -64,4 +67,10 @@ public class CpcUsuarioJpaEntity {
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public Instant getCriadoEm() { return criadoEm; }
     public void setCriadoEm(Instant criadoEm) { this.criadoEm = criadoEm; }
+    public Instant getSenhaAlteradaEm() { return senhaAlteradaEm; }
+    public void setSenhaAlteradaEm(Instant senhaAlteradaEm) { this.senhaAlteradaEm = senhaAlteradaEm; }
+    public int getTentativasLoginFalhas() { return tentativasLoginFalhas; }
+    public void setTentativasLoginFalhas(int tentativasLoginFalhas) { this.tentativasLoginFalhas = tentativasLoginFalhas; }
+    public Instant getBloqueioLoginAte() { return bloqueioLoginAte; }
+    public void setBloqueioLoginAte(Instant bloqueioLoginAte) { this.bloqueioLoginAte = bloqueioLoginAte; }
 }

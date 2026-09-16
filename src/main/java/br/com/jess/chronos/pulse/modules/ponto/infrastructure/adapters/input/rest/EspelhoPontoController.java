@@ -55,7 +55,7 @@ public class EspelhoPontoController {
     }
 
     @PostMapping("/ajustar")
-    @PreAuthorize("hasAnyRole('COLABORADOR', 'ADMIN_EMPRESA', 'GESTOR_RH', 'ADMIN_PLATAFORMA')")
+    @PreAuthorize("hasAnyRole('ADMIN_EMPRESA', 'GESTOR_RH', 'ADMIN_PLATAFORMA')")
     public ResponseEntity<EspelhoPontoItemDTO> ajustarPonto(
             @RequestBody @Valid AjustePontoManualDTO request,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {

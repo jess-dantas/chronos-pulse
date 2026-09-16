@@ -48,17 +48,29 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
             throw new IllegalArgumentException("Credenciais inválidas");
         }
 
+        if (usuario.isLoginBloqueado()) {
+            loginMetricsRecorder.registrarFalha(comando.cpf(), "USUARIO_BLOQUEADO", true,
+                    usuario.getTenantId(), usuario.getCpcId());
+            throw new IllegalArgumentException("Muitas tentativas de login. Tente novamente em instantes.");
+        }
+
         if (!usuario.isAtivo()) {
             loginMetricsRecorder.registrarFalha(comando.cpf(), "USUARIO_INATIVO", true,
                     usuario.getTenantId(), usuario.getCpcId());
-            throw new IllegalStateException("Usuário inativo");
+            // Resposta genérica para não enumerar contas desativadas (M1).
+            throw new IllegalArgumentException("Credenciais inválidas");
         }
 
         if (!passwordEncoder.matches(comando.senha(), usuario.getSenhaHash())) {
+            usuario.registrarFalhaLogin();
+            repositoryPort.atualizar(usuario);
             loginMetricsRecorder.registrarFalha(comando.cpf(), "SENHA_INVALIDA", true,
                     usuario.getTenantId(), usuario.getCpcId());
             throw new IllegalArgumentException("Credenciais inválidas");
         }
+
+        usuario.registrarLoginSucesso();
+        repositoryPort.atualizar(usuario);
 
         String tenantId = usuario.getTenantId() != null ? usuario.getTenantId().toString() : null;
         String tenantSlug = usuario.getTenantId() != null
