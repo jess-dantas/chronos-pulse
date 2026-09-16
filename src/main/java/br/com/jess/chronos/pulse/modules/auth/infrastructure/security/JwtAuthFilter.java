@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.auth.infrastructure.security;
 
+import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -44,37 +46,74 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Endpoints públicos não precisam resolver o usuário no banco:
+        // evita SELECT em cpc_usuario a cada heartbeat (/auth/ping).
+        if (isEndpointPublico(request.getRequestURI())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         Claims claims = jwtService.extrairClaims(token);
+
+        // Refresh tokens não podem ser usados como Bearer (LOW - security review).
+        if (!jwtService.isAccessToken(claims)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String cpf = claims.getSubject();
         String role = claims.get("role", String.class);
 
-        usuarioRepository.buscarPorCpf(cpf).ifPresent(usuario -> {
-            // Contexto de observabilidade no MDC (R27) — limpo ao final da
-            // requisição pelo TelemetriaFilter, que envolve toda a cadeia.
-            if (usuario.getTenantId() != null) {
-                MDC.put("tenantId", usuario.getTenantId().toString());
-            }
-            if (usuario.getCpcId() != null) {
-                MDC.put("usuarioId", usuario.getCpcId().toString());
-            }
-            var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-            if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_ESTOQUE"));
-            }
-            if (usuario.isAcessoPatrimonio() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_PATRIMONIO"));
-            }
-            if (usuario.isAcessoFrota() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_FROTA"));
-            }
-            if (usuario.isAcessoProtocolo() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_PROTOCOLO"));
-            }
-            var auth = new UsernamePasswordAuthenticationToken(usuario, null, authorities);
-            SecurityContextHolder.getContext().setAuthentication(auth);
-        });
+        var usuarioOpt = usuarioRepository.buscarPorCpf(cpf);
+        if (usuarioOpt.isEmpty()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        CpcUsuario usuario = usuarioOpt.get();
+
+        // Revogação (H2): usuário desativado ou tokens emitidos antes da última
+        // troca de senha não autenticam.
+        if (!usuario.isAtivo()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        Instant iat = claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant() : null;
+        if (usuario.getSenhaAlteradaEm() != null && iat != null
+                && iat.isBefore(usuario.getSenhaAlteradaEm())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Contexto de observabilidade no MDC (R27) — limpo ao final da
+        // requisição pelo TelemetriaFilter, que envolve toda a cadeia.
+        if (usuario.getTenantId() != null) {
+            MDC.put("tenantId", usuario.getTenantId().toString());
+        }
+        if (usuario.getCpcId() != null) {
+            MDC.put("usuarioId", usuario.getCpcId().toString());
+        }
+        var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ESTOQUE"));
+        }
+        if (usuario.isAcessoPatrimonio() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_PATRIMONIO"));
+        }
+        if (usuario.isAcessoFrota() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_FROTA"));
+        }
+        if (usuario.isAcessoProtocolo() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_PROTOCOLO"));
+        }
+        var auth = new UsernamePasswordAuthenticationToken(usuario, null, authorities);
+        SecurityContextHolder.getContext().setAuthentication(auth);
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isEndpointPublico(String uri) {
+        return uri != null && (uri.startsWith("/api/v1/auth/ping")
+                || uri.startsWith("/api/v1/publico/"));
     }
 }

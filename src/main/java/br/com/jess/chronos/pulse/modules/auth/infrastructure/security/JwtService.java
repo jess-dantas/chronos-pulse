@@ -40,6 +40,7 @@ public class JwtService {
                                    boolean acessoFrota, boolean acessoProtocolo) {
         return Jwts.builder()
                 .subject(cpf)
+                .claim("typ", "access")
                 .claim("role", role)
                 .claim("cpcId", cpcId)
                 .claim("tenantId", tenantId)
@@ -56,6 +57,7 @@ public class JwtService {
     public String gerarRefreshToken(String cpf) {
         return Jwts.builder()
                 .subject(cpf)
+                .claim("typ", "refresh")
                 .id(UUID.randomUUID().toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
@@ -69,6 +71,20 @@ public class JwtService {
 
     public String extrairCpf(String token) {
         return extrairClaims(token).getSubject();
+    }
+
+    /**
+     * Tokens antigos (sem claim "typ") continuam aceitos durante a transição;
+     * tokens novos "access" NÃO valem como refresh e vice-versa.
+     */
+    public boolean isRefreshToken(Claims claims) {
+        String typ = claims.get("typ", String.class);
+        return typ == null || "refresh".equals(typ);
+    }
+
+    public boolean isAccessToken(Claims claims) {
+        String typ = claims.get("typ", String.class);
+        return typ == null || "access".equals(typ);
     }
 
     public boolean isTokenValido(String token) {

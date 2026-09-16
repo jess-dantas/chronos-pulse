@@ -16,12 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class AutenticarUsuarioUseCaseImplTest {
@@ -101,5 +103,63 @@ class AutenticarUsuarioUseCaseImplTest {
                 .hasMessage("Credenciais inválidas");
 
         verify(loginMetricsRecorder).registrarFalha(eq("12345678901"), eq("SENHA_INVALIDA"), eq(true), any(), any());
+    }
+
+    @Test
+    void deveBloquearLoginQuandoLimiteDeTentativasAtingido() {
+        CpcUsuario usuario = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "12345678901", "Usuario Teste",
+                "teste@empresa.com", "hashSenha", Role.COLABORADOR, UUID.randomUUID());
+
+        for (int i = 0; i < CpcUsuario.MAX_TENTATIVAS_LOGIN; i++) {
+            usuario.registrarFalhaLogin();
+        }
+
+        when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
+
+        assertThat(usuario.isLoginBloqueado()).isTrue();
+        assertThatThrownBy(() -> useCase.executar(new Comando("12345678901", "senha123")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Muitas tentativas");
+
+        verify(loginMetricsRecorder).registrarFalha("12345678901", "USUARIO_BLOQUEADO", true,
+                usuario.getTenantId(), usuario.getCpcId());
+        verify(repositoryPort, never()).atualizar(any());
+    }
+
+    @Test
+    void deveIncrementarTentativasEmSenhaIncorreta() {
+        CpcUsuario usuario = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "12345678901", "Usuario Teste",
+                "teste@empresa.com", "hashSenha", Role.COLABORADOR, UUID.randomUUID());
+
+        when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senhaErrada", "hashSenha")).thenReturn(false);
+
+        assertThatThrownBy(() -> useCase.executar(new Comando("12345678901", "senhaErrada")))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        var captor = ArgumentCaptor.forClass(CpcUsuario.class);
+        verify(repositoryPort).atualizar(captor.capture());
+        assertThat(captor.getValue().getTentativasLoginFalhas()).isEqualTo(1);
+    }
+
+    @Test
+    void deveZerarTentativasEmLoginComSucesso() {
+        CpcUsuario usuario = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "12345678901", "Usuario Teste",
+                "teste@empresa.com", "hashSenha", Role.COLABORADOR, UUID.randomUUID());
+        usuario.atualizarControleAcesso(Instant.now(), 3, Instant.now().minusSeconds(60));
+
+        when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senha123", "hashSenha")).thenReturn(true);
+        when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", usuario.getCpcId().toString(),
+                usuario.getTenantId().toString(), false, false, false, false))
+                .thenReturn("access-token");
+        when(modulosPort.listarCodigosAtivos(usuario.getTenantId())).thenReturn(java.util.List.of());
+
+        useCase.executar(new Comando("12345678901", "senha123"));
+
+        var captor = ArgumentCaptor.forClass(CpcUsuario.class);
+        verify(repositoryPort).atualizar(captor.capture());
+        assertThat(captor.getValue().getTentativasLoginFalhas()).isZero();
+        assertThat(captor.getValue().getBloqueioLoginAte()).isNull();
     }
 }

@@ -24,6 +24,8 @@ spring:
     multipart:
       max-file-size: 2MB
       max-request-size: 2MB
+  flyway:
+    locations: classpath:db/migration
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
@@ -50,4 +52,16 @@ chronos:
     from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}
     remetente-nome: ${CHRONOS_MAIL_NAME:Chronos Pulse}
   cors:
-    allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:4200,https://chronos-pulse.netlify.app,https://*.netlify.app}
+    allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:4200,https://chronos-pulse.netlify.app}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

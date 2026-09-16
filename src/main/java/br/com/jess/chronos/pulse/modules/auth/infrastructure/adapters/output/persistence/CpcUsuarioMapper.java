@@ -30,5 +30,7 @@ public interface CpcUsuarioMapper {
     @AfterMapping
     default void atribuirDadosPessoais(CpcUsuarioJpaEntity entity, @MappingTarget CpcUsuario model) {
         model.atualizarDadosPessoais(entity.getApelido(), entity.getCelular(), entity.getEmailPessoal());
+        model.atualizarControleAcesso(entity.getSenhaAlteradaEm(),
+                entity.getTentativasLoginFalhas(), entity.getBloqueioLoginAte());
     }
 }
