@@ -404,8 +404,18 @@ Cadastro público em 3 etapas (Empresa → Endereço → Contato) **sem CPF e se
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | `POST` | `/leads/empresas` | 🌐 pública | Registra lead com dados da empresa, endereço e contato comercial (status inicial `NOVO`) |
+| `GET` | `/leads` | 🔒 `ADMIN_PLATAFORMA`/`SUPORTE_N1`/`SUPORTE_N2` | Lista todos os leads, do mais recente ao mais antigo (funil de prospecção) |
+| `PATCH` | `/leads/{id}/status` | 🔒 `ADMIN_PLATAFORMA`/`SUPORTE_N1`/`SUPORTE_N2` | Avança o funil do lead: `NOVO` → `AGENDADO` → `REUNIAO` → `CONTRATADO` (ou `DESCARTADO`) |
 
-**Body:**
+Body do `PATCH /leads/{id}/status`:
+
+```json
+{ "status": "REUNIAO" }
+```
+
+O `GET /leads` retorna um array de objetos (mesmo formato da resposta do `POST`, incluindo endereço completo e `observacao`), ordenado por `criadoEm` decrescente.
+
+**Body (POST):**
 
 ```jsonc
 {

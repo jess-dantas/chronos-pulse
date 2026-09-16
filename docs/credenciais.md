@@ -14,9 +14,13 @@
 
 ## Usuários de demonstração
 
-Seeds aplicados pelas migrations `V3` e `V5` (gestor de RH e acesso ao estoque).
+> **Atenção:** desde a `V36`, os CPFs seedados estão **desativados em produção** (`ativo = false`) —
+> o deploy real cria apenas a estrutura e deixa os usuários **offline**. A reativação ocorre
+> exclusivamente no perfil `dev` via seed repetível `db/seed/R__seed_dados_dev.sql`
+> (`flyway.locations` inclui `classpath:db/seed` somente em `application-dev.yml`;
+> produção utiliza apenas `classpath:db/migration`).
 
-| Perfil | CPF | Senha | Observação |
+| Perfil | CPF | Senha (only dev seed) | Observação |
 |---|---|---|---|
 | Admin Empresa | `11111111111` | `admin123` | Acesso irrestrito no tenant (todos os módulos) |
 | Gestor de RH | `22222222222` | `admin123` | Gestão de RH, ponto, estoque |
@@ -25,7 +29,9 @@ Seeds aplicados pelas migrations `V3` e `V5` (gestor de RH e acesso ao estoque).
 
 ## Perfis de plataforma (fora do repositório)
 
-- **Admin Plataforma** (CPF `00000000000`): seedado na `V3`; `V13` só atualiza o e-mail corporativo. Senha entregue fora do repositório.
-- **Fundador / Admin Empresa da Red Cape** (CPF `99999999999`): seedado na `V9` com hash bcrypt. Senha entregue fora do repositório.
+- **Admin Plataforma** (CPF `00000000000`): seedado na `V3`; `V13` só atualiza o e-mail corporativo.
+  Desativado em produção pela `V36` — senha entregue fora do repositório e reativado apenas no seed dev.
+- **Fundador / Admin Empresa da Red Cape** (CPF `99999999999`): seedado na `V9` com hash bcrypt.
+  Desativado em produção pela `V36` — senha entregue fora do repositório e reativado apenas no seed dev.
 
 Para saber como subir a aplicação, ver [`README.md`](../README.md).

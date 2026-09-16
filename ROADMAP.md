@@ -15,7 +15,7 @@
 
 ## Requisitos (R-series)
 
-Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (282 no backend, 166 no app) refletem o estado atual.
+Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (301 no backend, 204 no app) refletem o estado atual.
 
 | Req | Entrega | Status |
 |---|---|---|
@@ -25,6 +25,8 @@ Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/
 | **R30** | Gestão da Execução Contratual: aditivos, fiscalização/apontamentos, medições/pagamentos, sanções e rescisão (Lei 14.133/2021) | ✅ |
 | **R31** | Portal da Transparência completo (LC 131/2009): publicização automática de licitações, contratos, aditivos, sanções e despesas + endpoints públicos por `slug` | ✅ |
 | **R31.1** | Ajustes pós-entrega: robustez da batida de ponto (watchdog global de 30s), voltar nas telas públicas e **onboarding comercial em 3 etapas (lead sem CPF/senha)** | ✅ |
+| **R32** | **REP-P (Portaria MTP 671/2021)**: AFD (Anexo V) e AEJ (Anexo VI) com leiaute oficial (CRC-16/CCITT-TRUE, SHA-256 encadeado), endpoints `/fiscal/afd` e `/fiscal/aej`, espelho conforme art. 84. *Pendente de homologação: registro no INPI (art. 91), assinatura ICP-Brasil (art. 88), registros AEJ "02"/"04"/"07", NSR por estabelecimento e validadores do MTE.* | 🚧 |
+| **R33** | Acompanhamento de leads: tela admin para listar e avançar o funil (NOVO → AGENDADO → REUNIAO → CONTRATADO/DESCARTADO) — `GET /leads` + `PATCH /leads/{id}/status` | ✅ |
 
 ---
 
@@ -50,10 +52,12 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 
 | Marco | Status |
 |---|---|
-| CI: build, 275 testes, security (Trivy) com upload SARIF para Code Scanning | ✅ |
-| CI app: analyze, 166 testes, build Android (APK+AppBundle), build Web (Netlify) e build iOS | ✅ |
-| Credenciais/segredos fora do código (versionadas em `docs/credenciais.md`) | ✅ |
-| Documentação sincronizada (10 módulos, 34 migrations, RBAC, API) | ✅ |
+| CI: build, 301 testes, security (Trivy) com upload SARIF para Code Scanning | ✅ |
+| CI app: analyze, 204 testes, build Android (APK+AppBundle), build Web (Netlify) e build iOS | ✅ |
+| Secretos fora do código — `JWT_SECRET` via env (sem default em `docker-compose.yml`); senhas de seed só no perfil dev; CPFs de seed desativados em produção via `V36` | ✅ |
+| Segurança (auditoria + correções): lockout de login, reset de senha com código de 8 dígitos, revogação de JWT por troca de senha, `senhaAtual` no alterar-senha, foto validada por magic-bytes, CORS sem wildcard, Swagger/Actuator restritos | ✅ |
+| App endurecido: `allowBackup=false`, cleartext só em debug, keystore de release fora do repositório, perfil (nome/CPF/foto/e-mail) no armazenamento seguro, fila offline apagada no logout/LGPD, ajuste de ponto só p/ gestores, erros amigáveis sem `e.toString()` | ✅ |
+| Documentação sincronizada (10 módulos, migrations, RBAC, API) | ✅ |
 | Deploy **staging** (Render) | ✅ |
 | Deploy **produção** (infra cloud + secrets `DB_URL`/`DB_USER`/`DB_PASSWORD`/`KUBE_CONFIG`) | ⏭️ guard no-op enquanto a infra não existir |
 
@@ -61,6 +65,7 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 
 ## Próximos passos
 
-1. **R31.1 (entregue)** — batida de ponto com watchdog de 30s (link: tela "Bater Ponto"); voltar nas telas de login e cadastro; cadastro público em 3 etapas (Empresa → Endereço → Contato) virou **lead** sem CPF/senha (`POST /api/v1/leads/empresas`, tabela `tb_lead_empresa`). Backend: 286 testes verdes; app: 180 testes verdes.
-2. **Acompanhamento de leads** — criar tela admin para listar/alterar status dos leads (NOVO → AGENDADO/REUNIAO/CONTRATADO).
-3. **Infra de produção** — provisionar infra cloud e ativar o guard de deploy quando existir.
+1. **R32 — REP-P (parcialmente entregue)** — AFD (Anexo V) e AEJ (Anexo VI) seguem o leiaute oficial, com testes (CRC-16/CCITT-TRUE validado pelo vetor `"123456789"→2189` do próprio leiaute; SHA-256 encadeado; larguras fixas; sem linhas em branco; trailer com contagem). Para **homologação**: registrar o software no **INPI** (art. 91) e alimentar o campo de registro no cabeçalho do AFD; assinar AFD/AEJ com certificado **ICP-Brasil** (art. 86/88 via PFX); implementar registros AEJ `02` (REPs), `04` (horário contratual) e `07` (ausências/banco de horas); **NSR por estabelecimento (CNPJ)**; roteiro em `docs/inpi.md`. Backend: 301 testes verdes; app: 204.
+2. **R33 — Acompanhamento de leads (entregue)** — `GET /leads` + `PATCH /leads/{id}/status` no backend e tela **Acompanhamento de Leads** no painel admin (funil por status, contadores, avanço por dropdown; `docs/api.md` §14).
+3. **Espelho conforme art. 84** — conferir campos mínimos no PDF do espelho (empregador, trabalhador, período, jornada contratual, marcações tratadas e duração) e código de verificação.
+4. **Infra de produção** — provisionar infra cloud e ativar o guard de deploy quando existir.
