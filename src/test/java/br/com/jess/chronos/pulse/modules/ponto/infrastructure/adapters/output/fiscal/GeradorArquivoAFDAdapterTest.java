@@ -67,13 +67,24 @@ class GeradorArquivoAFDAdapterTest {
                 "2024-01-15T08:00:00-03:00"))));
         String marcacao = conteudo.split("\\r?\\n")[1];
         assertThat(marcacao).hasSize(137);
-        assertThat(marcacao.substring(0, 9)).isEqualTo("000000007");
+        assertThat(marcacao.substring(0, 9)).isEqualTo("000000001");
         assertThat(marcacao.charAt(9)).isEqualTo('7');
         assertThat(marcacao.substring(10, 34)).isEqualTo("2024-01-15T08:00:00-0300");
         assertThat(marcacao.substring(34, 46)).isEqualTo("012345678901");
         assertThat(marcacao.substring(70, 72)).isEqualTo("01"); // coletor app mobile
         assertThat(marcacao.charAt(72)).isEqualTo('0'); // on-line
         assertThat(marcacao.substring(73, 137)).matches("[0-9a-f]{64}");
+    }
+
+    @Test
+    void deveRenumerarNsrDeFormaSequencialPorEstabelecimento() {
+        List<RegistroPonto> jornada = List.of(
+                registro(TipoRegistro.SAIDA, 42L, "2024-01-15T18:00:00-03:00"),
+                registro(TipoRegistro.ENTRADA, 7L, "2024-01-15T08:00:00-03:00"));
+        String conteudo = adapter.gerarConteudoAFD(dados(jornada));
+        String[] linhas = conteudo.split("\\r?\\n");
+        assertThat(linhas[1].substring(0, 9)).isEqualTo("000000001"); // ENTRADA 08:00
+        assertThat(linhas[2].substring(0, 9)).isEqualTo("000000002"); // SAIDA 18:00
     }
 
     @Test

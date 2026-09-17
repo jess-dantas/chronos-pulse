@@ -77,11 +77,20 @@ certificado digital **ICP-Brasil** (.pfx) da **Chronos Pulse** (e-CNPJ ICP-Brasi
   arquivo com timestamp para os arquivos fiscais);
 - Manter `docs/credenciais.md` sem segredos e o `docker-compose.yml` sem default.
 
+#### 5.1. Estado da implementação (nº INPI)
+
+O campo está **pronto para receber o número** assim que o registro sair na RPI:
+
+- **AFD** (Anexo V, pos. 190–206 do cabeçalho): preenchido em `GeradorArquivoAFDAdapter`
+  via parâmetro `numeroRegistroInpi` do endpoint `/fiscal/afd/download`;
+- **AEJ** (Anexo VI): `numeroRegistroInpi` no endpoint `/fiscal/aej/download` emite o
+  registro `02` (REP-P) e é referenciado nas marcações (`idRepAej`).
+
 ## 5. Checklist de execução
 
 - [ ] Abertura do pedido de **programa de computador** no INPI (portaria art. 91)
-- [ ] Nº INPI preenchido no **AFD** (campo 190–206 do cabeçalho) — manualmente no
-      endpoint `/fiscal/afd/download` (`numeroRegistroInpi`) e depois automático via **settings por tenant**
+- [ ] Nº INPI testado no **AFD** (campo 190–206 do cabeçalho) e no **AEJ** (registro `02`)
+      via endpoint; futuramente automático via **settings por tenant**
 - [ ] Pedido de **marca** (Classe 9) no e-Marca
 - [ ] Certificado **e-CNPJ ICP-Brasil** adquirido/testado (assinatura AFD+AEJ)
 - [ ] Homologação dos arquivos com o **leiaute oficial** (gov.br) e o

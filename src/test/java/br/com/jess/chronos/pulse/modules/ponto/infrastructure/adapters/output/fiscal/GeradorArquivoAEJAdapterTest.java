@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,9 +39,101 @@ class GeradorArquivoAEJAdapterTest {
     void deveGerarCabecalhoComLayoutDoAnexoVi() {
         String conteudo = adapter.gerarConteudoAEJ(dados(List.of()));
         String[] linhas = conteudo.split("\\r?\\n");
-        assertThat(linhas).hasSize(1);
+        assertThat(linhas).hasSize(2);
         assertThat(linhas[0])
                 .startsWith("01|1|12345678000195||Empresa Teste|2024-01-01|2024-01-02|2024-01-31T18:00:00-0300|001");
+    }
+
+    @Test
+    void deveGerarTrailerComQuantidadePorTipoDeRegistro() {
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of()));
+        String[] linhas = conteudo.split("\\r?\\n");
+        assertThat(linhas[1]).isEqualTo("99|1|0|0|0|0|0|0|0");
+    }
+
+    @Test
+    void deveGerarRegistro02DoRepPComNumeroInpi() {
+        GeradorArquivoAEJAdapter.GerarAEJ comRep = new GeradorArquivoAEJAdapter.GerarAEJ(
+                "12345678000195", "Empresa Teste", null,
+                dh(1, 8), dh(2, 18), Instant.parse("2024-01-31T18:00:00-03:00"),
+                List.of(), List.of(new GeradorArquivoAEJAdapter.AejRep(1, 3, "BR512019000001-7")));
+        String conteudo = adapter.gerarConteudoAEJ(comRep);
+        assertThat(conteudo).contains("02|1|3|BR512019000001-7");
+    }
+
+    @Test
+    void deveGerarRegistro04DoHorarioContratual() {
+        GeradorArquivoAEJAdapter.AejHorarioContratual horario =
+                new GeradorArquivoAEJAdapter.AejHorarioContratual("1", 480,
+                        List.of(new GeradorArquivoAEJAdapter.ParJornada("0800", "1200"),
+                                new GeradorArquivoAEJAdapter.ParJornada("1300", "1800")));
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "123.456.789-01", "Maria Silva",
+                        List.of(), horario, List.of()))));
+        assertThat(conteudo).contains("04|1|480|0800|1200|1300|1800");
+    }
+
+    @Test
+    void deveGerarRegistro07DeAusenciasEBancoDeHoras() {
+        GeradorArquivoAEJAdapter.AejAusencia banco =
+                new GeradorArquivoAEJAdapter.AejAusencia(3, LocalDate.parse("2024-01-10"), 120, 2);
+        GeradorArquivoAEJAdapter.AejAusencia falta =
+                new GeradorArquivoAEJAdapter.AejAusencia(2, LocalDate.parse("2024-01-12"), null, null);
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "123.456.789-01", "Maria Silva",
+                        List.of(), null, List.of(banco, falta)))));
+
+        assertThat(conteudo).contains("07|1|3|2024-01-10|120|2");
+        assertThat(conteudo).contains("07|1|2|2024-01-12");
+    }
+
+    @Test
+    void devePreencherCodigoDoHorarioNaPrimeiraEntrada() {
+        GeradorArquivoAEJAdapter.AejHorarioContratual horario =
+                new GeradorArquivoAEJAdapter.AejHorarioContratual("XPTO", 480,
+                        List.of(new GeradorArquivoAEJAdapter.ParJornada("0800", "1800")));
+        List<RegistroPonto> jornada = List.of(
+                registro(TipoRegistro.ENTRADA, 1L, 15, 8),
+                registro(TipoRegistro.ENTRADA, 2L, 15, 13),
+                registro(TipoRegistro.SAIDA, 3L, 15, 18));
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of(
+                new GeradorArquivoAEJAdapter.AejVinculo(1, "12345678901", "Maria Silva",
+                        jornada, horario, List.of()))));
+
+        assertThat(conteudo)
+                .contains("05|1|2024-01-15T08:00:00-0300||E|001|O|XPTO|")
+                .contains("05|1|2024-01-15T13:00:00-0300||E|002|O||")
+                .contains("05|1|2024-01-15T18:00:00-0300||S|003|O||");
+    }
+
+    @Test
+    void deveReferenciarRepPNaMarcacao() {
+        GeradorArquivoAEJAdapter.GerarAEJ comRep = new GeradorArquivoAEJAdapter.GerarAEJ(
+                "12345678000195", "Empresa Teste", null,
+                dh(1, 8), dh(2, 18), Instant.parse("2024-01-31T18:00:00-03:00"),
+                List.of(new GeradorArquivoAEJAdapter.AejVinculo(1, "12345678901", "Maria Silva",
+                        List.of(registro(TipoRegistro.ENTRADA, 1L, 15, 8)))),
+                List.of(new GeradorArquivoAEJAdapter.AejRep(1, 3, "BR512019000001-7")));
+        String conteudo = adapter.gerarConteudoAEJ(comRep);
+        assertThat(conteudo).contains("05|1|2024-01-15T08:00:00-0300|1|E|001|O||");
+    }
+
+    @Test
+    void deveGerarTrailerComContagemTotal() {
+        GeradorArquivoAEJAdapter.AejHorarioContratual horario =
+                new GeradorArquivoAEJAdapter.AejHorarioContratual("1", 480,
+                        List.of(new GeradorArquivoAEJAdapter.ParJornada("0800", "1800")));
+        GeradorArquivoAEJAdapter.GerarAEJ completo = new GeradorArquivoAEJAdapter.GerarAEJ(
+                "12345678000195", "Empresa Teste", null,
+                dh(1, 8), dh(2, 18), Instant.parse("2024-01-31T18:00:00-03:00"),
+                List.of(new GeradorArquivoAEJAdapter.AejVinculo(1, "12345678901", "Maria Silva",
+                        List.of(registro(TipoRegistro.ENTRADA, 1L, 15, 8),
+                                registro(TipoRegistro.SAIDA, 2L, 15, 18)), horario,
+                        List.of(new GeradorArquivoAEJAdapter.AejAusencia(2,
+                                LocalDate.parse("2024-01-12"), null, null)))),
+                List.of(new GeradorArquivoAEJAdapter.AejRep(1, 3, "BR512019000001-7")));
+        String conteudo = adapter.gerarConteudoAEJ(completo);
+        assertThat(conteudo).contains("99|1|1|1|1|2|0|1|0");
     }
 
     @Test

@@ -55,13 +55,18 @@ public class GeradorArquivoAFDAdapter {
 
         sb.append(linhaCabecalho(dados)).append("\r\n");
 
+        // O AFD é gerado por estabelecimento (CNPJ): o NSR é reenumerado de 1..N
+        // na ordem cronológica das marcações, independentemente do NSR gravado na
+        // base (que pode ser sequência global do tenant).
         String hashAnterior = "";
         long indice = 0;
-        for (RegistroPonto p : dados.pontos()) {
-            String linha = linhaMarcacao(dados, p, hashAnterior);
+        for (RegistroPonto p : dados.pontos().stream()
+                .sorted((a, b) -> a.getDataHora().compareTo(b.getDataHora()))
+                .toList()) {
+            indice++;
+            String linha = linhaMarcacao(dados, p, hashAnterior, indice);
             sb.append(linha).append("\r\n");
             hashAnterior = extrairHash(linha);
-            indice++;
         }
 
         sb.append(linhaTrailer(dados.pontos().size())).append("\r\n");
@@ -92,7 +97,7 @@ public class GeradorArquivoAFDAdapter {
         return linha.toString();
     }
 
-    private String linhaMarcacao(GerarAFD dados, RegistroPonto p, String hashAnterior) {
+    private String linhaMarcacao(GerarAFD dados, RegistroPonto p, String hashAnterior, long nsrSequencial) {
         String cpf = cpf12(dados.cpfColaborador());
         String dhMarcacao = FORMATO_DH.format(p.getDataHora());
         String dhGravacao = FORMATO_DH.format(
@@ -101,9 +106,8 @@ public class GeradorArquivoAFDAdapter {
 
         String hash = hashEncadeado(dhMarcacao, cpf, dhGravacao, COLETOR_APP_MOBILE, online, hashAnterior);
 
-        String nsr = p.getNsr() == null ? "0" : String.valueOf(p.getNsr());
         StringBuilder linha = new StringBuilder();
-        linha.append(campo(nsr, 9, '0'));
+        linha.append(campo(String.valueOf(nsrSequencial), 9, '0'));
         linha.append("7");
         linha.append(dhMarcacao);
         linha.append(cpf);
