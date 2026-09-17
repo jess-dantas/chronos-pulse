@@ -78,6 +78,7 @@ Login — corpo e resposta resumida:
 |---|---|---|---|
 | `POST` | `/pontos/sincronizar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Batida(s) online/offline com GPS e hash |
 | `GET` | `/pontos/espelho?mes=9&ano=2026` | 🛡️ (mesmos perfis) | Espelho de ponto mensal |
+| `GET` | `/pontos/espelho/relatorio?colaboradorId=...&mes=9&ano=2026` | 🛡️ (mesmos perfis) | Relatório do espelho conforme art. 84 da Portaria MTP 671/2021: empregador (nome/CNPJ), trabalhador (nome, CPF, admissão, cargo/função, matrícula), data de emissão, período apurado, jornada contratual, marcações tratadas e **código de verificação** SHA-256 |
 | `POST` | `/pontos/ajustar` | 🛡️ (mesmos perfis) | Ajuste manual com justificativa obrigatória |
 
 ---
