@@ -75,6 +75,13 @@
 			<version>${org.mapstruct.version}</version>
 		</dependency>
 
+		<!-- Assinatura digital CAdES (CMS) - Portaria MTP n. 671/2021, art. 86/88 -->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcpkix-jdk18on</artifactId>
+			<version>1.80</version>
+		</dependency>
+
 		<!-- Testes -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
