@@ -45,6 +45,7 @@ SPRING_DATASOURCE_USERNAME=chronos_user
 SPRING_DATASOURCE_PASSWORD=$PGPASS
 PORT=8080
 CHRONOS_MAIL_ENABLED=false
+MANAGEMENT_HEALTH_MAIL_ENABLED=false
 EOF
     chmod 600 "$INSTALL_DIR/.env"
     echo ".env criado em $INSTALL_DIR/.env (credenciais geradas)."

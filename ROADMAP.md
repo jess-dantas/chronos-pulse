@@ -57,7 +57,7 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 | Secretos fora do código — `JWT_SECRET` via env (sem default em `docker-compose.yml`); senhas de seed só no perfil dev; CPFs de seed desativados em produção via `V36` | ✅ |
 | Segurança (auditoria + correções): lockout de login, reset de senha com código de 8 dígitos, revogação de JWT por troca de senha, `senhaAtual` no alterar-senha, foto validada por magic-bytes, CORS sem wildcard, Swagger/Actuator restritos | ✅ |
 | App endurecido: `allowBackup=false`, cleartext só em debug, keystore de release fora do repositório, perfil (nome/CPF/foto/e-mail) no armazenamento seguro, fila offline apagada no logout/LGPD, ajuste de ponto só p/ gestores, erros amigáveis sem `e.toString()` | ✅ |
-| Pacote de instalação **on-prem** (`release/`): servidor JAR + `docker-compose.yml` (PostgreSQL 16) + launchers `start.bat`/`start.sh`/`stop.*` + instalação `systemd` (`install-linux.sh`) para Windows 10/11 e Linux, usando o perfil `prod` (Flyway só migrações) | ✅ (validado por build+330 testes; teste com Docker em máquina real pendente) |
+| Pacote de instalação **on-prem** (`release/`): servidor JAR + `docker-compose.yml` (PostgreSQL 16) + launchers `start.bat`/`start.sh`/`stop.*` + instalação `systemd` (`install-linux.sh`) para Windows 10/11 e Linux, usando o perfil `prod` (Flyway só migrações) | ✅ (validado em Windows + Docker/WSL2: 38 migrações aplicadas e `/actuator/health` UP) |
 | Documentação sincronizada (10 módulos, migrations, RBAC, API) | ✅ |
 | Deploy **staging** (Render) | ✅ |
 | Deploy **produção** (infra cloud + secrets `DB_URL`/`DB_USER`/`DB_PASSWORD`/`KUBE_CONFIG`) | ⏭️ guard no-op enquanto a infra não existir |

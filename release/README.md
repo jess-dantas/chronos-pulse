@@ -72,6 +72,7 @@ mínimo). Variáveis principais:
 | `POSTGRES_PORT` | não | Porta do Postgres no host (padrão `5432`) |
 | `PORT` | não | Porta HTTP do app (padrão `8080`) |
 | `CHRONOS_MAIL_ENABLED` | não | Liga envio de e-mails (padrão `false` no on-prem) |
+| `MANAGEMENT_HEALTH_MAIL_ENABLED` | não | `false` | Mantém `/actuator/health` "UP" sem SMTP; reative se usar e-mail real |
 | `CHRONOS_ALLOWED_ORIGINS` | não | CORS (origens separadas por vírgula) |
 | `FISCAL_PFX_BASE64` / `FISCAL_PFX_SENHA` | não | Certificado p/ assinatura CAdES (`.p7s`) do AFD/AEJ |
 | `TELEMETRIA_ENABLED` | não | Logs de login/telemetria (padrão `true`) |

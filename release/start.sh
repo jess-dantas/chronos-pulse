@@ -56,6 +56,7 @@ export SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:${POSTGRES_PORT:-5432}
 export SPRING_DATASOURCE_USERNAME="${POSTGRES_USER}"
 export SPRING_DATASOURCE_PASSWORD="${POSTGRES_PASSWORD}"
 export CHRONOS_MAIL_ENABLED="${CHRONOS_MAIL_ENABLED:-false}"
+export MANAGEMENT_HEALTH_MAIL_ENABLED="${MANAGEMENT_HEALTH_MAIL_ENABLED:-false}"
 export PORT="${PORT:-8080}"
 
 echo "---------------------------------------------------------------"

@@ -51,6 +51,7 @@ set "SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:%POSTGRES_PORT%/%POSTGRES
 set "SPRING_DATASOURCE_USERNAME=%POSTGRES_USER%"
 set "SPRING_DATASOURCE_PASSWORD=%POSTGRES_PASSWORD%"
 if not defined CHRONOS_MAIL_ENABLED set "CHRONOS_MAIL_ENABLED=false"
+if not defined MANAGEMENT_HEALTH_MAIL_ENABLED set "MANAGEMENT_HEALTH_MAIL_ENABLED=false"
 if not defined PORT set "PORT=8080"
 
 echo ---------------------------------------------------------------
