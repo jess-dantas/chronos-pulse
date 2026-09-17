@@ -11,7 +11,7 @@ POSTGRES_USER=chronos_user
 POSTGRES_PASSWORD=$PGPASS
 POSTGRES_DB=chronos_db
 POSTGRES_PORT=5432
-PORT=8080
+PORT=3030
 EOF
     chmod 600 .env
     echo "Arquivo .env criado (credenciais do banco e JWT geradas)."
@@ -57,7 +57,7 @@ export SPRING_DATASOURCE_USERNAME="${POSTGRES_USER}"
 export SPRING_DATASOURCE_PASSWORD="${POSTGRES_PASSWORD}"
 export CHRONOS_MAIL_ENABLED="${CHRONOS_MAIL_ENABLED:-false}"
 export MANAGEMENT_HEALTH_MAIL_ENABLED="${MANAGEMENT_HEALTH_MAIL_ENABLED:-false}"
-export PORT="${PORT:-8080}"
+export PORT="${PORT:-3030}"
 
 echo "---------------------------------------------------------------"
 echo " Chronos Pulse - modo on-prem (Postgres via Docker)"

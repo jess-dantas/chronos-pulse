@@ -48,7 +48,7 @@ primeira execução ele:
 
 1. cria o `.env` (segredo JWT + credenciais do Postgres geradas);
 2. sobe o Postgres com `docker compose up -d` e aguarda o `pg_isready`;
-3. inicia o servidor em `http://localhost:8080`.
+3. inicia o servidor em `http://localhost:3030`.
 
 **Linux** — na pasta do pacote:
 
@@ -57,7 +57,7 @@ chmod +x start.sh stop.sh
 ./start.sh
 ```
 
-Saúde/status: `http://localhost:8080/actuator/health` (deve retornar
+Saúde/status: `http://localhost:3030/actuator/health` (deve retornar
 `{"status":"UP"}`). Na primeira subida, o Flyway cria/migra o schema (V1…V38).
 
 ## Configuração (.env)
@@ -70,7 +70,7 @@ mínimo). Variáveis principais:
 | `JWT_SECRET` | **sim** | Segredo de assinatura dos tokens (mín. 32 bytes) |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | sim | Credenciais do banco local |
 | `POSTGRES_PORT` | não | Porta do Postgres no host (padrão `5432`) |
-| `PORT` | não | Porta HTTP do app (padrão `8080`) |
+| `PORT` | não | Porta HTTP do app (padrão `3030`) |
 | `CHRONOS_MAIL_ENABLED` | não | Liga envio de e-mails (padrão `false` no on-prem) |
 | `MANAGEMENT_HEALTH_MAIL_ENABLED` | não | `false` | Mantém `/actuator/health` "UP" sem SMTP; reative se usar e-mail real |
 | `CHRONOS_ALLOWED_ORIGINS` | não | CORS (origens separadas por vírgula) |
@@ -128,7 +128,7 @@ diariamente (ou use um volume/`bind mount` em disco sincronizado).
 
 ## Segurança
 
-- **Não exponha** a porta `8080` na internet sem um *reverse proxy* com TLS
+- **Não exponha a porta `3030` na internet sem um *reverse proxy* com TLS
   (Caddy/nginx); em LAN, mantenha firewall liberando apenas a rede interna.
 - Mantenha `JWT_SECRET` e `POSTGRES_PASSWORD` fortes e privados (o `.env` não é
   versionado).
