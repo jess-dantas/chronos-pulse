@@ -86,7 +86,8 @@ Login — corpo e resposta resumida:
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/fiscal/aej/download?cnpj=...&razaoSocial=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do arquivo AEJ (Portaria MTP 671/2021) |
+| `GET` | `/fiscal/afd/download?cnpj=...&inicio=...&fim=...&numeroRegistroInpi=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do AFD (Anexo V, REP-P): hash SHA-256 encadeado e NSR reenumerado 1..N por CNPJ |
+| `GET` | `/fiscal/aej/download?cnpj=...&razaoSocial=...&numeroRegistroInpi=...&horarioContratual=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do AEJ (Anexo VI, MTP 671/2021). `numeroRegistroInpi` emite o registro `02` (REP-P); `horarioContratual` (`HHmm-HHmm[;...]`) emite o `04`; `codHorarioContratual` (default `1`) referencia o horário na 1ª entrada |
 
 ---
 
