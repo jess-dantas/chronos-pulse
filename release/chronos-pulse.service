@@ -1,0 +1,20 @@
+[Unit]
+Description=Chronos Pulse (Controle Eletronico de Ponto - REP-P)
+Requires=docker.service
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=chronos
+Group=chronos
+WorkingDirectory=/opt/chronos-pulse
+Environment=SPRING_PROFILES_ACTIVE=prod
+EnvironmentFile=/opt/chronos-pulse/.env
+ExecStartPre=/usr/bin/docker compose -f /opt/chronos-pulse/docker-compose.yml up -d postgres
+ExecStart=/usr/bin/java -Xms256m -Xmx1g -jar /opt/chronos-pulse/chronos-pulse.jar
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

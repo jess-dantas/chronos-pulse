@@ -1,0 +1,23 @@
+# Servidor PostgreSQL do Chronos Pulse (on-prem).
+# O app (chronos-pulse.jar) conecta em jdbc:postgresql://localhost:PORT/DB.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chronos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chronos_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-chronos_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - chronos_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  chronos_pgdata:

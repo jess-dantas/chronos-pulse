@@ -33,3 +33,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Release on-prem ###
+/release/dist/
+/release/*.zip
