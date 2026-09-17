@@ -23,6 +23,10 @@ chronos:
     retention-dias: ${TELEMETRIA_RETENTION_DIAS:30}
     app-versao: ${TELEMETRIA_APP_VERSAO:1.0.0}
     request-log: ${TELEMETRIA_REQUEST_LOG:true}
+  fiscal:
+    assinatura:
+      pfx-base64: ${FISCAL_PFX_BASE64:}
+      pfx-senha: ${FISCAL_PFX_SENHA:}
 
 management:
   endpoints:

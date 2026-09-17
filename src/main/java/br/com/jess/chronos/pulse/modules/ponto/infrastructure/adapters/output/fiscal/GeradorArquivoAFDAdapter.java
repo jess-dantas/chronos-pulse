@@ -31,6 +31,7 @@ public class GeradorArquivoAFDAdapter {
     private static final String VERSAO_LEIAUTE = "004";
     private static final String MODELO = "CHRONOS PULSE";
     private static final String COLETOR_APP_MOBILE = "01";
+    private static final String LITERAL_ASSINATURA = "ASSINATURA_DIGITAL_EM_ARQUIVO_P7S";
 
     /** DTO de entrada para a geração do AFD de um estabelecimento. */
     public record GerarAFD(
@@ -70,6 +71,10 @@ public class GeradorArquivoAFDAdapter {
         }
 
         sb.append(linhaTrailer(dados.pontos().size())).append("\r\n");
+        // Última linha do arquivo: campo "assinDigital" (100 A). Para REP-A/REP-P,
+        // preencher com o literal "ASSINATURA_DIGITAL_EM_ARQUIVO_P7S" + espaços à
+        // direita; a assinatura propriamente dita fica no arquivo .p7s destacado.
+        sb.append(linhaAssinaturaDigital()).append("\r\n");
         return sb.toString();
     }
 
@@ -129,6 +134,15 @@ public class GeradorArquivoAFDAdapter {
         linha.append(campo(String.valueOf(quantidadeMarcacoes), 9, '0')); // registros tipo "7"
         linha.append("9");
         return linha.toString();
+    }
+
+    /** Campo "assinDigital" (100 A) do leiaute do AFD: literal + espaços à direita. */
+    private static String linhaAssinaturaDigital() {
+        String v = LITERAL_ASSINATURA;
+        if (v.length() >= 100) {
+            return v.substring(0, 100);
+        }
+        return v + " ".repeat(100 - v.length());
     }
 
     private static String hashEncadeado(String dhMarcacao, String cpf, String dhGravacao,

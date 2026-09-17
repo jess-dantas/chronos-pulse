@@ -87,8 +87,10 @@ Login — corpo e resposta resumida:
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/fiscal/afd/download?cnpj=...&inicio=...&fim=...&numeroRegistroInpi=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do AFD (Anexo V, REP-P): hash SHA-256 encadeado e NSR reenumerado 1..N por CNPJ |
-| `GET` | `/fiscal/aej/download?cnpj=...&razaoSocial=...&numeroRegistroInpi=...&horarioContratual=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do AEJ (Anexo VI, MTP 671/2021). `numeroRegistroInpi` emite o registro `02` (REP-P); `horarioContratual` (`HHmm-HHmm[;...]`) emite o `04`; `codHorarioContratual` (default `1`) referencia o horário na 1ª entrada |
+| `GET` | `/fiscal/afd/download?cnpj=...&inicio=...&fim=...&numeroRegistroInpi=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do AFD (Anexo V, REP-P): hash SHA-256 encadeado, NSR reenumerado 1..N por CNPJ e campo `assinDigital` (`ASSINATURA_DIGITAL_EM_ARQUIVO_P7S`) na última linha | 
+| `GET` | `/fiscal/afd/assinatura?...` | 🛡️ (mesmos perfis) | Assinatura **CAdES destacada** `.p7s` do AFD (`application/pkcs7-signature`); `503` sem `FISCAL_PFX_BASE64`/`FISCAL_PFX_SENHA` |
+| `GET` | `/fiscal/aej/download?cnpj=...&razaoSocial=...&numeroRegistroInpi=...&horarioContratual=...&cnpjDesenvolvedor=...` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Download do AEJ (Anexo VI, MTP 671/2021). `numeroRegistroInpi` emite o registro `02` (REP-P); `horarioContratual` (`HHmm-HHmm[;...]`) emite o `04`; `codHorarioContratual` (default `1`) referencia o horário na 1ª entrada; `cnpjDesenvolvedor`/`prtpNome`/`prtpVersao`/`prtpRazaoDesenv`/`prtpEmail` alimentam o registro `08` (PTRP) | 
+| `GET` | `/fiscal/aej/assinatura?...` | 🛡️ (mesmos perfis) | Assinatura **CAdES destacada** `.p7s` do AEJ (`application/pkcs7-signature`); `503` sem certificado configurado |
 
 ---
 

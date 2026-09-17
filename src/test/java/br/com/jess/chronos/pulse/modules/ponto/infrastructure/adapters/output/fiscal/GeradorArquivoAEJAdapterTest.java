@@ -39,7 +39,7 @@ class GeradorArquivoAEJAdapterTest {
     void deveGerarCabecalhoComLayoutDoAnexoVi() {
         String conteudo = adapter.gerarConteudoAEJ(dados(List.of()));
         String[] linhas = conteudo.split("\\r?\\n");
-        assertThat(linhas).hasSize(2);
+        assertThat(linhas).hasSize(4);
         assertThat(linhas[0])
                 .startsWith("01|1|12345678000195||Empresa Teste|2024-01-01|2024-01-02|2024-01-31T18:00:00-0300|001");
     }
@@ -48,7 +48,30 @@ class GeradorArquivoAEJAdapterTest {
     void deveGerarTrailerComQuantidadePorTipoDeRegistro() {
         String conteudo = adapter.gerarConteudoAEJ(dados(List.of()));
         String[] linhas = conteudo.split("\\r?\\n");
-        assertThat(linhas[1]).isEqualTo("99|1|0|0|0|0|0|0|0");
+        assertThat(linhas[1]).isEqualTo("08|||1|||");
+        assertThat(linhas[2]).isEqualTo("99|1|0|0|0|0|0|0|1");
+    }
+
+    @Test
+    void deveGerarRegistro08DeIdentificacaoDoPrtp() {
+        GeradorArquivoAEJAdapter.GerarAEJ comPrtp = new GeradorArquivoAEJAdapter.GerarAEJ(
+                "12345678000195", "Empresa Teste", null,
+                dh(1, 8), dh(2, 18), Instant.parse("2024-01-31T18:00:00-03:00"),
+                List.of(), List.of(),
+                new GeradorArquivoAEJAdapter.AejPrtp("CHRONOS PULSE", "1.0.0", 1,
+                        "46411071000130", "Jess Tecnologia", "contato@chronos.com.br"));
+        String conteudo = adapter.gerarConteudoAEJ(comPrtp);
+        assertThat(conteudo)
+                .contains("08|CHRONOS PULSE|1.0.0|1|46411071000130|Jess Tecnologia|contato@chronos.com.br")
+                .contains("99|1|0|0|0|0|0|0|1");
+    }
+
+    @Test
+    void deveTerminarComLinhaDeAssinaturaDigital() {
+        String conteudo = adapter.gerarConteudoAEJ(dados(List.of()));
+        String[] linhas = conteudo.split("\\r?\\n");
+        assertThat(linhas[linhas.length - 1]).hasSize(100);
+        assertThat(linhas[linhas.length - 1]).matches("ASSINATURA_DIGITAL_EM_ARQUIVO_P7S {67}");
     }
 
     @Test
@@ -133,7 +156,7 @@ class GeradorArquivoAEJAdapterTest {
                                 LocalDate.parse("2024-01-12"), null, null)))),
                 List.of(new GeradorArquivoAEJAdapter.AejRep(1, 3, "BR512019000001-7")));
         String conteudo = adapter.gerarConteudoAEJ(completo);
-        assertThat(conteudo).contains("99|1|1|1|1|2|0|1|0");
+        assertThat(conteudo).contains("99|1|1|1|1|2|0|1|1");
     }
 
     @Test

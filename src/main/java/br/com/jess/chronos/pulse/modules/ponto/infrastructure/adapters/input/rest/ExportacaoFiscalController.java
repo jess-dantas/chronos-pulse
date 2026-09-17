@@ -4,9 +4,13 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
+import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.AssinadorCadesAdapter;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.GeradorArquivoAEJAdapter;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.GeradorArquivoAFDAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,25 +31,30 @@ import java.util.UUID;
 /**
  * Exportação de arquivos fiscais do controle eletrônico de ponto (REP-P),
  * conforme Portaria MTP n. 671/2021: AFD (Anexo V, art. 81) e AEJ (Anexo VI,
- * art. 83). Todos os registros são restritos ao tenant do usuário autenticado.
+ * art. 83), incluindo a assinatura digital CAdES destacada ({@code .p7s},
+ * art. 86/88). Todos os registros são restritos ao tenant do usuário autenticado.
  */
 @RestController
 @RequestMapping("/api/v1/fiscal")
 public class ExportacaoFiscalController {
 
+    private static final Logger log = LoggerFactory.getLogger(ExportacaoFiscalController.class);
     private static final ZoneId FUSO_BRASIL = ZoneId.of("America/Sao_Paulo");
 
     private final GeradorArquivoAEJAdapter geradorAEJ;
     private final GeradorArquivoAFDAdapter geradorAFD;
+    private final AssinadorCadesAdapter assinadorCades;
     private final RegistroPontoRepositoryPort registroPontoRepository;
     private final CpcUsuarioRepositoryPort usuarioRepository;
 
     public ExportacaoFiscalController(GeradorArquivoAEJAdapter geradorAEJ,
                                       GeradorArquivoAFDAdapter geradorAFD,
+                                      AssinadorCadesAdapter assinadorCades,
                                       RegistroPontoRepositoryPort registroPontoRepository,
                                       CpcUsuarioRepositoryPort usuarioRepository) {
         this.geradorAEJ = geradorAEJ;
         this.geradorAFD = geradorAFD;
+        this.assinadorCades = assinadorCades;
         this.registroPontoRepository = registroPontoRepository;
         this.usuarioRepository = usuarioRepository;
     }
@@ -60,8 +69,81 @@ public class ExportacaoFiscalController {
             @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
             @RequestParam(value = "horarioContratual", required = false) String horarioContratual,
             @RequestParam(value = "codHorarioContratual", required = false, defaultValue = "1") String codHorarioContratual,
+            @RequestParam(value = "cnpjDesenvolvedor", required = false, defaultValue = "") String cnpjDesenvolvedor,
+            @RequestParam(value = "prtpNome", required = false, defaultValue = "CHRONOS PULSE") String prtpNome,
+            @RequestParam(value = "prtpVersao", required = false, defaultValue = "1.0.0") String prtpVersao,
+            @RequestParam(value = "prtpRazaoDesenv", required = false, defaultValue = "") String prtpRazaoDesenv,
+            @RequestParam(value = "prtpEmail", required = false, defaultValue = "") String prtpEmail,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
+        byte[] corpo = corpoAEJ(cnpj, razaoSocial, inicio, fim, colaboradorId, numeroRegistroInpi,
+                horarioContratual, codHorarioContratual, cnpjDesenvolvedor, prtpNome, prtpVersao,
+                prtpRazaoDesenv, prtpEmail, usuarioLogado);
+        return arquivo(corpo, "AEJ_" + cnpj + ".txt");
+    }
+
+    @GetMapping("/aej/assinatura")
+    public ResponseEntity<byte[]> assinarAEJ(
+            @RequestParam("cnpj") String cnpj,
+            @RequestParam("razaoSocial") String razaoSocial,
+            @RequestParam("inicio") String inicio,
+            @RequestParam("fim") String fim,
+            @RequestParam(value = "colaboradorId", required = false) UUID colaboradorId,
+            @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
+            @RequestParam(value = "horarioContratual", required = false) String horarioContratual,
+            @RequestParam(value = "codHorarioContratual", required = false, defaultValue = "1") String codHorarioContratual,
+            @RequestParam(value = "cnpjDesenvolvedor", required = false, defaultValue = "") String cnpjDesenvolvedor,
+            @RequestParam(value = "prtpNome", required = false, defaultValue = "CHRONOS PULSE") String prtpNome,
+            @RequestParam(value = "prtpVersao", required = false, defaultValue = "1.0.0") String prtpVersao,
+            @RequestParam(value = "prtpRazaoDesenv", required = false, defaultValue = "") String prtpRazaoDesenv,
+            @RequestParam(value = "prtpEmail", required = false, defaultValue = "") String prtpEmail,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+
+        byte[] corpo = corpoAEJ(cnpj, razaoSocial, inicio, fim, colaboradorId, numeroRegistroInpi,
+                horarioContratual, codHorarioContratual, cnpjDesenvolvedor, prtpNome, prtpVersao,
+                prtpRazaoDesenv, prtpEmail, usuarioLogado);
+        return assinar(corpo, "AEJ_" + cnpj + ".txt");
+    }
+
+    @GetMapping("/afd/download")
+    public ResponseEntity<byte[]> baixarAFD(
+            @RequestParam("cnpj") String cnpj,
+            @RequestParam("razaoSocial") String razaoSocial,
+            @RequestParam("inicio") String inicio,
+            @RequestParam("fim") String fim,
+            @RequestParam(value = "colaboradorId", required = false) UUID colaboradorId,
+            @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
+            @RequestParam(value = "cno", required = false) String cno,
+            @RequestParam("cnpjDesenvolvedor") String cnpjDesenvolvedor,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+
+        byte[] corpo = corpoAFD(cnpj, razaoSocial, inicio, fim, colaboradorId, numeroRegistroInpi,
+                cno, cnpjDesenvolvedor, usuarioLogado);
+        return arquivo(corpo, "AFD_" + cnpj + "_REP_P.txt");
+    }
+
+    @GetMapping("/afd/assinatura")
+    public ResponseEntity<byte[]> assinarAFD(
+            @RequestParam("cnpj") String cnpj,
+            @RequestParam("razaoSocial") String razaoSocial,
+            @RequestParam("inicio") String inicio,
+            @RequestParam("fim") String fim,
+            @RequestParam(value = "colaboradorId", required = false) UUID colaboradorId,
+            @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
+            @RequestParam(value = "cno", required = false) String cno,
+            @RequestParam("cnpjDesenvolvedor") String cnpjDesenvolvedor,
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+
+        byte[] corpo = corpoAFD(cnpj, razaoSocial, inicio, fim, colaboradorId, numeroRegistroInpi,
+                cno, cnpjDesenvolvedor, usuarioLogado);
+        return assinar(corpo, "AFD_" + cnpj + "_REP_P.txt");
+    }
+
+    private byte[] corpoAEJ(String cnpj, String razaoSocial, String inicio, String fim,
+                            UUID colaboradorId, String numeroRegistroInpi, String horarioContratual,
+                            String codHorarioContratual, String cnpjDesenvolvedor, String prtpNome,
+                            String prtpVersao, String prtpRazaoDesenv, String prtpEmail,
+                            CpcUsuario usuarioLogado) {
         UUID tenantId = usuarioLogado.getTenantId();
         UUID alvo = colaboradorId == null ? usuarioLogado.getCpcId() : colaboradorId;
 
@@ -84,12 +166,43 @@ public class ExportacaoFiscalController {
         GeradorArquivoAEJAdapter.AejVinculo vinculo = new GeradorArquivoAEJAdapter.AejVinculo(
                 1, colaborador.getCpf(), colaborador.getNome(), pontos, horario, List.of());
 
+        GeradorArquivoAEJAdapter.AejPrtp prtp = new GeradorArquivoAEJAdapter.AejPrtp(
+                prtpNome == null ? "" : prtpNome,
+                prtpVersao == null ? "" : prtpVersao,
+                cnpjDesenvolvedor == null || cnpjDesenvolvedor.isBlank() ? 2 : 1,
+                cnpjDesenvolvedor == null ? "" : apenasDigitos(cnpjDesenvolvedor, 14),
+                prtpRazaoDesenv == null ? "" : prtpRazaoDesenv,
+                prtpEmail == null ? "" : prtpEmail);
+
         String conteudo = geradorAEJ.gerarConteudoAEJ(new GeradorArquivoAEJAdapter.GerarAEJ(
                 cnpj, razaoSocial, null,
                 inicioInstant, fimInstant.plusMillis(-1), Instant.now(),
-                List.of(vinculo), reps));
+                List.of(vinculo), reps, prtp));
 
-        return arquivo(conteudo, "AEJ_" + cnpj + ".txt");
+        return conteudo.getBytes(StandardCharsets.ISO_8859_1);
+    }
+
+    private byte[] corpoAFD(String cnpj, String razaoSocial, String inicio, String fim,
+                            UUID colaboradorId, String numeroRegistroInpi, String cno,
+                            String cnpjDesenvolvedor, CpcUsuario usuarioLogado) {
+        UUID tenantId = usuarioLogado.getTenantId();
+        UUID alvo = colaboradorId == null ? usuarioLogado.getCpcId() : colaboradorId;
+
+        LocalDate dataInicio = LocalDate.parse(inicio);
+        LocalDate dataFim = LocalDate.parse(fim);
+        Instant inicioInstant = dataInicio.atStartOfDay(FUSO_BRASIL).toInstant();
+        Instant fimInstant = dataFim.plusDays(1).atStartOfDay(FUSO_BRASIL).toInstant();
+
+        CpcUsuario colaborador = buscarColaborador(alvo, tenantId);
+        List<RegistroPonto> pontos = registroPontoRepository
+                .listarPorColaboradorEPeriodo(alvo, tenantId, inicioInstant, fimInstant);
+
+        GeradorArquivoAFDAdapter.GerarAFD dados = new GeradorArquivoAFDAdapter.GerarAFD(
+                cnpj, razaoSocial, cno, numeroRegistroInpi, colaborador.getCpf(),
+                cnpjDesenvolvedor, inicioInstant, fimInstant.plusMillis(-1), Instant.now(),
+                pontos);
+
+        return geradorAFD.gerarConteudoAFD(dados).getBytes(StandardCharsets.ISO_8859_1);
     }
 
     /**
@@ -123,51 +236,43 @@ public class ExportacaoFiscalController {
                 LocalTime.parse(entrada), LocalTime.parse(saida)).toMinutes();
     }
 
-    @GetMapping("/afd/download")
-    public ResponseEntity<byte[]> baixarAFD(
-            @RequestParam("cnpj") String cnpj,
-            @RequestParam("razaoSocial") String razaoSocial,
-            @RequestParam("inicio") String inicio,
-            @RequestParam("fim") String fim,
-            @RequestParam(value = "colaboradorId", required = false) UUID colaboradorId,
-            @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
-            @RequestParam(value = "cno", required = false) String cno,
-            @RequestParam("cnpjDesenvolvedor") String cnpjDesenvolvedor,
-            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
-
-        UUID tenantId = usuarioLogado.getTenantId();
-        UUID alvo = colaboradorId == null ? usuarioLogado.getCpcId() : colaboradorId;
-
-        LocalDate dataInicio = LocalDate.parse(inicio);
-        LocalDate dataFim = LocalDate.parse(fim);
-        Instant inicioInstant = dataInicio.atStartOfDay(FUSO_BRASIL).toInstant();
-        Instant fimInstant = dataFim.plusDays(1).atStartOfDay(FUSO_BRASIL).toInstant();
-
-        CpcUsuario colaborador = buscarColaborador(alvo, tenantId);
-        List<RegistroPonto> pontos = registroPontoRepository
-                .listarPorColaboradorEPeriodo(alvo, tenantId, inicioInstant, fimInstant);
-
-        GeradorArquivoAFDAdapter.GerarAFD dados = new GeradorArquivoAFDAdapter.GerarAFD(
-                cnpj, razaoSocial, cno, numeroRegistroInpi, colaborador.getCpf(),
-                cnpjDesenvolvedor, inicioInstant, fimInstant.plusMillis(-1), Instant.now(),
-                pontos);
-
-        String conteudo = geradorAFD.gerarConteudoAFD(dados);
-
-        return arquivo(conteudo, "AFD_" + cnpj + "_REP_P.txt");
-    }
-
     private CpcUsuario buscarColaborador(UUID colaboradorId, UUID tenantId) {
         return usuarioRepository.buscarPorId(colaboradorId)
                 .filter(u -> tenantId.equals(u.getTenantId()))
                 .orElseThrow(() -> new IllegalArgumentException("Colaborador não encontrado no tenant."));
     }
 
-    private ResponseEntity<byte[]> arquivo(String conteudo, String nomeArquivo) {
-        byte[] bytes = conteudo.getBytes(StandardCharsets.ISO_8859_1);
+    private static String apenasDigitos(String valor, int max) {
+        String apenas = valor.replaceAll("\\D", "");
+        return apenas.length() > max ? apenas.substring(0, max) : apenas;
+    }
+
+    private ResponseEntity<byte[]> arquivo(byte[] bytes, String nomeArquivo) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"")
                 .contentType(MediaType.parseMediaType("text/plain; charset=ISO-8859-1"))
                 .body(bytes);
+    }
+
+    private ResponseEntity<byte[]> assinar(byte[] corpo, String nomeArquivoTxt) {
+        if (!assinadorCades.assinaturaDisponivel()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Assinatura digital indisponível: configure FISCAL_PFX_BASE64/FISCAL_PFX_SENHA."
+                            .getBytes(StandardCharsets.UTF_8));
+        }
+        byte[] p7s;
+        try {
+            p7s = assinadorCades.assinarDetached(corpo);
+        } catch (Exception e) {
+            log.warn("Falha ao gerar assinatura CAdES de {}", nomeArquivoTxt, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Falha ao gerar a assinatura digital (CAdES).".getBytes(StandardCharsets.UTF_8));
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivoTxt + ".p7s\"")
+                .contentType(MediaType.parseMediaType("application/pkcs7-signature"))
+                .body(p7s);
     }
 }
