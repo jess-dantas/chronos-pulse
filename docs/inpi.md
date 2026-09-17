@@ -69,13 +69,24 @@ documento que a fiscalização do trabalho pede.
 
 O AFD e o AEJ precisam de **assinatura eletrônica qualificada** (art. 86/88):
 certificado digital **ICP-Brasil** (.pfx) da **Chronos Pulse** (e-CNPJ ICP-Brasil
-é o usual). Backlog técnico:
+é o usual).
 
-- Armazenar o certificado (PFX) e senha em **secret manager** (não no repositório);
-- Assinar o conteúdo gerado (`GeradorArquivoAFDAdapter`/`GeradorArquivoAEJAdapter`)
-  antes do download (`PAdES`/`CAdES` para o formato texto, ou assinatura do hash do
-  arquivo com timestamp para os arquivos fiscais);
-- Manter `docs/credenciais.md` sem segredos e o `docker-compose.yml` sem default.
+**Estado atual (implementado no backend):**
+- Leiaute: AFD e AEJ terminam com o campo **`assinDigital`** (100 A) preenchido com
+  o literal `ASSINATURA_DIGITAL_EM_ARQUIVO_P7S` (espaços à direita) — última linha
+  do arquivo, conforme FAQ oficial do MTE (perguntas 28/29).
+- AEJ (Anexo VI): registro **`08`** (Identificação do PTRP — nome, versão, tipo de
+  identificador, CNPJ/CPF, razão social/nome e e-mail do desenvolvedor) emitido e
+  **contado no trailer `99`**.
+- Assinatura **CAdES (CMS) destacada**: `AssinadorCadesAdapter` gera o arquivo
+  **`.p7s`** (SHA-256withRSA / ECDSA sobre o byte-a-byte do `.txt`), usando o PFX
+  fornecido por **segredos de ambiente** (não versionados):
+  - `FISCAL_PFX_BASE64` (PFX em Base64) e `FISCAL_PFX_SENHA`;
+  - espelhados em `chronos.fiscal.assinatura.*` (`application.yml`).
+- Endpoints novos: `GET /fiscal/afd/assinatura` e `GET /fiscal/aej/assinatura`
+  (retornam `application/pkcs7-signature`, nome `*.txt.p7s`); retornam `503` quando
+  o certificado não está configurado.
+- O `.p7s` deve ser mantido junto ao `.txt` (ambos são necessários para a fiscalização).
 
 #### 5.1. Estado da implementação (nº INPI)
 
@@ -92,7 +103,9 @@ O campo está **pronto para receber o número** assim que o registro sair na RPI
 - [ ] Nº INPI testado no **AFD** (campo 190–206 do cabeçalho) e no **AEJ** (registro `02`)
       via endpoint; futuramente automático via **settings por tenant**
 - [ ] Pedido de **marca** (Classe 9) no e-Marca
-- [ ] Certificado **e-CNPJ ICP-Brasil** adquirido/testado (assinatura AFD+AEJ)
+- [ ] Certificado **e-CNPJ ICP-Brasil** adquirido e testado (CAdES `.p7s` já
+      implementado: `AssinadorCadesAdapter` + `/fiscal/{afd,aej}/assinatura`,
+      via `FISCAL_PFX_BASE64`/`FISCAL_PFX_SENHA`)
 - [ ] Homologação dos arquivos com o **leiaute oficial** (gov.br) e o
       [validador AEJ do MPT/MTE](https://peticionamento.prt7.mpt.mp.br/arquivos/aej_leiaute.pdf)
 - [ ] Atualizar `ROADMAP.md` (R32) quando o nº de registro estiver disponível

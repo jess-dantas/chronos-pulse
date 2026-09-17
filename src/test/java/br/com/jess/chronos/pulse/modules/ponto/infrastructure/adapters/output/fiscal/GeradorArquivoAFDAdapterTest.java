@@ -130,4 +130,14 @@ class GeradorArquivoAFDAdapterTest {
             assertThat(linha).isNotBlank();
         }
     }
+
+    @Test
+    void deveTerminarComLinhaDeAssinaturaDigitalDe100Posicoes() {
+        String conteudo = adapter.gerarConteudoAFD(dados(List.of(
+                registro(TipoRegistro.ENTRADA, 1L, "2024-01-15T08:00:00-03:00"))));
+        String[] linhas = conteudo.split("\\r?\\n");
+        String assinatura = linhas[linhas.length - 1];
+        assertThat(assinatura).hasSize(100);
+        assertThat(assinatura).matches("ASSINATURA_DIGITAL_EM_ARQUIVO_P7S {67}");
+    }
 }

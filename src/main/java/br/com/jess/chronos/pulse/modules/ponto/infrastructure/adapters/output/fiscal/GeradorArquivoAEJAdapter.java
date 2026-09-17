@@ -16,7 +16,8 @@ import java.util.List;
  * linha terminando em CRLF, campos separados por "|" (exceto o último), sem
  * linhas em branco. Registros: "01" cabeçalho do empregador, "02" REPs
  * utilizados, "03" vínculos, "04" horário contratual, "05" marcações tratadas,
- * "07" ausências e banco de horas e "99" trailer (raridade dos tipos).
+ * "07" ausências e banco de horas, "08" identificação do PTRP, "99" trailer
+ * (quantidades dos tipos) e, como última linha, o campo "assinDigital" (100 A).
  */
 @Component
 public class GeradorArquivoAEJAdapter {
@@ -26,6 +27,15 @@ public class GeradorArquivoAEJAdapter {
             DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DH =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ").withZone(FUSO_BRASIL);
+    private static final String LITERAL_ASSINATURA = "ASSINATURA_DIGITAL_EM_ARQUIVO_P7S";
+
+    /** Identificação do PTRP (registro "08"): programa, versão e desenvolvedor. */
+    public record AejPrtp(String nomeProg, String versaoProg, int tipoIdtDesenv,
+                          String idtDesenv, String razaoNomeDesenv, String emailDesenv) {
+    }
+
+    public static final AejPrtp PRTP_PADRAO =
+            new AejPrtp("", "", 1, "", "", "");
 
     /** Par entrada/saída de um horário contratual no formato "HHmm". */
     public record ParJornada(String entrada, String saida) {
@@ -71,17 +81,26 @@ public class GeradorArquivoAEJAdapter {
     /** Dados de geração do AEJ para um estabelecimento no período. */
     public record GerarAEJ(String cnpjEmpresa, String razaoSocial, String cno,
                            Instant dataInicial, Instant dataFinal, Instant dataHoraGeracao,
-                           List<AejVinculo> vinculos, List<AejRep> reps) {
+                           List<AejVinculo> vinculos, List<AejRep> reps, AejPrtp prtp) {
 
         public GerarAEJ {
             vinculos = vinculos == null ? List.of() : vinculos;
             reps = reps == null ? List.of() : reps;
+            prtp = prtp == null ? PRTP_PADRAO : prtp;
         }
 
         public GerarAEJ(String cnpjEmpresa, String razaoSocial, String cno,
                         Instant dataInicial, Instant dataFinal, Instant dataHoraGeracao,
                         List<AejVinculo> vinculos) {
-            this(cnpjEmpresa, razaoSocial, cno, dataInicial, dataFinal, dataHoraGeracao, vinculos, List.of());
+            this(cnpjEmpresa, razaoSocial, cno, dataInicial, dataFinal, dataHoraGeracao,
+                    vinculos, List.of(), PRTP_PADRAO);
+        }
+
+        public GerarAEJ(String cnpjEmpresa, String razaoSocial, String cno,
+                        Instant dataInicial, Instant dataFinal, Instant dataHoraGeracao,
+                        List<AejVinculo> vinculos, List<AejRep> reps) {
+            this(cnpjEmpresa, razaoSocial, cno, dataInicial, dataFinal, dataHoraGeracao,
+                    vinculos, reps, PRTP_PADRAO);
         }
     }
 
@@ -119,7 +138,12 @@ public class GeradorArquivoAEJAdapter {
             }
         }
 
+        sb.append(linhaPrtp(dados.prtp())).append("\r\n");
+
         sb.append(trailer(qt02, qt03, qt04, qt05, qt07)).append("\r\n");
+        // Última linha do arquivo: campo "assinDigital" (100 A) com o literal;
+        // a assinatura CAdES fica no arquivo .p7s destacado (art. 86/88).
+        sb.append(linhaAssinaturaDigital()).append("\r\n");
         return sb.toString();
     }
 
@@ -179,8 +203,23 @@ public class GeradorArquivoAEJAdapter {
         return linha.toString();
     }
 
+    private String linhaPrtp(AejPrtp p) {
+        return "08|" + (p.nomeProg() == null ? "" : p.nomeProg())
+                + "|" + (p.versaoProg() == null ? "" : p.versaoProg())
+                + "|" + p.tipoIdtDesenv()
+                + "|" + (p.idtDesenv() == null ? "" : p.idtDesenv())
+                + "|" + (p.razaoNomeDesenv() == null ? "" : p.razaoNomeDesenv())
+                + "|" + (p.emailDesenv() == null ? "" : p.emailDesenv());
+    }
+
     private String trailer(int qt02, int qt03, int qt04, int qt05, int qt07) {
-        return "99|1|" + qt02 + "|" + qt03 + "|" + qt04 + "|" + qt05 + "|0|" + qt07 + "|0";
+        return "99|1|" + qt02 + "|" + qt03 + "|" + qt04 + "|" + qt05 + "|0|" + qt07 + "|1";
+    }
+
+    /** Campo "assinDigital" (100 A) do leiaute do AEJ (última linha do arquivo). */
+    private static String linhaAssinaturaDigital() {
+        String v = LITERAL_ASSINATURA;
+        return v + " ".repeat(Math.max(0, 100 - v.length()));
     }
 
     /** Identificador do REP-P (registro "02") a ser referenciado nas marcações. */
