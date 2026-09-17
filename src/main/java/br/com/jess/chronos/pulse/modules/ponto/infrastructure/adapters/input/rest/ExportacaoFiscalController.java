@@ -2,7 +2,9 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.re
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.ConfiguracaoFiscal;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
+import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.ConfiguracaoFiscalRepositoryPort;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.AssinadorCadesAdapter;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.GeradorArquivoAEJAdapter;
@@ -46,17 +48,20 @@ public class ExportacaoFiscalController {
     private final AssinadorCadesAdapter assinadorCades;
     private final RegistroPontoRepositoryPort registroPontoRepository;
     private final CpcUsuarioRepositoryPort usuarioRepository;
+    private final ConfiguracaoFiscalRepositoryPort configuracaoFiscalRepository;
 
     public ExportacaoFiscalController(GeradorArquivoAEJAdapter geradorAEJ,
                                       GeradorArquivoAFDAdapter geradorAFD,
                                       AssinadorCadesAdapter assinadorCades,
                                       RegistroPontoRepositoryPort registroPontoRepository,
-                                      CpcUsuarioRepositoryPort usuarioRepository) {
+                                      CpcUsuarioRepositoryPort usuarioRepository,
+                                      ConfiguracaoFiscalRepositoryPort configuracaoFiscalRepository) {
         this.geradorAEJ = geradorAEJ;
         this.geradorAFD = geradorAFD;
         this.assinadorCades = assinadorCades;
         this.registroPontoRepository = registroPontoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.configuracaoFiscalRepository = configuracaoFiscalRepository;
     }
 
     @GetMapping("/aej/download")
@@ -70,8 +75,8 @@ public class ExportacaoFiscalController {
             @RequestParam(value = "horarioContratual", required = false) String horarioContratual,
             @RequestParam(value = "codHorarioContratual", required = false, defaultValue = "1") String codHorarioContratual,
             @RequestParam(value = "cnpjDesenvolvedor", required = false, defaultValue = "") String cnpjDesenvolvedor,
-            @RequestParam(value = "prtpNome", required = false, defaultValue = "CHRONOS PULSE") String prtpNome,
-            @RequestParam(value = "prtpVersao", required = false, defaultValue = "1.0.0") String prtpVersao,
+            @RequestParam(value = "prtpNome", required = false) String prtpNome,
+            @RequestParam(value = "prtpVersao", required = false) String prtpVersao,
             @RequestParam(value = "prtpRazaoDesenv", required = false, defaultValue = "") String prtpRazaoDesenv,
             @RequestParam(value = "prtpEmail", required = false, defaultValue = "") String prtpEmail,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
@@ -93,8 +98,8 @@ public class ExportacaoFiscalController {
             @RequestParam(value = "horarioContratual", required = false) String horarioContratual,
             @RequestParam(value = "codHorarioContratual", required = false, defaultValue = "1") String codHorarioContratual,
             @RequestParam(value = "cnpjDesenvolvedor", required = false, defaultValue = "") String cnpjDesenvolvedor,
-            @RequestParam(value = "prtpNome", required = false, defaultValue = "CHRONOS PULSE") String prtpNome,
-            @RequestParam(value = "prtpVersao", required = false, defaultValue = "1.0.0") String prtpVersao,
+            @RequestParam(value = "prtpNome", required = false) String prtpNome,
+            @RequestParam(value = "prtpVersao", required = false) String prtpVersao,
             @RequestParam(value = "prtpRazaoDesenv", required = false, defaultValue = "") String prtpRazaoDesenv,
             @RequestParam(value = "prtpEmail", required = false, defaultValue = "") String prtpEmail,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
@@ -114,7 +119,7 @@ public class ExportacaoFiscalController {
             @RequestParam(value = "colaboradorId", required = false) UUID colaboradorId,
             @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
             @RequestParam(value = "cno", required = false) String cno,
-            @RequestParam("cnpjDesenvolvedor") String cnpjDesenvolvedor,
+            @RequestParam(value = "cnpjDesenvolvedor", required = false, defaultValue = "") String cnpjDesenvolvedor,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
         byte[] corpo = corpoAFD(cnpj, razaoSocial, inicio, fim, colaboradorId, numeroRegistroInpi,
@@ -131,7 +136,7 @@ public class ExportacaoFiscalController {
             @RequestParam(value = "colaboradorId", required = false) UUID colaboradorId,
             @RequestParam(value = "numeroRegistroInpi", required = false) String numeroRegistroInpi,
             @RequestParam(value = "cno", required = false) String cno,
-            @RequestParam("cnpjDesenvolvedor") String cnpjDesenvolvedor,
+            @RequestParam(value = "cnpjDesenvolvedor", required = false, defaultValue = "") String cnpjDesenvolvedor,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
         byte[] corpo = corpoAFD(cnpj, razaoSocial, inicio, fim, colaboradorId, numeroRegistroInpi,
@@ -146,6 +151,9 @@ public class ExportacaoFiscalController {
                             CpcUsuario usuarioLogado) {
         UUID tenantId = usuarioLogado.getTenantId();
         UUID alvo = colaboradorId == null ? usuarioLogado.getCpcId() : colaboradorId;
+        ConfiguracaoFiscal.DadosEfetivos fiscais = resolverFiscais(tenantId,
+                numeroRegistroInpi, cnpjDesenvolvedor, prtpNome, prtpVersao, prtpRazaoDesenv,
+                prtpEmail, null);
 
         LocalDate dataInicio = LocalDate.parse(inicio);
         LocalDate dataFim = LocalDate.parse(fim);
@@ -157,8 +165,8 @@ public class ExportacaoFiscalController {
                 .listarPorColaboradorEPeriodo(alvo, tenantId, inicioInstant, fimInstant);
 
         List<GeradorArquivoAEJAdapter.AejRep> reps = new ArrayList<>();
-        if (numeroRegistroInpi != null && !numeroRegistroInpi.isBlank()) {
-            reps.add(new GeradorArquivoAEJAdapter.AejRep(1, 3, numeroRegistroInpi.trim()));
+        if (fiscais.numeroRegistroInpi() != null && !fiscais.numeroRegistroInpi().isBlank()) {
+            reps.add(new GeradorArquivoAEJAdapter.AejRep(1, 3, fiscais.numeroRegistroInpi()));
         }
 
         GeradorArquivoAEJAdapter.AejHorarioContratual horario =
@@ -167,12 +175,12 @@ public class ExportacaoFiscalController {
                 1, colaborador.getCpf(), colaborador.getNome(), pontos, horario, List.of());
 
         GeradorArquivoAEJAdapter.AejPrtp prtp = new GeradorArquivoAEJAdapter.AejPrtp(
-                prtpNome == null ? "" : prtpNome,
-                prtpVersao == null ? "" : prtpVersao,
-                cnpjDesenvolvedor == null || cnpjDesenvolvedor.isBlank() ? 2 : 1,
-                cnpjDesenvolvedor == null ? "" : apenasDigitos(cnpjDesenvolvedor, 14),
-                prtpRazaoDesenv == null ? "" : prtpRazaoDesenv,
-                prtpEmail == null ? "" : prtpEmail);
+                fiscais.prtpNome(),
+                fiscais.prtpVersao(),
+                fiscais.cnpjDesenvolvedor().isBlank() ? 2 : 1,
+                apenasDigitos(fiscais.cnpjDesenvolvedor(), 14),
+                fiscais.prtpRazaoDesenv(),
+                fiscais.prtpEmail());
 
         String conteudo = geradorAEJ.gerarConteudoAEJ(new GeradorArquivoAEJAdapter.GerarAEJ(
                 cnpj, razaoSocial, null,
@@ -187,6 +195,8 @@ public class ExportacaoFiscalController {
                             String cnpjDesenvolvedor, CpcUsuario usuarioLogado) {
         UUID tenantId = usuarioLogado.getTenantId();
         UUID alvo = colaboradorId == null ? usuarioLogado.getCpcId() : colaboradorId;
+        ConfiguracaoFiscal.DadosEfetivos fiscais = resolverFiscais(tenantId,
+                numeroRegistroInpi, cnpjDesenvolvedor, null, null, null, null, cno);
 
         LocalDate dataInicio = LocalDate.parse(inicio);
         LocalDate dataFim = LocalDate.parse(fim);
@@ -198,8 +208,8 @@ public class ExportacaoFiscalController {
                 .listarPorColaboradorEPeriodo(alvo, tenantId, inicioInstant, fimInstant);
 
         GeradorArquivoAFDAdapter.GerarAFD dados = new GeradorArquivoAFDAdapter.GerarAFD(
-                cnpj, razaoSocial, cno, numeroRegistroInpi, colaborador.getCpf(),
-                cnpjDesenvolvedor, inicioInstant, fimInstant.plusMillis(-1), Instant.now(),
+                cnpj, razaoSocial, fiscais.cno(), fiscais.numeroRegistroInpi(), colaborador.getCpf(),
+                fiscais.cnpjDesenvolvedor(), inicioInstant, fimInstant.plusMillis(-1), Instant.now(),
                 pontos);
 
         return geradorAFD.gerarConteudoAFD(dados).getBytes(StandardCharsets.ISO_8859_1);
@@ -240,6 +250,19 @@ public class ExportacaoFiscalController {
         return usuarioRepository.buscarPorId(colaboradorId)
                 .filter(u -> tenantId.equals(u.getTenantId()))
                 .orElseThrow(() -> new IllegalArgumentException("Colaborador não encontrado no tenant."));
+    }
+
+    /**
+     * Resolve os dados fiscais com precedência: parâmetro explícito da requisição,
+     * depois a configuração salva por tenant, depois o padrão do sistema.
+     */
+    private ConfiguracaoFiscal.DadosEfetivos resolverFiscais(UUID tenantId, String numeroRegistroInpi,
+                                                             String cnpjDesenvolvedor, String prtpNome,
+                                                             String prtpVersao, String prtpRazaoDesenv,
+                                                             String prtpEmail, String cno) {
+        ConfiguracaoFiscal config = configuracaoFiscalRepository.buscarPorTenant(tenantId).orElse(null);
+        return ConfiguracaoFiscal.resolver(config, numeroRegistroInpi, cnpjDesenvolvedor, prtpNome,
+                prtpVersao, prtpRazaoDesenv, prtpEmail, cno);
     }
 
     private static String apenasDigitos(String valor, int max) {

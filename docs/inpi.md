@@ -90,18 +90,26 @@ certificado digital **ICP-Brasil** (.pfx) da **Chronos Pulse** (e-CNPJ ICP-Brasi
 
 #### 5.1. Estado da implementação (nº INPI)
 
-O campo está **pronto para receber o número** assim que o registro sair na RPI:
+O campo está **pronto para receber o número** assim que o registro sair na RPI,
+preenchido **automaticamente por tenant** via `PUT /fiscal/configuracao`
+(`GET` para consultar):
 
 - **AFD** (Anexo V, pos. 190–206 do cabeçalho): preenchido em `GeradorArquivoAFDAdapter`
-  via parâmetro `numeroRegistroInpi` do endpoint `/fiscal/afd/download`;
-- **AEJ** (Anexo VI): `numeroRegistroInpi` no endpoint `/fiscal/aej/download` emite o
-  registro `02` (REP-P) e é referenciado nas marcações (`idRepAej`).
+  a partir das settings do tenant (tabela `configuracao_fiscal`) — o parâmetro
+  `numeroRegistroInpi` do download continua tendo precedência sobre a settings;
+- **AEJ** (Anexo VI): o registro `02` (REP-P), referenciado nas marcações
+  (`idRepAej`), também sai das settings quando o parâmetro não é informado.
 
 ## 5. Checklist de execução
 
+> **Kit de depósito** em `inpi/`: `gerar_resumo_hash.ps1`/`.sh` (resumo digital
+> SHA-256 do código-fonte, exportável ao e-Software), `declaracao_de_veracidade.md`
+> (DV para assinar com o e-CNPJ) e `README.md` com o passo a passo (GRU código 730).
+
 - [ ] Abertura do pedido de **programa de computador** no INPI (portaria art. 91)
-- [ ] Nº INPI testado no **AFD** (campo 190–206 do cabeçalho) e no **AEJ** (registro `02`)
-      via endpoint; futuramente automático via **settings por tenant**
+- [ ] Nº INPI testado no **AFD** (campo 190–206 do cabeçalho) e no **AEJ** (registro `02`) —
+      alimente uma vez em `PUT /fiscal/configuracao` e os downloads passam a usá-lo
+      automaticamente (parâmetro explícito continua tendo prioridade)
 - [ ] Pedido de **marca** (Classe 9) no e-Marca
 - [ ] Certificado **e-CNPJ ICP-Brasil** adquirido e testado (CAdES `.p7s` já
       implementado: `AssinadorCadesAdapter` + `/fiscal/{afd,aej}/assinatura`,
