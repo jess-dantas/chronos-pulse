@@ -22,7 +22,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: chronos-pulse-app
     ports:
-      - "8080:8080"
+      - "3030:3030"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/chronos_db
       SPRING_DATASOURCE_USERNAME: chronos_user
