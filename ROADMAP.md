@@ -53,7 +53,7 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 | Marco | Status |
 |---|---|
 | CI: build, 330 testes, security (Trivy) com upload SARIF para Code Scanning | ✅ |
-| CI app: analyze, 204 testes, build Android (APK+AppBundle), build Web (Netlify) e build iOS | ✅ |
+| CI app: analyze, 204 testes, build Android (APK+AppBundle), build Web (Vercel) e build iOS | ✅ |
 | Secretos fora do código — `JWT_SECRET` via env (sem default em `docker-compose.yml`); senhas de seed só no perfil dev; CPFs de seed desativados em produção via `V36` | ✅ |
 | Segurança (auditoria + correções): lockout de login, reset de senha com código de 8 dígitos, revogação de JWT por troca de senha, `senhaAtual` no alterar-senha, foto validada por magic-bytes, CORS sem wildcard, Swagger/Actuator restritos | ✅ |
 | App endurecido: `allowBackup=false`, cleartext só em debug, keystore de release fora do repositório, perfil (nome/CPF/foto/e-mail) no armazenamento seguro, fila offline apagada no logout/LGPD, ajuste de ponto só p/ gestores, erros amigáveis sem `e.toString()` | ✅ |
