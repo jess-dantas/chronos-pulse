@@ -429,14 +429,14 @@ Feature: Envio de Comprovantes de Ponto por E-mail (Backend)
 Feature: Segurança CORS e Bootstrap (Backend)
   Como plataforma hospedada
   Eu quero liberar o acesso cross-origin apenas para origens confiáveis
-  Para que o frontend (Netlify) consuma a API sem bloqueios
+  Para que o frontend (Vercel) consuma a API sem bloqueios
 
   @cors
-  Scenario: Preflight CORS a partir do Netlify é liberado
-    Given uma requisição OPTIONS em /api/v1/auth/login com origin "https://chronos-pulse.netlify.app"
+  Scenario: Preflight CORS a partir do Vercel é liberado
+    Given uma requisição OPTIONS em /api/v1/auth/login com origin "https://chronos-pulse-portal.vercel.app"
     When o preflight é processado
     Then a resposta é HTTP 200
-    And o header Access-Control-Allow-Origin é "https://chronos-pulse.netlify.app"
+    And o header Access-Control-Allow-Origin é "https://chronos-pulse-portal.vercel.app"
     And o header Access-Control-Allow-Credentials é "true"
 
   @cors
@@ -448,10 +448,10 @@ Feature: Segurança CORS e Bootstrap (Backend)
 
   @cors
   Scenario: Resposta com GET /auth/ping inclui cabeçalhos CORS
-    Given uma requisição GET em /api/v1/auth/ping com origin do Netlify
+    Given uma requisição GET em /api/v1/auth/ping com origin do Vercel
     When a resposta é gerada
     Then o status é HTTP 200
-    And o header Access-Control-Allow-Origin é "https://chronos-pulse.netlify.app"
+    And o header Access-Control-Allow-Origin é "https://chronos-pulse-portal.vercel.app"
 
   @bootstrap
   Scenario: Contexto da aplicação Spring inicia sem erros

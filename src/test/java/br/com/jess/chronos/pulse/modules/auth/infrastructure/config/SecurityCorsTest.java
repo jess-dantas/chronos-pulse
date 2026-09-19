@@ -34,13 +34,13 @@ class SecurityCorsTest {
     }
 
     @Test
-    void shouldAllowCorsPreflightFromNetlify() throws Exception {
+    void shouldAllowCorsPreflightFromVercel() throws Exception {
         mockMvc.perform(options("/api/v1/auth/login")
-                        .header(HttpHeaders.ORIGIN, "https://chronos-pulse.netlify.app")
+                        .header(HttpHeaders.ORIGIN, "https://chronos-pulse-portal.vercel.app")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type"))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://chronos-pulse.netlify.app"))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://chronos-pulse-portal.vercel.app"))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
     }
 
@@ -57,9 +57,9 @@ class SecurityCorsTest {
     @Test
     void shouldIncludeCorsHeadersOnGetPing() throws Exception {
         mockMvc.perform(get("/api/v1/auth/ping")
-                        .header(HttpHeaders.ORIGIN, "https://chronos-pulse.netlify.app"))
+                        .header(HttpHeaders.ORIGIN, "https://chronos-pulse-portal.vercel.app"))
                 .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://chronos-pulse.netlify.app"))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "https://chronos-pulse-portal.vercel.app"))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
     }
 }
