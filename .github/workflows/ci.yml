@@ -64,7 +64,7 @@ jobs:
         run: ./mvnw -B -q dependency:go-offline -DskipTests
 
       - name: Instala Trivy
-        uses: aquasecurity/setup-trivy@v0.2.1
+        uses: aquasecurity/setup-trivy@0.3.1
 
       - name: Trivy - varredura de dependências e código
         run: |
