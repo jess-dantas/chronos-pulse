@@ -25,8 +25,8 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
         TipoRegistro proximoTipo = determinarProximoTipo(registro.getColaboradorId(), tenantId);
         registro.atribuirTipo(proximoTipo);
 
-        Long nsr = repositoryPort.obterProximoNsr();
-        registro.atribuirNsr(nsr);
+        Long nsrLogico = repositoryPort.obterProximoNsrLogico(registro.getColaboradorId(), tenantId);
+        registro.atribuirNsrLogico(nsrLogico);
 
         String hash = GeradorHashService.gerarHashRegistro(registro, cpfColaborador);
         registro.atribuirHash(hash);

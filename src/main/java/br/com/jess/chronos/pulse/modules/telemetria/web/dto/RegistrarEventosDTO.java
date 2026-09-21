@@ -7,7 +7,6 @@ import java.util.List;
 
 public record RegistrarEventosDTO(
         @NotEmpty(message = "Informe ao menos um evento")
-        @Valid
-        List<EventoIngestDTO> eventos
+        List<@Valid EventoIngestDTO> eventos
 ) {
 }

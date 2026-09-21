@@ -15,6 +15,5 @@ public record CriarRequisicaoDTO(
         String justificativa,
 
         @NotEmpty(message = "A requisição deve conter pelo menos um item")
-        @Valid
-        List<ItemRequisicaoDTO> itens
+        List<@Valid ItemRequisicaoDTO> itens
 ) {}

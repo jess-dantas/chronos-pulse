@@ -18,6 +18,5 @@ public record CadastrarRequisicaoDTO(
         String observacoes,
 
         @NotEmpty(message = "A requisição deve conter ao menos um item")
-        @Valid
-        List<RequisicaoItemDTO> itens
+        List<@Valid RequisicaoItemDTO> itens
 ) {}

@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.lead.infrastructure.adapters.output.pe
 
 import br.com.jess.chronos.pulse.modules.lead.domain.model.LeadEmpresa;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.ObjectFactory;
 
 @Mapper(componentModel = "spring")
@@ -9,6 +10,7 @@ public interface LeadEmpresaMapper {
 
     LeadEmpresaJpaEntity toEntity(LeadEmpresa model);
 
+    @Mapping(target = "criarComCnpj", ignore = true)
     LeadEmpresa toModel(LeadEmpresaJpaEntity entity);
 
     @ObjectFactory

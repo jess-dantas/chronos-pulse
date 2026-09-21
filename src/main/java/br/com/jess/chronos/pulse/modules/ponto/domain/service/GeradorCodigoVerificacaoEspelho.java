@@ -36,7 +36,7 @@ public class GeradorCodigoVerificacaoEspelho {
                 .forEach(m -> payload.append(segmento(String.format("%s|%d|%s|%s",
                         m.getTipoRegistro() != null ? m.getTipoRegistro().name() : "",
                         m.getDataHora() != null ? m.getDataHora().toEpochMilli() : 0L,
-                        m.getNsr() == null ? "" : m.getNsr(),
+                        m.getNsrLogico() == null ? "" : m.getNsrLogico(),
                         m.getHashIntegridade() == null ? "" : m.getHashIntegridade()))));
 
         try {

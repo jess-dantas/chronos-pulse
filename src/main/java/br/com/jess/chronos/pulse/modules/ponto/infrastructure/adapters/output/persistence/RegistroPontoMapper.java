@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.persistence;
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.AjusteStatus;
 import org.mapstruct.*;
 
 @Mapper(componentModel = "spring")
@@ -17,7 +18,8 @@ public interface RegistroPontoMapper {
                 e.getId(), e.getColaboradorId(), e.getTenantId(), e.getDataHoraDispositivo(),
                 e.getDataHoraServidor(), e.getTipoRegistro(), e.getLatitude(), e.getLongitude(),
                 e.getPrecisaoGps(), e.getFotoUrl(), e.getSincronizadoOffline(), e.getNsr(),
-                e.getAjusteManual(), e.getJustificativa(), e.getObservacao()
+                e.getNsrLogico(), e.getAjusteManual(), e.getJustificativa(), e.getObservacao(),
+                e.getAjusteStatus(), e.getAjusteMotivoRejeicao(), e.getAprovadoPor(), e.getAprovadoEm()
         );
     }
 

@@ -51,6 +51,5 @@ public record ReceberNfeDTO(
         String xmlNfe,
 
         @NotEmpty(message = "Informe ao menos um item recebido")
-        @Valid
-        List<ItemNfeDTO> itens
+        List<@Valid ItemNfeDTO> itens
 ) {}
