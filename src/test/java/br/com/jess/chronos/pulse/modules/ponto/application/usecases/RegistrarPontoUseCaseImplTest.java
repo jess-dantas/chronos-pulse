@@ -43,17 +43,17 @@ class RegistrarPontoUseCaseImplTest {
     void deveAtribuirEntradaQuandoNaoHouverBatidaAnteriorEPersistirRegistro() {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
-        when(repositoryPort.obterProximoNsr()).thenReturn(1L);
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
 
         RegistroPonto resultado = useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.ENTRADA);
-        assertThat(registro.getNsr()).isEqualTo(1L);
+        assertThat(registro.getNsrLogico()).isEqualTo(1L);
         assertThat(registro.getHashIntegridade()).isNotNull().hasSize(64);
         assertThat(resultado).isNotNull();
         verify(repositoryPort).buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
-        verify(repositoryPort).obterProximoNsr();
+        verify(repositoryPort).obterProximoNsrLogico(colaboradorId, tenantId);
         verify(repositoryPort).salvar(registro);
     }
 
@@ -61,33 +61,33 @@ class RegistrarPontoUseCaseImplTest {
     void deveAvancarSequenciaDeBatidasCorretamente() {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.ENTRADA));
-        when(repositoryPort.obterProximoNsr()).thenReturn(2L);
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(2L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
 
         useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.INTERVALO);
-        assertThat(registro.getNsr()).isEqualTo(2L);
+        assertThat(registro.getNsrLogico()).isEqualTo(2L);
     }
 
     @Test
     void deveReiniciarCicloParaEntradaAposSaida() {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.SAIDA));
-        when(repositoryPort.obterProximoNsr()).thenReturn(3L);
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(3L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
 
         useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.ENTRADA);
-        assertThat(registro.getNsr()).isEqualTo(3L);
+        assertThat(registro.getNsrLogico()).isEqualTo(3L);
     }
 
     @Test
-    void devePropagaExcecaoQuandoRepositorioFalha() {
+    void devePropagarExcecaoQuandoRepositorioFalha() {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
-        when(repositoryPort.obterProximoNsr()).thenReturn(1L);
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.salvar(any())).thenThrow(new RuntimeException("DB error"));
 
         assertThatThrownBy(() -> useCase.executar(registro, "12345678901", tenantId))
