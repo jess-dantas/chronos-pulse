@@ -1,4 +1,4 @@
-name: CI Backend Java
+name: CI Backend Java + Spring
 
 on:
   pull_request:
@@ -14,21 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-
       - run: chmod +x mvnw
-
       - run: ./mvnw -B clean package
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'chronos-pulse-ci-secret-key-only-for-tests-256-bits' }}
@@ -41,30 +33,21 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-
       - run: chmod +x mvnw
-
       - run: ./mvnw -B -q dependency:go-offline -DskipTests
-
       - uses: aquasecurity/setup-trivy@v0.3.1
-
       - run: |
           set -o pipefail
           trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --skip-dirs target --format sarif --output trivy-results.sarif .
-
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-results.sarif
+
+  
