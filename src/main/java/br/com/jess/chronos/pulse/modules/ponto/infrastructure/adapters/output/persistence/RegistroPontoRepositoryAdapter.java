@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.p
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.AjusteStatus;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import org.springframework.stereotype.Component;
 import java.time.Instant;
@@ -36,6 +37,11 @@ public class RegistroPontoRepositoryAdapter implements RegistroPontoRepositoryPo
     }
 
     @Override
+    public Long obterProximoNsrLogico(UUID colaboradorId, UUID tenantId) {
+        return jpaRepository.obterProximoNsrLogico(colaboradorId, tenantId);
+    }
+
+    @Override
     public Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId) {
         return jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
     }
@@ -55,6 +61,12 @@ public class RegistroPontoRepositoryAdapter implements RegistroPontoRepositoryPo
     @Override
     public List<RegistroPonto> listarPorTenant(UUID tenantId) {
         return jpaRepository.findByTenantIdOrderByDataHoraDispositivoAsc(tenantId)
+                .stream().map(mapper::toModel).toList();
+    }
+
+    @Override
+    public List<RegistroPonto> listarAjustesPendentesPorTenant(UUID tenantId) {
+        return jpaRepository.findAjustesPendentesPorTenant(tenantId, AjusteStatus.PENDENTE)
                 .stream().map(mapper::toModel).toList();
     }
 }

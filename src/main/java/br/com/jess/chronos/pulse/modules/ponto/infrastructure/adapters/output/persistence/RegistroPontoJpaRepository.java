@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.persistence;
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.AjusteStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +15,10 @@ public interface RegistroPontoJpaRepository extends JpaRepository<RegistroPontoJ
 
     @Query("SELECT COALESCE(MAX(r.nsr), 0) + 1 FROM RegistroPontoJpaEntity r")
     Long obterProximoNsr();
+
+    @Query("SELECT COALESCE(MAX(r.nsrLogico), 0) + 1 FROM RegistroPontoJpaEntity r " +
+           "WHERE r.colaboradorId = :colaboradorId AND r.tenantId = :tenantId")
+    Long obterProximoNsrLogico(@Param("colaboradorId") UUID colaboradorId, @Param("tenantId") UUID tenantId);
 
     @Query("SELECT r.tipoRegistro FROM RegistroPontoJpaEntity r " +
            "WHERE r.colaboradorId = :colaboradorId AND r.tenantId = :tenantId " +
@@ -29,4 +34,10 @@ public interface RegistroPontoJpaRepository extends JpaRepository<RegistroPontoJ
             UUID colaboradorId, UUID tenantId, Instant inicio, Instant fim);
 
     List<RegistroPontoJpaEntity> findByTenantIdOrderByDataHoraDispositivoAsc(UUID tenantId);
+
+    @Query("SELECT r FROM RegistroPontoJpaEntity r " +
+           "WHERE r.tenantId = :tenantId AND r.ajusteManual = true AND r.ajusteStatus = :status")
+    List<RegistroPontoJpaEntity> findAjustesPendentesPorTenant(
+            @Param("tenantId") UUID tenantId,
+            @Param("status") AjusteStatus status);
 }

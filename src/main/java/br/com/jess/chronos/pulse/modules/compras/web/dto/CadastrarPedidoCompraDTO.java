@@ -27,6 +27,5 @@ public record CadastrarPedidoCompraDTO(
         String observacoes,
 
         @NotEmpty(message = "O pedido deve conter ao menos um item")
-        @Valid
-        List<PedidoCompraItemDTO> itens
+        List<@Valid PedidoCompraItemDTO> itens
 ) {}

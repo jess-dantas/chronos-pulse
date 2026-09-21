@@ -5,5 +5,9 @@
 -- ambiente até a emissão do novo CNPJ (substituição pendente).
 -- ==========================================================
 UPDATE tenant
-SET nome = 'LJ CHRONOS PULSE TECNOLOGIA E SISTEMAS LTDA'
+SET
+    nome = 'LJ CODE TECNOLOGIA E SISTEMAS LTDA',
+    razao_social = 'LJ CODE TECNOLOGIA E SISTEMAS LTDA',
+    nome_fantasia = 'LJ CODE',
+    produto = 'Chronos Suite'
 WHERE cnpj = '49262262000113';

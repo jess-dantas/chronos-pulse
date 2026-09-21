@@ -12,6 +12,5 @@ public record RegistrarPropostasDTO(
         UUID fornecedorId,
 
         @NotEmpty(message = "Informe ao menos um item na proposta")
-        @Valid
-        List<PropostaItemDTO> itens
+        List<@Valid PropostaItemDTO> itens
 ) {}

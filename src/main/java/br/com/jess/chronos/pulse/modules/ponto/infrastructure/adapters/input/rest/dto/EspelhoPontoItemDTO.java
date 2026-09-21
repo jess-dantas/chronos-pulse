@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.re
 
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.TipoRegistro;
+import br.com.jess.chronos.pulse.modules.ponto.domain.model.AjusteStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -21,9 +22,14 @@ public record EspelhoPontoItemDTO(
         String hashIntegridade,
         Boolean sincronizadoOffline,
         Long nsr,
+        Long nsrLogico,
         Boolean ajusteManual,
         String justificativa,
-        String observacao
+        String observacao,
+        AjusteStatus ajusteStatus,
+        String ajusteMotivoRejeicao,
+        UUID aprovadoPor,
+        Instant aprovadoEm
 ) {
     public static EspelhoPontoItemDTO fromDomain(RegistroPonto r) {
         return new EspelhoPontoItemDTO(
@@ -40,9 +46,14 @@ public record EspelhoPontoItemDTO(
                 r.getHashIntegridade(),
                 r.getSincronizadoOffline(),
                 r.getNsr(),
+                r.getNsrLogico(),
                 r.getAjusteManual(),
                 r.getJustificativa(),
-                r.getObservacao()
+                r.getObservacao(),
+                r.getAjusteStatus(),
+                r.getAjusteMotivoRejeicao(),
+                r.getAprovadoPor(),
+                r.getAprovadoEm()
         );
     }
 }
