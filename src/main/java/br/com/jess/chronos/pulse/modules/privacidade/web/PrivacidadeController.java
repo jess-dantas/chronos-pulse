@@ -33,6 +33,12 @@ public class PrivacidadeController {
         return ResponseEntity.ok(privacidadeService.politicaAtual());
     }
 
+    @GetMapping("/consentimento/status")
+    public ResponseEntity<Map<String, Object>> statusConsentimento(
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+        return ResponseEntity.ok(privacidadeService.statusConsentimento(usuarioLogado));
+    }
+
     @GetMapping("/meus-dados")
     public ResponseEntity<Map<String, Object>> meusDados(
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
@@ -44,12 +50,14 @@ public class PrivacidadeController {
             @RequestBody @Valid ConsentimentoRequestDTO request,
             @AuthenticationPrincipal CpcUsuario usuarioLogado,
             @RequestHeader(value = "X-Forwarded-For", required = false) String forwardedIp,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
             HttpServletRequest httpRequest) {
         privacidadeService.registrarConsentimento(
                 usuarioLogado,
                 request.versaoPolitica(),
                 Boolean.TRUE.equals(request.aceito()),
-                resolverIp(httpRequest, forwardedIp));
+                resolverIp(httpRequest, forwardedIp),
+                userAgent);
         return ResponseEntity.created(URI.create("/api/v1/privacidade/consentimento")).build();
     }
 

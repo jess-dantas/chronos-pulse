@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.auth.domain.ports.output;
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,4 +12,5 @@ public interface CpcUsuarioRepositoryPort {
     boolean existePorCpf(String cpf);
     CpcUsuario atualizar(CpcUsuario usuario);
     void desativarPorId(UUID id);
+    List<CpcUsuario> listarPorTenant(UUID tenantId);
 }

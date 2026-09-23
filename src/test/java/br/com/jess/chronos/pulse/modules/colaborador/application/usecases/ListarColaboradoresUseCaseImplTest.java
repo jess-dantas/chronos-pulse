@@ -65,6 +65,7 @@ class ListarColaboradoresUseCaseImplTest {
         assertThat(item.cpf()).isEqualTo("11122233344");
         assertThat(item.cargo()).isEqualTo("Analista");
         assertThat(item.departamento()).isEqualTo("Administrativo");
+        assertThat(item.celular()).isNull();
         assertThat(item.acessoEstoque()).isTrue();
         assertThat(item.acessoPatrimonio()).isTrue();
         assertThat(item.acessoFrota()).isTrue();

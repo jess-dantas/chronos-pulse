@@ -28,55 +28,58 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final String allowedOrigins;
 
-    public SecurityConfig(
-            JwtAuthFilter jwtAuthFilter,
-            @Value("${chronos.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:4200,https://chronos-pulse-portal.vercel.app}") String allowedOrigins
-    ) {
-        this.jwtAuthFilter = jwtAuthFilter;
-        this.allowedOrigins = allowedOrigins;
-    }
+public SecurityConfig(
+        JwtAuthFilter jwtAuthFilter,
+        @Value("${chronos.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:4200,https://chronos-pulse-portal.vercel.app}") String allowedOrigins
+) {
+    this.jwtAuthFilter = jwtAuthFilter;
+    this.allowedOrigins = allowedOrigins;
+}
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .cors(Customizer.withDefaults())
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/cadastrar-empresa").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/esqueci-senha").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/redefinir-senha").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/leads/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/privacidade/politica").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/publico/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
-                        .requestMatchers("/actuator/**").hasRole("ADMIN_PLATAFORMA")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/telemetria/eventos").authenticated()
-                        .requestMatchers("/api/v1/telemetria/**").hasRole("ADMIN_PLATAFORMA")
-                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN_PLATAFORMA", "SUPORTE_N1", "SUPORTE_N2")
-                        .requestMatchers("/api/v1/suporte/**").hasAnyRole("SUPORTE_N1", "SUPORTE_N2")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/empresas/**").hasRole("ADMIN_PLATAFORMA")
-                        .requestMatchers("/api/v1/colaboradores/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH")
-                        .requestMatchers("/api/v1/pontos/**").hasAnyRole("COLABORADOR", "ADMIN_EMPRESA", "GESTOR_RH", "ADMIN_PLATAFORMA")
-                        .requestMatchers("/api/v1/fiscal/**").hasAnyRole("ADMIN_EMPRESA", "ADMIN_PLATAFORMA", "GESTOR_RH")
-                        .requestMatchers("/api/v1/estoque/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
-                        .requestMatchers("/api/v1/compras/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
-                        .requestMatchers("/api/v1/licitacoes/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
-                        .requestMatchers("/api/v1/contratos/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
-                        .requestMatchers("/api/v1/patrimonio/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
-                        .requestMatchers("/api/v1/frota/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
-                        .requestMatchers("/api/v1/protocolo/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
-                        .requestMatchers("/api/v1/transparencia/**").hasAnyRole("ADMIN_PLATAFORMA", "ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE", "COLABORADOR")
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    return http
+            .cors(Customizer.withDefaults())
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/admin/**").permitAll()  // Admin routes handled by AdminSecurityConfig
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/cadastrar-empresa").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/esqueci-senha").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/redefinir-senha").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/leads/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/privacidade/politica").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/publico/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/actuator/health/**").permitAll()
+                    .requestMatchers("/actuator/**").hasRole("ADMIN_PLATAFORMA")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/telemetria/eventos").authenticated()
+                    .requestMatchers("/api/v1/telemetria/**").hasRole("ADMIN_PLATAFORMA")
+                    .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN_PLATAFORMA", "SUPORTE_N1", "SUPORTE_N2")
+                    .requestMatchers("/api/v1/suporte/**").hasAnyRole("SUPORTE_N1", "SUPORTE_N2")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/empresas/**").hasRole("ADMIN_PLATAFORMA")
+                    .requestMatchers("/api/v1/colaboradores/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH")
+                    .requestMatchers("/api/v1/titularidade/**").hasRole("ADMIN_EMPRESA")
+                    .requestMatchers("/api/v1/pontos/**").hasAnyRole("COLABORADOR", "ADMIN_EMPRESA", "GESTOR_RH")
+                    .requestMatchers("/api/v1/fiscal/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH")
+                    .requestMatchers("/api/v1/estoque/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
+                    .requestMatchers("/api/v1/compras/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
+                    .requestMatchers("/api/v1/licitacoes/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
+                    .requestMatchers("/api/v1/contratos/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE")
+                    .requestMatchers("/api/v1/patrimonio/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
+                    .requestMatchers("/api/v1/frota/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
+                    .requestMatchers("/api/v1/protocolo/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "COLABORADOR")
+                    .requestMatchers("/api/v1/transparencia/**").hasAnyRole("ADMIN_EMPRESA", "GESTOR_RH", "ESTOQUE", "COLABORADOR")
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
 
     @Bean

@@ -22,5 +22,6 @@ public record CadastrarColaboradorRequestDTO(
         Boolean acessoEstoque,
         Boolean acessoPatrimonio,
         Boolean acessoFrota,
-        Boolean acessoProtocolo
+        Boolean acessoProtocolo,
+        String celular
 ) {}

@@ -7,7 +7,7 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
 ![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Ready-2496ED)
-![Tests](https://img.shields.io/badge/tests-257%20verdes-brightgreen)
+![Tests](https://img.shields.io/badge/tests-363%20verdes-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 </div>
@@ -152,7 +152,7 @@ O tenant de demonstração possui todos os 9 módulos ativos; novas empresas rec
 ## Testes automatizados
 
 ```bash
-./mvnw test      # Windows: .\mvnw.cmd test   (257 testes)
+./mvnw test      # Windows: .\mvnw.cmd test   (363 testes)
 ```
 
 O ambiente de teste usa H2 em modo PostgreSQL (`application-test.yml`, Flyway desativado).

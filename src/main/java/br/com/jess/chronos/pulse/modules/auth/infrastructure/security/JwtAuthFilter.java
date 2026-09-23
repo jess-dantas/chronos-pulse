@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.auth.infrastructure.security;
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
+import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -62,26 +63,34 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String cpf = claims.getSubject();
-        String role = claims.get("role", String.class);
 
-        var usuarioOpt = usuarioRepository.buscarPorCpf(cpf);
-        if (usuarioOpt.isEmpty()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-        CpcUsuario usuario = usuarioOpt.get();
+        CpcUsuario usuario;
+        if (claims.get("adminId", String.class) != null) {
+            // Token AdminPlataforma (login /admin/auth/login): subject é o
+            // username, não um CPF de cpc_usuario. Autentica direto com o
+            // papel ADMIN_PLATAFORMA sem lookup em cpc_usuario.
+            usuario = new CpcUsuario(null, null, cpf, cpf, null, null,
+                    Role.ADMIN_PLATAFORMA, null);
+        } else {
+            var usuarioOpt = usuarioRepository.buscarPorCpf(cpf);
+            if (usuarioOpt.isEmpty()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            usuario = usuarioOpt.get();
 
-        // Revogação (H2): usuário desativado ou tokens emitidos antes da última
-        // troca de senha não autenticam.
-        if (!usuario.isAtivo()) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-        Instant iat = claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant() : null;
-        if (usuario.getSenhaAlteradaEm() != null && iat != null
-                && iat.isBefore(usuario.getSenhaAlteradaEm())) {
-            filterChain.doFilter(request, response);
-            return;
+            // Revogação (H2): usuário desativado ou tokens emitidos antes da última
+            // troca de senha não autenticam.
+            if (!usuario.isAtivo()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            Instant iat = claims.getIssuedAt() != null ? claims.getIssuedAt().toInstant() : null;
+            if (usuario.getSenhaAlteradaEm() != null && iat != null
+                    && iat.isBefore(usuario.getSenhaAlteradaEm())) {
+                filterChain.doFilter(request, response);
+                return;
+            }
         }
 
         // Contexto de observabilidade no MDC (R27) — limpo ao final da
@@ -92,6 +101,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (usuario.getCpcId() != null) {
             MDC.put("usuarioId", usuario.getCpcId().toString());
         }
+        // Autoridades derivadas do banco, não do claim do token: trocas de papel
+        // (ex.: transferência de titularidade) valem imediatamente, sem esperar
+        // a expiração/refresh do access token.
+        String role = usuario.getRole().name();
         var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
         authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
         if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {

@@ -19,7 +19,8 @@ public interface AtualizarColaboradorUseCase {
             boolean acessoEstoque,
             boolean acessoPatrimonio,
             boolean acessoFrota,
-            boolean acessoProtocolo
+            boolean acessoProtocolo,
+            String celular
     ) {}
 
     void executar(Comando comando);

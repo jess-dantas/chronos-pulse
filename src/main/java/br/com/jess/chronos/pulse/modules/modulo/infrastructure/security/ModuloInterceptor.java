@@ -36,12 +36,12 @@ public class ModuloInterceptor implements HandlerInterceptor {
         if (authentication == null || !(authentication.getPrincipal() instanceof CpcUsuario usuario)) {
             return true;
         }
-        if (isPerfilPlataforma(usuario) || usuario.getTenantId() == null) {
+        if (isPerfilPlataforma(usuario) || usuario.getRole() == Role.ADMIN_EMPRESA || usuario.getTenantId() == null) {
             return true;
         }
-        if (!modulosPort.isAtivo(usuario.getTenantId(), codigo)) {
+        if (!modulosPort.usuarioModuloAtivo(usuario.getId(), usuario.getTenantId(), codigo)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "O módulo " + codigo + " não está contratado para esta empresa.");
+                    "O módulo " + codigo + " não está liberado para este usuário.");
         }
         return true;
     }
@@ -49,10 +49,23 @@ public class ModuloInterceptor implements HandlerInterceptor {
     private String resolverCodigoModulo(HandlerMethod handlerMethod) {
         RequiresModulo methodAnnotation = handlerMethod.getMethodAnnotation(RequiresModulo.class);
         if (methodAnnotation != null) {
-            return methodAnnotation.codigo();
+            String codigo = extrairCodigo(methodAnnotation);
+            if (codigo != null) {
+                return codigo;
+            }
         }
         RequiresModulo classAnnotation = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), RequiresModulo.class);
-        return classAnnotation != null ? classAnnotation.codigo() : null;
+        return classAnnotation != null ? extrairCodigo(classAnnotation) : null;
+    }
+
+    private String extrairCodigo(RequiresModulo annotation) {
+        if (annotation.codigo() != null && !annotation.codigo().isBlank()) {
+            return annotation.codigo();
+        }
+        if (annotation.value() != null && !annotation.value().isBlank()) {
+            return annotation.value();
+        }
+        return null;
     }
 
     private boolean isPerfilPlataforma(CpcUsuario usuario) {

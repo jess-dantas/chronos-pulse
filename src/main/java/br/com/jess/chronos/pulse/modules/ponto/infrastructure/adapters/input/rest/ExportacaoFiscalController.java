@@ -8,6 +8,7 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.ConfiguracaoF
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.AssinadorCadesAdapter;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.GeradorArquivoAEJAdapter;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.output.fiscal.GeradorArquivoAFDAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/fiscal")
+@RequiresModulo("PONTO")
 public class ExportacaoFiscalController {
 
     private static final Logger log = LoggerFactory.getLogger(ExportacaoFiscalController.class);

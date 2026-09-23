@@ -9,6 +9,14 @@ Base: `http://localhost:8080/api/v1` · Formato: JSON · Autenticação: `Author
 | 🛡️ | Restrito por `@PreAuthorize` (perfis entre parênteses) |
 | 🌐 | Perfis de plataforma (`ADMIN_PLATAFORMA`, `SUPORTE_N1`, `SUPORTE_N2`) |
 
+> **LGPD (Admin Plataforma):** `ADMIN_PLATAFORMA` **não** acessa rotas de
+> dados de tenant (colaboradores, pontos, fiscal, estoque, compras,
+> licitações, contratos, patrimônio, frota, protocolo, transparência) — a
+> camada de URL em `SecurityConfig` nega; a única rota de empresa permitida é
+> `POST /empresas`. Anotações `@PreAuthorize` em controllers podem ainda
+> mencionar o perfil, mas a **efetividade final é a interseção** URL ×
+> `@PreAuthorize` (ver [`rbac.md`](rbac.md)).
+
 ---
 
 ## 1. Autenticação & Cadastro
@@ -41,7 +49,50 @@ Login — corpo e resposta resumida:
 
 ---
 
-## 2. Admin Plataforma (Módulos)
+## 2. Admin Plataforma — Auth (fora de `/api/v1`)
+
+Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/admin/auth")`, sem o prefixo `/api/v1`).
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` (8–100) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true` |
+| `GET` | `/admin/auth/bootstrap/status` | 🔓 | `{ bootstrapAvailable }` — `true` enquanto `admin_plataforma` estiver vazia (first-run) |
+| `POST` | `/admin/auth/bootstrap` | 🔓 | First-run wizard: `{ username, senha, nomeCompleto, email }` → cria o Administrator e responde `requiresTwoFactor: true`, `setupRequired: true` + `tempToken` |
+| `POST` | `/admin/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos) → troca pelos tokens finais |
+| `POST` | `/admin/auth/2fa/recover` | 🔓 | `{ username, senha, recoveryCode }` (`XXXXX-XXXXX`) → tokens + **8 novos** códigos de recuperação |
+| `POST` | `/admin/auth/logout` | 🔓 | Logout (best-effort; invalidação de refresh pendente) |
+| `GET` | `/admin/auth/2fa/status` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ enabled }` |
+| `POST` | `/admin/auth/2fa/setup` | 🛡️ (`ADMIN_PLATAFORMA`) | Gera segredo TOTP → `{ secret, otpauthUri }` (segredo fica pendente até o confirm) |
+| `POST` | `/admin/auth/2fa/confirm` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — valida TOTP, **ativa** o 2FA e, no fluxo de bootstrap/setup, emite os tokens finais **e 8 códigos de recuperação** (exibidos uma única vez) |
+| `POST` | `/admin/auth/2fa/disable` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA; **403** quando `chronos.admin.two-factor-required=true` |
+| `POST` | `/admin/auth/alterar-senha` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ senhaAtual, novaSenha }` (nova 8–100) |
+
+Regras de acesso de `/admin/**` ficam em `AdminSecurityConfig` (chain separada com `securityMatcher("/admin/**")`); o token admin tem claim `adminId` e `role=ADMIN_PLATAFORMA` (sem CPF/tenant). O `JwtAuthFilter` autentica tokens com `adminId` direto com `ADMIN_PLATAFORMA`, sem lookup em `cpc_usuario`.
+
+**2FA obrigatório:** `chronos.admin.two-factor-required` (default `true`, `CHRONOS_ADMIN_2FA_REQUIRED` sobrepõe; `false` no profile dev). Em produção o Administrator nasce apenas pelo wizard `bootstrap` (zero-trace — `V1` não grava linha em `admin_plataforma`); no dev o seed `db/seed/R__seed_admin_dev.sql` cria `Administrator`/`admin123` sem 2FA. Tabela `admin_recovery_code` guarda os 8 códigos (hash SHA-256, uso único).
+
+---
+
+## 2.1 Transferência de Titularidade `/api/v1/titularidade`
+
+Base: `/api/v1/titularidade` — 🛡️ (`ADMIN_EMPRESA` em todas as rotas; tenant e solicitante vêm da `CpcUsuario` de sessão, **nunca do corpo**). App: wizard `/perfil/titularidade` (`TransferirTitularidadeScreen`).
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/titularidade/iniciar` | `{ novoTitularId }` → `{ transferenciaId, novoTitularNome, novoTitularCelular }`; cancela transferências abertas anteriores do tenant |
+| `POST` | `/titularidade/{id}/etapa/biometria` | `{ confirmado }` — etapa 1 (biometria do solicitante; no app Web é confirmada automaticamente) |
+| `POST` | `/titularidade/{id}/etapa/celular/enviar` | Envia OTP de 6 dígitos ao **e-mail do titular atual** → `{ mensagem, destino }` |
+| `POST` | `/titularidade/{id}/etapa/celular/verificar` | `{ codigo, celularConfirmado }` — valida o OTP **e** exige a atestação do celular do novo titular |
+| `POST` | `/titularidade/{id}/etapa/email/enviar` | Envia OTP ao **e-mail corporativo do novo titular** → `{ mensagem, destino }` |
+| `POST` | `/titularidade/{id}/etapa/email/verificar` | `{ codigo }` — valida o OTP do novo titular |
+| `POST` | `/titularidade/{id}/concluir` | Exige as 3 etapas; troca papéis (`novo` → `ADMIN_EMPRESA` + módulos contratados; `antigo` → `COLABORADOR`, acesso `PONTO`) |
+| `POST` | `/titularidade/{id}/cancelar` | Cancela a transferência em andamento |
+
+Regras: etapas obrigatoriamente em ordem (biometria → celular → e-mail); transferência expira em **30 minutos** (auto-`CANCELADA`); OTPs vencem em **15 minutos** e são armazenados com `PasswordEncoder`; reenvio invalida o código anterior da mesma etapa; novo titular deve pertencer ao mesmo tenant e ser diferente do solicitante. Com `chronos.mail.enabled=false` (dev) os OTPs são logados no console (INFO) para smoke test. Ao concluir, o app encerra a sessão — o novo titular precisa logar novamente para refletir o novo papel.
+
+---
+
+## 3. Admin Plataforma (Módulos)
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -53,7 +104,7 @@ Login — corpo e resposta resumida:
 
 ---
 
-## 3. Empresas (Tenants)
+## 4. Empresas (Tenants)
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -61,29 +112,42 @@ Login — corpo e resposta resumida:
 
 ---
 
-## 4. Colaboradores
+## 5. Colaboradores
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/colaboradores` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Cadastra colaborador |
-| `GET` | `/colaboradores` | 🛡️ (mesmos perfis) | Lista do tenant |
-| `PUT` | `/colaboradores/{id}` | 🛡️ (mesmos perfis) | Atualiza dados/acesso ao estoque |
+| `POST` | `/colaboradores` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra colaborador (aceita `celular` opcional) |
+| `GET` | `/colaboradores` | 🛡️ (mesmos perfis) | Lista do tenant (inclui `celular`) |
+| `PUT` | `/colaboradores/{id}` | 🛡️ (mesmos perfis) | Atualiza dados/acesso ao estoque (`celular` só muda se informado) |
 | `DELETE` | `/colaboradores/{id}` | 🛡️ (mesmos perfis) | Soft delete |
 
----
+### Módulos por usuário (`usuario_modulo`)
 
-## 5. Ponto Eletrônico
+Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`).
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/pontos/sincronizar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) | Batida(s) online/offline com GPS e hash |
-| `GET` | `/pontos/espelho?mes=9&ano=2026` | 🛡️ (mesmos perfis) | Espelho de ponto mensal |
-| `GET` | `/pontos/espelho/relatorio?colaboradorId=...&mes=9&ano=2026` | 🛡️ (mesmos perfis) | Relatório do espelho conforme art. 84 da Portaria MTP 671/2021: empregador (nome/CNPJ), trabalhador (nome, CPF, admissão, cargo/função, matrícula), data de emissão, período apurado, jornada contratual, marcações tratadas e **código de verificação** SHA-256 |
-| `POST` | `/pontos/ajustar` | 🛡️ (mesmos perfis) | Ajuste manual com justificativa obrigatória |
+| `GET` | `/usuarios/{usuarioId}/modulos?tenantId=` | 🛡️ (acima) | `{ modulos: [...] }` — códigos associados ao usuário |
+| `PUT` | `/usuarios/{usuarioId}/modulos` | 🛡️ (acima) | Corpo `{ tenantId, codigos: [...] }` — substitui a associação **e** sincroniza os flags legados (`acessoEstoque`, `acessoPatrimonio`, `acessoFrota`, `acessoProtocolo`) |
 
 ---
 
-## 6. Fiscal
+## 6. Ponto Eletrônico
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `POST` | `/pontos/sincronizar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Batida(s) online/offline com GPS e hash |
+| `GET` | `/pontos/espelho?mes=9&ano=2026` | 🛡️ (mesmos perfis) | Espelho de ponto mensal |
+| `GET` | `/pontos/espelho/relatorio?colaboradorId=...&mes=9&ano=2026` | 🛡️ (mesmos perfis) | Relatório do espelho conforme art. 84 da Portaria MTP 671/2021: empregador (nome/CNPJ), trabalhador (nome, CPF, admissão, cargo/função, matrícula), data de emissão, período apurado, jornada contratual, marcações tratadas e **código de verificação** SHA-256 |
+| `POST` | `/pontos/ajustar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Ajuste manual com justificativa obrigatória |
+| `POST` | `/pontos/ajustar/solicitar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Colaborador solicita ajuste (vai para fila de aprovação) |
+| `GET` | `/pontos/ajustes/pendentes` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Fila de aprovação de ajustes |
+| `PUT` | `/pontos/ajustes/{id}/aprovar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Aprova ajuste pendente |
+| `PUT` | `/pontos/ajustes/{id}/rejeitar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Rejeita ajuste pendente |
+
+---
+
+## 7. Fiscal
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -96,7 +160,7 @@ Login — corpo e resposta resumida:
 
 ---
 
-## 7. Estoque & Almoxarifado
+## 8. Estoque & Almoxarifado
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -112,7 +176,7 @@ Login — corpo e resposta resumida:
 
 ---
 
-## 8. Patrimônio Público `@RequiresModulo("PATRIMONIO")`
+## 9. Patrimônio Público `@RequiresModulo("PATRIMONIO")`
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -140,7 +204,7 @@ Login — corpo e resposta resumida:
 
 ---
 
-## 9. Gestão de Frota `@RequiresModulo("FROTA")`
+## 10. Gestão de Frota `@RequiresModulo("FROTA")`
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -181,7 +245,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 ---
 
-## 10. Protocolo Eletrônico `@RequiresModulo("PROTOCOLO")`
+## 11. Protocolo Eletrônico `@RequiresModulo("PROTOCOLO")`
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -216,7 +280,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 ---
 
-## 11. Compras & Fornecedores `@RequiresModulo("COMPRAS")`
+## 12. Compras & Fornecedores `@RequiresModulo("COMPRAS")`
 
 ### Fornecedores e pedidos
 
@@ -278,7 +342,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 ---
 
-## 12. Licitações & Contratações `@RequiresModulo("LICITACOES")` (Lei 14.133/2021)
+## 13. Licitações & Contratações `@RequiresModulo("LICITACOES")` (Lei 14.133/2021)
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -342,7 +406,7 @@ Situação computada: `RESCINDIDO` > `VENCIDO` (vigência expirada sem aditivo) 
 
 ---
 
-## 13. Portal da Transparência `@RequiresModulo("TRANSPARENCIA")` (LC 131/2009)
+## 14. Portal da Transparência `@RequiresModulo("TRANSPARENCIA")` (LC 131/2009)
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -368,9 +432,9 @@ Situação computada: `RESCINDIDO` > `VENCIDO` (vigência expirada sem aditivo) 
 
 ---
 
-## 13.1 Portal Público da Transparência (R31) — sem autenticação
+## 14.1 Portal Público da Transparência (R31) — sem autenticação
 
-Rotas públicas por `slug` do órgão (ex.: `chronos-pulse-demo`). Requisitos: empresa ativa + módulo `TRANSPARENCIA` ativo. Fora disso → `404`.
+Rotas públicas por `slug` do órgão (ex.: `demonstracao`, `lj-code`). Requisitos: empresa ativa + módulo `TRANSPARENCIA` ativo. Fora disso → `404`.
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
@@ -388,7 +452,7 @@ Resposta do resumo (trecho):
 
 ```jsonc
 {
-  "orgao": { "slug": "chronos-pulse-demo", "nome": "Chronos Pulse Tech", "cnpj": "49262262000113" },
+  "orgao": { "slug": "demonstracao", "nome": "Demonstração", "cnpj": "01001001000101" },
   "licitacoesPublicadas": 4,
   "licitacoesEmAndamento": 2,
   "licitacoesHomologadas": 1,
@@ -403,7 +467,7 @@ Resposta do resumo (trecho):
 
 ---
 
-## 14. Leads de Prospecção (R31.1) — onboarding comercial
+## 15. Leads de Prospecção (R31.1) — onboarding comercial
 
 Cadastro público em 3 etapas (Empresa → Endereço → Contato) **sem CPF e sem senha**: não cria conta, apenas registra um lead comercial (`tb_lead_empresa`) que a equipe retorna para agendar a conversa/contratação.
 
@@ -464,6 +528,20 @@ Regras:
 - `cnpj` deve conter **14 dígitos** (após remover máscara) → caso contrário `400` (`CNPJ inválido: deve conter 14 dígitos.`).
 - `razaoSocial`, `contatoNome` e `contatoEmail` obrigatórios.
 - `endereco*`, telefones e `observacao` opcionais.
+
+---
+
+## 16. Privacidade & LGPD `/api/v1/privacidade`
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/privacidade/politica` | 👤 | Política/Termo vigente: `{ versao, dataPublicacao, texto, hashTermo }` (`hashTermo` = SHA-256 do texto exato) |
+| `GET` | `/privacidade/consentimento/status` | 👤 | `{ versaoAtual, versaoAceita, dataConsentimento, aceitePendente }` — usado pelo `ConsentimentoGate` do app |
+| `GET` | `/privacidade/meus-dados` | 👤 | Exportação LGPD (art. 18): dados do usuário, colaborador e histórico de consentimentos |
+| `POST` | `/privacidade/consentimento` | 👤 | Registra o aceite do **Termo de Ciência**: corpo `{ versaoPolitica, aceito }` (`aceito` deve ser `true`; versão deve ser a vigente) → `201`. Captura IP (`X-Forwarded-For`/remote), `User-Agent` e grava `tenant_id` + `hashTermo` no registro e na auditoria (`CONSENTIMENTO_PRIVACIDADE`). **Idempotente:** reenvio do mesmo usuário/versão não duplica. No 1º aceite de `ADMIN_EMPRESA`, associa todos os módulos contratados ao usuário. |
+| `DELETE` | `/privacidade/meus-dados` | 👤 | Anonimização LGPD (art. 18, VI) → `204` + auditoria |
+
+> **Escopo do gate:** apenas usuários do painel (`cpc_usuario`). O modal do app (`ConsentimentoGate`) só fecha pelo aceite ou por "Sair" (logout); falha de rede em `GET .../status` **não** bloqueia o acesso (fail-open silencioso). Base legal da marcação de ponto é obrigação legal (CLT / Portaria MTP 671/2021) — o aceite é ciência, não consentimento revogável.
 
 ---
 

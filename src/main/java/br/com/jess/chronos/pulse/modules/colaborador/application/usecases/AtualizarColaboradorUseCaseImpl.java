@@ -5,16 +5,23 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepo
 import br.com.jess.chronos.pulse.modules.colaborador.domain.model.Colaborador;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.AtualizarColaboradorUseCase;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.ColaboradorRepositoryPort;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class AtualizarColaboradorUseCaseImpl implements AtualizarColaboradorUseCase {
 
     private final ColaboradorRepositoryPort colaboradorRepository;
     private final CpcUsuarioRepositoryPort usuarioRepository;
+    private final ModulosPort modulosPort;
 
     public AtualizarColaboradorUseCaseImpl(ColaboradorRepositoryPort colaboradorRepository,
-                                           CpcUsuarioRepositoryPort usuarioRepository) {
+                                           CpcUsuarioRepositoryPort usuarioRepository,
+                                           ModulosPort modulosPort) {
         this.colaboradorRepository = colaboradorRepository;
         this.usuarioRepository = usuarioRepository;
+        this.modulosPort = modulosPort;
     }
 
     @Override
@@ -34,7 +41,35 @@ public class AtualizarColaboradorUseCaseImpl implements AtualizarColaboradorUseC
                 usuario.getSenhaHash(), usuario.getRole(), usuario.getTenantId(),
                 comando.acessoEstoque(), comando.acessoPatrimonio(),
                 comando.acessoFrota(), comando.acessoProtocolo(), usuario.getFoto());
+        // Preserva dados pessoais já cadastrados; celular só muda se informado.
+        usuarioAtualizado.atualizarDadosPessoais(
+                usuario.getApelido(),
+                comando.celular() != null ? comando.celular() : usuario.getCelular(),
+                usuario.getEmailPessoal());
         usuarioRepository.atualizar(usuarioAtualizado);
+
+        List<String> modulosAtuais = modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId());
+        List<String> atualizados = new ArrayList<>();
+        for (String codigo : modulosAtuais) {
+            boolean toggleavel = codigo.equals("ESTOQUE") || codigo.equals("PATRIMONIO")
+                    || codigo.equals("FROTA") || codigo.equals("PROTOCOLO");
+            if (!toggleavel) {
+                atualizados.add(codigo);
+            }
+        }
+        if (comando.acessoEstoque()) {
+            atualizados.add("ESTOQUE");
+        }
+        if (comando.acessoPatrimonio()) {
+            atualizados.add("PATRIMONIO");
+        }
+        if (comando.acessoFrota()) {
+            atualizados.add("FROTA");
+        }
+        if (comando.acessoProtocolo()) {
+            atualizados.add("PROTOCOLO");
+        }
+        modulosPort.definirModulosDoUsuario(usuario.getId(), usuario.getTenantId(), atualizados);
 
         Colaborador colaboradorAtualizado = new Colaborador(
                 colaborador.getId(), colaborador.getCpcUsuarioId(), colaborador.getTenantId(),

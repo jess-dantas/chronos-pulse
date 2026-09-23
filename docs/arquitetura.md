@@ -60,4 +60,4 @@ A segregação é **lógica (row-level)** por `tenant_id`: cada entidade princip
 
 ## Migrations
 
-O esquema é versionado com **Flyway** em `src/main/resources/db/migration/` (`V1` a `V11`). A migração `V11__modulos_plataforma_patrimonio_frota_protocolo.sql` introduz o catálogo de módulos (`modulo_plataforma`), a ativação por empresa (`empresa_modulo`) e as tabelas dos três novos módulos, além dos seeds de demonstração.
+O esquema é versionado com **Flyway** em `src/main/resources/db/migration/` com **migration única**: `V1__baseline_chronos_pulse.sql` (baseline consolidado — schema completo, catálogo `modulo_plataforma`, ativação `empresa_modulo`, associação por usuário `usuario_modulo`, seeds de demonstração e hash do Administrator). Novas alterações de schema entram como `V2__...`, `V3__...`, etc.

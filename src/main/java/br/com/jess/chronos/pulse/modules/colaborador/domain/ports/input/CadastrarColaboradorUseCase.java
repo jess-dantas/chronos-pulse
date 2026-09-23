@@ -11,7 +11,8 @@ public interface CadastrarColaboradorUseCase {
             LocalDate dataNascimento, LocalDate dataAdmissao, LocalDate dataDesligamento,
             UUID tenantId, UUID configuracaoJornadaId,
             boolean acessoEstoque, boolean acessoPatrimonio,
-            boolean acessoFrota, boolean acessoProtocolo
+            boolean acessoFrota, boolean acessoProtocolo,
+            String celular
     ) {
         public Comando(String cpf, String nome, String emailCorporativo, String senha,
                        String matricula, String cargo, String departamento,
@@ -19,7 +20,7 @@ public interface CadastrarColaboradorUseCase {
                        UUID tenantId, UUID configuracaoJornadaId) {
             this(cpf, nome, emailCorporativo, senha, matricula, cargo, departamento,
                     dataNascimento, dataAdmissao, null, tenantId, configuracaoJornadaId,
-                    false, false, false, false);
+                    false, false, false, false, null);
         }
     }
     Colaborador executar(Comando comando);

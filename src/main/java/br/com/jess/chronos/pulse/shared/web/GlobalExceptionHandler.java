@@ -72,6 +72,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(new ApiError(400, ex.getMessage(), null));
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiError> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiError(403, ex.getMessage(), null));
+    }
+
     @ExceptionHandler(PortalIndisponivelException.class)
     public ResponseEntity<ApiError> handlePortalIndisponivel(PortalIndisponivelException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)

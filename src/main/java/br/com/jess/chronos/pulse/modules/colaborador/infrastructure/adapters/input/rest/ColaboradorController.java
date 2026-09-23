@@ -10,6 +10,7 @@ import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ListarCo
 import br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest.dto.AtualizarColaboradorRequestDTO;
 import br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest.dto.CadastrarColaboradorRequestDTO;
 import br.com.jess.chronos.pulse.modules.colaborador.infrastructure.adapters.input.rest.dto.ColaboradorResponseDTO;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/colaboradores")
+@RequiresModulo("RECURSOS_HUMANOS")
 public class ColaboradorController {
 
     private final CadastrarColaboradorUseCase cadastrarColaboradorUseCase;
@@ -67,7 +69,8 @@ public class ColaboradorController {
                 request.matricula(), request.cargo(), request.departamento(),
                 request.dataNascimento(), request.dataAdmissao(), request.dataDesligamento(),
                 tenantId, request.configuracaoJornadaId(),
-                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo));
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo,
+                request.celular()));
 
         auditoriaService.registrar("CADASTRO", "COLABORADOR", colaborador.getId(),
                 "Cadastro de colaborador " + request.cpf(),
@@ -78,7 +81,8 @@ public class ColaboradorController {
         return ResponseEntity.ok(new ColaboradorResponseDTO(
                 colaborador.getId(), colaborador.getCpcUsuarioId(), colaborador.getTenantId(),
                 colaborador.getMatricula(), colaborador.getCargo(), colaborador.getDepartamento(),
-                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo));
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo,
+                request.celular()));
     }
 
     @GetMapping
@@ -113,7 +117,8 @@ public class ColaboradorController {
                 Boolean.TRUE.equals(request.acessoEstoque()),
                 Boolean.TRUE.equals(request.acessoPatrimonio()),
                 Boolean.TRUE.equals(request.acessoFrota()),
-                Boolean.TRUE.equals(request.acessoProtocolo())));
+                Boolean.TRUE.equals(request.acessoProtocolo()),
+                request.celular()));
 
         auditoriaService.registrar("ATUALIZACAO", "COLABORADOR", id,
                 "Atualização de colaborador",

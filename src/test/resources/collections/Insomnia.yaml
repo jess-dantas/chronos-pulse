@@ -15,21 +15,21 @@ collection:
       sortKey: -1788352684590
       description: "Endpoints de autenticação JWT da plataforma."
     children:
-      - url: "{{ _.base_url }}/api/v1/auth/login"
+      - url: "{{ _.base_url }}/admin/auth/login"
         name: Login - Admin Plataforma
         meta:
           id: req_auth_login_admin_plataforma
           created: 1725278400000
           modified: 1725278400000
           isPrivate: false
-          description: "Autenticação como Admin da Plataforma para gerenciar empresas e sistema."
+          description: "Autenticação do Administrator (tabela admin_plataforma, fora de /api/v1). Pode exigir código 2FA (requiresTwoFactor + tempToken)."
           sortKey: -1725278400000
         method: POST
         body:
           mimeType: application/json
           text: |-
             {
-              "cpf": "{{ _.cpf_admin_plataforma }}",
+              "username": "{{ _.username_admin_plataforma }}",
               "senha": "{{ _.senha_admin }}"
             }
         headers:
@@ -635,7 +635,7 @@ environments:
     isPrivate: false
   data:
     base_url: http://localhost:8080
-    cpf_admin_plataforma: "00000000000"
+    username_admin_plataforma: "Administrator"
     cpf_admin_empresa: "11111111111"
     cpf_gestor_rh: "22222222222"
     cpf_colaborador: "12345678901"

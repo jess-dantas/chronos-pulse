@@ -5,6 +5,7 @@ import br.com.jess.chronos.pulse.modules.notificacao.service.EmailComprovantePon
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.RegistroPonto;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RegistrarPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.ResultadoSincronizacaoDTO;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.SincronizacaoLoteDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/pontos/sincronizar")
+@RequiresModulo("PONTO")
 public class SincronizacaoPontoController {
 
     private final RegistrarPontoUseCase registrarPontoUseCase;

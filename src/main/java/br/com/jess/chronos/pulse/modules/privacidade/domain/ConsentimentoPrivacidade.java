@@ -28,6 +28,9 @@ public class ConsentimentoPrivacidade {
     @Column(name = "cpc_id", nullable = false)
     private UUID cpcId;
 
+    @Column(name = "tenant_id")
+    private UUID tenantId;
+
     @Column(name = "versao_politica", nullable = false, length = 50)
     private String versaoPolitica;
 
@@ -39,4 +42,10 @@ public class ConsentimentoPrivacidade {
 
     @Column(name = "ip_origem", length = 64)
     private String ipOrigem;
+
+    @Column(name = "user_agent", length = 512)
+    private String userAgent;
+
+    @Column(name = "hash_termo", length = 64)
+    private String hashTermo;
 }

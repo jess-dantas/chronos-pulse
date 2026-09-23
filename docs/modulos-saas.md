@@ -27,23 +27,35 @@ O Chronos Pulse é um SaaS com **módulos contratáveis por empresa (CNPJ/tenant
 
 Única por par `(tenant_id, modulo_id)`.
 
+### `usuario_modulo` — Associação por usuário
+
+| Coluna | Descrição |
+|---|---|
+| `id` | UUID |
+| `usuario_id` | FK → `cpc_usuario(id)` |
+| `tenant_id` | UUID (nullable; sempre preenchido pelo adapter) |
+| `codigo` | Código do módulo (`PONTO`, `ESTOQUE`, ...) |
+| `criado_em` | Data/hora da associação |
+
+Restringe o menu/acesso **por usuário** (enforço duplo: empresa × usuário). `ADMIN_EMPRESA` recebe **todos os módulos contratados** automaticamente no primeiro consentimento LGPD (`PrivacidadeService.registrarConsentimento`). Gerência via `GET/PUT /api/v1/usuarios/{usuarioId}/modulos` (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`); o `PUT` sincroniza também os flags legados `acessoEstoque/Patrimonio/Frota/Protocolo`.
+
 ---
 
-## Catálogo Atual (seeds `V11`, `V21`, `V24` e `V26`)
+## Catálogo Atual (seed `V1__baseline_chronos_pulse.sql`)
 
 | Código | Nome | Tipo | Seed |
 |---|---|---|---|
-| `PONTO` | Ponto Eletrônico | Core | `V11` |
-| `RECURSOS_HUMANOS` | Recursos Humanos | Core | `V11` |
-| `ESTOQUE` | Estoque & Almoxarifado | Core | `V11` |
-| `PATRIMONIO` | Patrimônio Público | Comercializável | `V11` |
-| `FROTA` | Gestão de Frota | Comercializável | `V11` |
-| `PROTOCOLO` | Protocolo & Tramitação | Comercializável | `V11` |
-| `COMPRAS` | Compras & Fornecedores (pedidos, NFe, banco de preços) | Comercializável | `V21` |
-| `LICITACOES` | Licitações & Contratações (Lei 14.133/2021) | Comercializável | `V24` |
-| `TRANSPARENCIA` | Portal da Transparência & BI (LC 131/2009) | Comercializável | `V26` |
+| `PONTO` | Ponto Eletrônico | Core | `V1` |
+| `RECURSOS_HUMANOS` | Recursos Humanos | Core | `V1` |
+| `ESTOQUE` | Estoque & Almoxarifado | Core | `V1` |
+| `PATRIMONIO` | Patrimônio Público | Comercializável | `V1` |
+| `FROTA` | Gestão de Frota | Comercializável | `V1` |
+| `PROTOCOLO` | Protocolo & Tramitação | Comercializável | `V1` |
+| `COMPRAS` | Compras & Fornecedores (pedidos, NFe, banco de preços) | Comercializável | `V1` |
+| `LICITACOES` | Licitações & Contratações (Lei 14.133/2021) | Comercializável | `V1` |
+| `TRANSPARENCIA` | Portal da Transparência & BI (LC 131/2009) | Comercializável | `V1` |
 
-**Regras de ativação (V11 e cadastro de empresa):**
+**Regras de ativação (baseline `V1` e cadastro de empresa):**
 
 1. Toda empresa **já existente** recebe automaticamente o trio core (`PONTO`, `RECURSOS_HUMANOS`, `ESTOQUE`).
 2. O tenant de demonstração `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` recebe **os 9 módulos** (core + comercializáveis).
@@ -113,7 +125,7 @@ O app frontend (Flutter) armazena essa lista em sessão e usa para **esconder** 
 
 ## Como Criar um Novo Módulo
 
-1. **Banco**: adicionar a migração `V33_...` (próximo número livre após `V32`):
+1. **Banco**: criar a migration `V2__...` (próximo número livre após o baseline `V1__baseline_chronos_pulse.sql`):
    - linha no `INSERT` de `modulo_plataforma` (novo `codigo`),
    - `CREATE TABLE` da entidade com `tenant_id`,
    - (opcional) seeds de demonstração e ativação para o tenant de demonstração (`empresa_modulo`).

@@ -2,6 +2,7 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.re
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.ponto.domain.model.ConfiguracaoFiscal;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.ConfiguracaoFiscalRepositoryPort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +21,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/fiscal/configuracao")
+@RequiresModulo("PONTO")
 public class ConfiguracaoFiscalController {
 
     private final ConfiguracaoFiscalRepositoryPort repository;

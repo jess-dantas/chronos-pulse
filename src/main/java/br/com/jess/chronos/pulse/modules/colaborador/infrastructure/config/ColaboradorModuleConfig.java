@@ -10,6 +10,7 @@ import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.Cadastra
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ExcluirColaboradorUseCase;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ListarColaboradoresUseCase;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.ColaboradorRepositoryPort;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,8 +24,9 @@ public class ColaboradorModuleConfig {
     public CadastrarColaboradorUseCase cadastrarColaboradorUseCase(
             ColaboradorRepositoryPort colaboradorRepository,
             CpcUsuarioRepositoryPort usuarioRepository,
-            PasswordEncoder passwordEncoder) {
-        return new CadastrarColaboradorUseCaseImpl(colaboradorRepository, usuarioRepository, passwordEncoder);
+            PasswordEncoder passwordEncoder,
+            ModulosPort modulosPort) {
+        return new CadastrarColaboradorUseCaseImpl(colaboradorRepository, usuarioRepository, passwordEncoder, modulosPort);
     }
 
     @Bean
@@ -38,8 +40,9 @@ public class ColaboradorModuleConfig {
     @Transactional
     public AtualizarColaboradorUseCase atualizarColaboradorUseCase(
             ColaboradorRepositoryPort colaboradorRepository,
-            CpcUsuarioRepositoryPort usuarioRepository) {
-        return new AtualizarColaboradorUseCaseImpl(colaboradorRepository, usuarioRepository);
+            CpcUsuarioRepositoryPort usuarioRepository,
+            ModulosPort modulosPort) {
+        return new AtualizarColaboradorUseCaseImpl(colaboradorRepository, usuarioRepository, modulosPort);
     }
 
     @Bean

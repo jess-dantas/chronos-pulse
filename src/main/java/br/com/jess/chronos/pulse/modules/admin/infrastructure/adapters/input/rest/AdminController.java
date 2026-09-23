@@ -11,8 +11,6 @@ import br.com.jess.chronos.pulse.modules.auditoria.domain.entity.Auditoria;
 import br.com.jess.chronos.pulse.modules.auditoria.repository.AuditoriaRepository;
 import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
-import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.input.ListarColaboradoresUseCase;
-import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,8 +33,6 @@ public class AdminController {
     private final AdicionarEventoContratoUseCase adicionarEventoContratoUseCase;
     private final ListarEventosContratoUseCase listarEventosContratoUseCase;
     private final DashboardMetricsUseCase dashboardMetricsUseCase;
-    private final ListarColaboradoresUseCase listarColaboradoresUseCase;
-    private final EmpresaRepositoryPort empresaRepositoryPort;
     private final AuditoriaRepository auditoriaRepository;
     private final AuditoriaService auditoriaService;
 
@@ -47,8 +43,6 @@ public class AdminController {
             AdicionarEventoContratoUseCase adicionarEventoContratoUseCase,
             ListarEventosContratoUseCase listarEventosContratoUseCase,
             DashboardMetricsUseCase dashboardMetricsUseCase,
-            ListarColaboradoresUseCase listarColaboradoresUseCase,
-            EmpresaRepositoryPort empresaRepositoryPort,
             AuditoriaRepository auditoriaRepository,
             AuditoriaService auditoriaService) {
         this.cadastrarContratoUseCase = cadastrarContratoUseCase;
@@ -57,8 +51,6 @@ public class AdminController {
         this.adicionarEventoContratoUseCase = adicionarEventoContratoUseCase;
         this.listarEventosContratoUseCase = listarEventosContratoUseCase;
         this.dashboardMetricsUseCase = dashboardMetricsUseCase;
-        this.listarColaboradoresUseCase = listarColaboradoresUseCase;
-        this.empresaRepositoryPort = empresaRepositoryPort;
         this.auditoriaRepository = auditoriaRepository;
         this.auditoriaService = auditoriaService;
     }
@@ -66,20 +58,6 @@ public class AdminController {
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard() {
         return ResponseEntity.ok(dashboardMetricsUseCase.executar());
-    }
-
-    @GetMapping("/colaboradores")
-    public ResponseEntity<List<AdminColaboradorResponseDTO>> listarColaboradores() {
-        var itens = listarColaboradoresUseCase.executar(null);
-        List<AdminColaboradorResponseDTO> resultado = itens.stream().map(item -> {
-            String tenantNome = item.tenantId() != null
-                    ? empresaRepositoryPort.buscarPorId(item.tenantId())
-                            .map(e -> e.getNome())
-                            .orElse("—")
-                    : "—";
-            return AdminColaboradorResponseDTO.fromItem(item, tenantNome);
-        }).toList();
-        return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/contratos")
