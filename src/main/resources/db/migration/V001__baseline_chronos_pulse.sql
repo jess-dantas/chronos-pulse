@@ -1,10 +1,18 @@
 -- ============================================================
--- V1: Chronos Pulse — baseline única (schema + seeds)
--- Consolida todo o histórico de migrations (V1–V46) e o seed
--- dev em um único arquivo, válido apenas pré-produção.
--- Depois que o software entrar em produção, este arquivo passa
--- a ser o baseline congelado e novas mudanças terão migrations
--- próprias.
+-- V001: Chronos Pulse — baseline única (schema + seeds)
+-- Consolida TODO o histórico de migrations (cadeia antiga V1–V46
+-- + auditoria do Termo de Ciência LGPD) em um único arquivo.
+--
+-- REGRA PRÉ-PRODUÇÃO: enquanto o software não estiver em produção
+-- com validade jurídica, este é o ÚNICO arquivo de migration —
+-- toda mudança de schema é uma refactor deste V001 (nunca crie
+-- V002+). O histórico é recriado via workflow "Deploy Production
+-- Backend" (workflow_dispatch com a checkbox reset_database).
+--
+-- Quando a produção real for ativada, este arquivo passa a ser o
+-- baseline CONGELADO (imutável — regra de ouro: nunca editar
+-- migration já aplicada) e novas mudanças terão migrations próprias
+-- (V002+).
 --
 -- Conteúdo novo em relação à cadeia antiga:
 --   * admin_plataforma: colunas de 2FA (TOTP Google Authenticator)
@@ -16,6 +24,9 @@
 --   * colaboradores renomeados para "Colaborador 1" / "Colaborador 2"
 --   * seeds de demo no tenant "Demonstração" (CNPJ 01001001000101, slug
 --     demonstracao) e tenant "LJ Code" (ex-Red Cape, slug lj-code)
+--   * auditoria reforçada do Termo de Ciência (LGPD + validade
+--     trabalhista): tenant_id, user_agent e hash_termo (SHA-256 do
+--     texto exato do termo) em tb_consentimento_privacidade
 -- ============================================================
 
 -- ============================================================
@@ -801,10 +812,13 @@ CREATE INDEX idx_auditoria_tenant_data ON tb_auditoria(tenant_id, data_hora);
 CREATE TABLE tb_consentimento_privacidade (
     id                 UUID PRIMARY KEY,
     cpc_id             UUID NOT NULL,
+    tenant_id          UUID,
     versao_politica    VARCHAR(50)  NOT NULL,
     data_consentimento TIMESTAMP WITH TIME ZONE NOT NULL,
     aceito             BOOLEAN NOT NULL DEFAULT TRUE,
     ip_origem          VARCHAR(64),
+    user_agent         VARCHAR(512),
+    hash_termo         VARCHAR(64),
     UNIQUE (cpc_id, versao_politica)
 );
 

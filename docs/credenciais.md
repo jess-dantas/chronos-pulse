@@ -1,7 +1,7 @@
 # Credenciais (seeds — demonstração)
 
 > Esta página concentra as credenciais de demonstração aplicadas pela migration
-> única `V1__baseline_chronos_pulse.sql` (ambiente dev/demo). Em produção os
+> única `V001__baseline_chronos_pulse.sql` (ambiente dev/demo). Em produção os
 > mesmos `INSERT ... ON CONFLICT` criam a estrutura e os usuários demo
 > **ativos** apenas se o banco for criado do zero com esta migration — revise
 > antes de subir um banco real.
