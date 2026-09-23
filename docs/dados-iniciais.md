@@ -2,7 +2,7 @@
 
 ## Seeds
 
-Aplicados integralmente pela **migration única** `V1__baseline_chronos_pulse.sql`
+Aplicados integralmente pela **migration única** `V001__baseline_chronos_pulse.sql`
 (as credenciais são documentadas em [`credenciais.md`](credenciais.md)).
 
 ### Administrator (Admin Plataforma)
@@ -38,17 +38,26 @@ Aplicados integralmente pela **migration única** `V1__baseline_chronos_pulse.sq
 
 ## Migrations
 
-Local: `src/main/resources/db/migration/` — baseline `V1` + incrementos (`V2+`):
+Local: `src/main/resources/db/migration/` — **arquivo único** `V001` (pré-produção; sem incrementos):
 
 | Migration / Seed | Conteúdo |
 |---|---|
-| `V1__baseline_chronos_pulse.sql` | Baseline completo consolidado: schema de todas as tabelas (auth, tenant, colaborador, ponto, fiscal, estoque, compras, licitações, patrimônio, frota, protocolo, transparência, privacidade/LGPD, auditoria, telemetria, módulos, **admin_recovery_code**, **titularidade_transferencia/codigo**), catálogo `modulo_plataforma` (9 códigos + `PRIVACIDADE`), `empresa_modulo`, `usuario_modulo` (associação usuário↔módulo com backfill), seeds de tenants/usuários/módulos/dados demo — **sem** linha de `admin_plataforma` (provisionamento via first-run wizard) |
-| `V2__consentimento_auditoria_lgpd.sql` | Auditoria do Termo de Ciência (LGPD): `ALTER TABLE consentimento_privacidade` + `tenant_id`, `user_agent`, `hash_termo` (SHA-256 do texto exato do termo) |
+| `V001__baseline_chronos_pulse.sql` | Baseline completo consolidado: schema de todas as tabelas (auth, tenant, colaborador, ponto, fiscal, estoque, compras, licitações, patrimônio, frota, protocolo, transparência, privacidade/LGPD **com auditoria reforçada `tenant_id`/`user_agent`/`hash_termo`**, auditoria, telemetria, módulos, **admin_recovery_code**, **titularidade_transferencia/codigo**), catálogo `modulo_plataforma` (9 códigos + `PRIVACIDADE`), `empresa_modulo`, `usuario_modulo` (associação usuário↔módulo com backfill), seeds de tenants/usuários/módulos/dados demo — **sem** linha de `admin_plataforma` (provisionamento via first-run wizard) |
 | `db/seed/R__seed_admin_dev.sql` | Seed **apenas dev** (profile dev, `classpath:db/seed`): `Administrator` / `admin123`, 2FA desabilitado |
 
-> Histórico `V1`–`V34` foi consolidado neste baseline (squash). Bancos criados
-> com o schema antigo devem ser recriados (`docker compose down -v && docker
-> compose up --build`).
+> **Regra pré-produção (migration única):** enquanto o software não estiver em
+> produção com validade jurídica, `V001__baseline_chronos_pulse.sql` é o **único**
+> arquivo de migration — toda mudança de schema refactora este arquivo (nunca
+> crie `V002+`). O banco demo é recriado pelo workflow *Deploy Production
+> Backend* (`workflow_dispatch` + checkbox `reset_database` → `flyway:clean` e
+> reaplica o baseline); localmente, `docker compose down -v && docker compose
+> up --build`. **Na virada de chave:** `V001` congela (regra de ouro — nunca
+> editar migration já aplicada) e o versionamento passa a ser incremental
+> (`V002+`).
+>
+> Cadeia histórica anterior (V1–V46 sequenciais) foi consolidada neste baseline
+> via squash; bancos criados com o schema antigo devem ser recriados (checkbox
+> `reset_database` no Render / `down -v` no local).
 
 ## Testes Automatizados
 

@@ -41,21 +41,21 @@ Restringe o menu/acesso **por usuário** (enforço duplo: empresa × usuário). 
 
 ---
 
-## Catálogo Atual (seed `V1__baseline_chronos_pulse.sql`)
+## Catálogo Atual (seed `V001__baseline_chronos_pulse.sql`)
 
 | Código | Nome | Tipo | Seed |
 |---|---|---|---|
-| `PONTO` | Ponto Eletrônico | Core | `V1` |
-| `RECURSOS_HUMANOS` | Recursos Humanos | Core | `V1` |
-| `ESTOQUE` | Estoque & Almoxarifado | Core | `V1` |
-| `PATRIMONIO` | Patrimônio Público | Comercializável | `V1` |
-| `FROTA` | Gestão de Frota | Comercializável | `V1` |
-| `PROTOCOLO` | Protocolo & Tramitação | Comercializável | `V1` |
-| `COMPRAS` | Compras & Fornecedores (pedidos, NFe, banco de preços) | Comercializável | `V1` |
-| `LICITACOES` | Licitações & Contratações (Lei 14.133/2021) | Comercializável | `V1` |
-| `TRANSPARENCIA` | Portal da Transparência & BI (LC 131/2009) | Comercializável | `V1` |
+| `PONTO` | Ponto Eletrônico | Core | `V001` |
+| `RECURSOS_HUMANOS` | Recursos Humanos | Core | `V001` |
+| `ESTOQUE` | Estoque & Almoxarifado | Core | `V001` |
+| `PATRIMONIO` | Patrimônio Público | Comercializável | `V001` |
+| `FROTA` | Gestão de Frota | Comercializável | `V001` |
+| `PROTOCOLO` | Protocolo & Tramitação | Comercializável | `V001` |
+| `COMPRAS` | Compras & Fornecedores (pedidos, NFe, banco de preços) | Comercializável | `V001` |
+| `LICITACOES` | Licitações & Contratações (Lei 14.133/2021) | Comercializável | `V001` |
+| `TRANSPARENCIA` | Portal da Transparência & BI (LC 131/2009) | Comercializável | `V001` |
 
-**Regras de ativação (baseline `V1` e cadastro de empresa):**
+**Regras de ativação (baseline `V001` e cadastro de empresa):**
 
 1. Toda empresa **já existente** recebe automaticamente o trio core (`PONTO`, `RECURSOS_HUMANOS`, `ESTOQUE`).
 2. O tenant de demonstração `a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11` recebe **os 9 módulos** (core + comercializáveis).
@@ -125,7 +125,7 @@ O app frontend (Flutter) armazena essa lista em sessão e usa para **esconder** 
 
 ## Como Criar um Novo Módulo
 
-1. **Banco**: criar a migration `V2__...` (próximo número livre após o baseline `V1__baseline_chronos_pulse.sql`):
+1. **Banco** (pré-produção): refactor do baseline único `V001__baseline_chronos_pulse.sql` — nunca crie `V002+` enquanto a migration única estiver em vigor (o banco demo é recriado pela checkbox `reset_database` do workflow; na produção real congelada, use o próximo número livre `V002+`):
    - linha no `INSERT` de `modulo_plataforma` (novo `codigo`),
    - `CREATE TABLE` da entidade com `tenant_id`,
    - (opcional) seeds de demonstração e ativação para o tenant de demonstração (`empresa_modulo`).

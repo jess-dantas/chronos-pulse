@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      reset_database:
+        description: 'Limpa o banco demo do Render (flyway:clean) e reaplica o baseline'
+        type: boolean
+        default: false
 
 jobs:
   deploy-production:
@@ -25,6 +30,15 @@ jobs:
           cache: maven
 
       - run: chmod +x mvnw
+
+      - name: Reset Flyway history (demo — apenas via dispatch com checkbox)
+        if: ${{ inputs.reset_database == true }}
+        run: |
+          ./mvnw -B flyway:clean \
+            -Dflyway.cleanDisabled=false \
+            -Dflyway.url="${{ secrets.DB_URL }}" \
+            -Dflyway.user="${{ secrets.DB_USER }}" \
+            -Dflyway.password="${{ secrets.DB_PASSWORD }}"
 
       - name: Run Flyway migrations (production)
         run: |

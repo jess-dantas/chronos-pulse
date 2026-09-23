@@ -60,4 +60,6 @@ A segregação é **lógica (row-level)** por `tenant_id`: cada entidade princip
 
 ## Migrations
 
-O esquema é versionado com **Flyway** em `src/main/resources/db/migration/` com **migration única**: `V1__baseline_chronos_pulse.sql` (baseline consolidado — schema completo, catálogo `modulo_plataforma`, ativação `empresa_modulo`, associação por usuário `usuario_modulo`, seeds de demonstração e hash do Administrator). Novas alterações de schema entram como `V2__...`, `V3__...`, etc.
+O esquema é versionado com **Flyway** em `src/main/resources/db/migration/` com **migration única**: `V001__baseline_chronos_pulse.sql` (baseline consolidado — schema completo, catálogo `modulo_plataforma`, ativação `empresa_modulo`, associação por usuário `usuario_modulo`, auditoria LGPD do Termo de Ciência, seeds de demonstração e hash do Administrator).
+
+**Regra pré-produção:** enquanto o software não estiver em produção com validade jurídica, `V001` é o **único** arquivo de migration — toda mudança de schema refactora este arquivo (nunca crie `V002+`). O banco demo é recriado pelo workflow *Deploy Production Backend* (`workflow_dispatch` com a checkbox `reset_database` → `flyway:clean` + reaplica o baseline). Na virada de chave para produção real, `V001` é congelado (regra de ouro: **nunca editar migration já aplicada**) e novas mudanças passam a ser `V002+` incrementais.

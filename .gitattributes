@@ -3,6 +3,7 @@
 *.service text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+*.sql text eol=lf
 .env.example text eol=lf
 /mvnw text eol=lf
 

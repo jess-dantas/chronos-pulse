@@ -1,7 +1,7 @@
 # Checklist de Smoke (Ajustes + Modelagem)
 
 Validação manual ponta a ponta após `docker compose down -v && docker compose up --build -d`
-(banco novo — obrigatório: `V1` baseline + `V2__consentimento_auditoria_lgpd.sql`) e `flutter run -d web-server --web-port 3000 --dart-define=API_URL=http://localhost:3030/api/v1`.
+(banco novo — obrigatório: `V001__baseline_chronos_pulse.sql`, arquivo único de migration) e `flutter run -d web-server --web-port 3000 --dart-define=API_URL=http://localhost:3030/api/v1`.
 
 ## 1. Login Administrator (CORS + 1º acesso)
 
