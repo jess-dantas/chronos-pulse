@@ -5,6 +5,7 @@ import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.colaborador.domain.ports.output.ColaboradorRepositoryPort;
+import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.privacidade.repository.ConsentimentoPrivacidadeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class PrivacidadeServiceTest {
     @Mock
     private AuditoriaService auditoriaService;
 
+    @Mock
+    private ModulosPort modulosPort;
+
     @InjectMocks
     private PrivacidadeService privacidadeService;
 
@@ -55,7 +59,41 @@ class PrivacidadeServiceTest {
     void deveRetornarPoliticaAtual() {
         assertThat(privacidadeService.politicaAtual())
                 .containsEntry("versao", PrivacidadeService.VERSAO_POLITICA_ATUAL)
-                .containsKey("texto");
+                .containsKey("texto")
+                .containsKey("hashTermo");
+    }
+
+    @Test
+    void statusDeveIndicarPendenteQuandoNuncaAceitou() {
+        when(consentimentoRepository.findTopByCpcIdOrderByDataConsentimentoDesc(
+                usuario.getCpcId())).thenReturn(Optional.empty());
+
+        var status = privacidadeService.statusConsentimento(usuario);
+
+        assertThat(status)
+                .containsEntry("versaoAtual", PrivacidadeService.VERSAO_POLITICA_ATUAL)
+                .containsEntry("versaoAceita", null)
+                .containsEntry("aceitePendente", true);
+    }
+
+    @Test
+    void statusDeveIndicarAceitoQuandoVersaoAtualJaFoiAceita() {
+        var registro = br.com.jess.chronos.pulse.modules.privacidade.domain.ConsentimentoPrivacidade
+                .builder()
+                .id(UUID.randomUUID())
+                .cpcId(usuario.getCpcId())
+                .versaoPolitica(PrivacidadeService.VERSAO_POLITICA_ATUAL)
+                .dataConsentimento(java.time.OffsetDateTime.now())
+                .aceito(true)
+                .build();
+        when(consentimentoRepository.findTopByCpcIdOrderByDataConsentimentoDesc(
+                usuario.getCpcId())).thenReturn(Optional.of(registro));
+
+        var status = privacidadeService.statusConsentimento(usuario);
+
+        assertThat(status)
+                .containsEntry("versaoAceita", PrivacidadeService.VERSAO_POLITICA_ATUAL)
+                .containsEntry("aceitePendente", false);
     }
 
     @Test
@@ -73,7 +111,8 @@ class PrivacidadeServiceTest {
 
     @Test
     void deveRegistrarConsentimento() {
-        privacidadeService.registrarConsentimento(usuario, "1.0", true, "127.0.0.1");
+        privacidadeService.registrarConsentimento(
+                usuario, "1.0", true, "127.0.0.1", "Mozilla/5.0 (Flutter Test)");
 
         verify(consentimentoRepository).save(any());
         verify(auditoriaService).registrar(
@@ -81,11 +120,77 @@ class PrivacidadeServiceTest {
                 org.mockito.ArgumentMatchers.eq("cpc_usuario"),
                 org.mockito.ArgumentMatchers.eq(usuario.getId()),
                 any(), any(), any(), any(), any(), any(), any(), any());
+        verify(modulosPort, never()).definirModulosDoUsuario(any(), any(), any());
+    }
+
+    @Test
+    void deveGravarAuditoriaReforcadaTenantUserAgentEHashDoTermo() {
+        var captor = org.mockito.ArgumentCaptor.forClass(
+                br.com.jess.chronos.pulse.modules.privacidade.domain.ConsentimentoPrivacidade.class);
+
+        privacidadeService.registrarConsentimento(
+                usuario, "1.0", true, "189.23.45.12", "Mozilla/5.0 (Android 14; Flutter App v1.2)");
+
+        verify(consentimentoRepository).save(captor.capture());
+        var salvo = captor.getValue();
+        assertThat(salvo.getTenantId()).isEqualTo(usuario.getTenantId());
+        assertThat(salvo.getUserAgent()).isEqualTo("Mozilla/5.0 (Android 14; Flutter App v1.2)");
+        assertThat(salvo.getIpOrigem()).isEqualTo("189.23.45.12");
+        assertThat(salvo.getHashTermo())
+                .isNotNull()
+                .hasSize(64)
+                .isEqualTo(sha256(PrivacidadeService.TEXTO_POLITICA));
+    }
+
+    @Test
+    void deveSerIdempotenteQuandoVersaoJaAceita() {
+        when(consentimentoRepository.existsByCpcIdAndVersaoPoliticaAndAceitoTrue(
+                usuario.getCpcId(), "1.0")).thenReturn(true);
+
+        privacidadeService.registrarConsentimento(
+                usuario, "1.0", true, "127.0.0.1", "Agent");
+
+        verify(consentimentoRepository, never()).save(any());
+        verify(auditoriaService, never()).registrar(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    private static String sha256(String texto) {
+        try {
+            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(texto.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            var hex = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Test
+    void deveAssociarTodosModulosContratadosParaAdminEmpresaNoConsentimento() {
+        CpcUsuario adminEmpresa = new CpcUsuario(
+                UUID.randomUUID(), UUID.randomUUID(), "99988877766", "Admin Empresa",
+                "admin@empresa.com", "hash", Role.ADMIN_EMPRESA, usuario.getTenantId());
+
+        when(modulosPort.listarCodigosAtivos(adminEmpresa.getTenantId()))
+                .thenReturn(java.util.List.of("PONTO", "ESTOQUE"));
+
+        privacidadeService.registrarConsentimento(
+                adminEmpresa, "1.0", true, "127.0.0.1", "Agent");
+
+        verify(consentimentoRepository).save(any());
+        verify(modulosPort).definirModulosDoUsuario(
+                adminEmpresa.getId(), adminEmpresa.getTenantId(),
+                java.util.List.of("PONTO", "ESTOQUE"));
     }
 
     @Test
     void deveRejeitarConsentimentoNaoAfirmativo() {
-        assertThatThrownBy(() -> privacidadeService.registrarConsentimento(usuario, "1.0", false, "127.0.0.1"))
+        assertThatThrownBy(() -> privacidadeService.registrarConsentimento(
+                usuario, "1.0", false, "127.0.0.1", "Agent"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("afirmativo");
 
@@ -94,7 +199,8 @@ class PrivacidadeServiceTest {
 
     @Test
     void deveRejeitarVersaoDePoliticaInvalida() {
-        assertThatThrownBy(() -> privacidadeService.registrarConsentimento(usuario, "9.9", true, "127.0.0.1"))
+        assertThatThrownBy(() -> privacidadeService.registrarConsentimento(
+                usuario, "9.9", true, "127.0.0.1", "Agent"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("inválida");
     }

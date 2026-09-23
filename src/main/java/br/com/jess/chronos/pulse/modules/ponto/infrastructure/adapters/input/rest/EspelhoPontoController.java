@@ -10,6 +10,7 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsultarEspel
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsultarRelatorioEspelhoPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ListarAjustesPendentesUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RejeitarAjustePontoUseCase;
+import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.SolicitarAjustePontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.AjustePontoManualDTO;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.EspelhoPontoItemDTO;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/pontos")
+@RequiresModulo("PONTO")
 public class EspelhoPontoController {
 
     private final ConsultarEspelhoPontoUseCase consultarEspelhoPontoUseCase;
@@ -169,7 +171,7 @@ public class EspelhoPontoController {
     }
 
     @GetMapping("/ajustes/pendentes")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA', 'ADMIN_PLATAFORMA')")
+    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
     public ResponseEntity<List<EspelhoPontoItemDTO>> listarAjustesPendentes(
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
@@ -181,7 +183,7 @@ public class EspelhoPontoController {
     }
 
     @PutMapping("/ajustes/{id}/aprovar")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA', 'ADMIN_PLATAFORMA')")
+    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
     public ResponseEntity<EspelhoPontoItemDTO> aprovarAjuste(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
@@ -207,7 +209,7 @@ public class EspelhoPontoController {
     }
 
     @PutMapping("/ajustes/{id}/rejeitar")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA', 'ADMIN_PLATAFORMA')")
+    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
     public ResponseEntity<EspelhoPontoItemDTO> rejeitarAjuste(
             @PathVariable UUID id,
             @RequestParam String motivo,

@@ -12,9 +12,10 @@ public record ColaboradorResponseDTO(
         boolean acessoEstoque,
         boolean acessoPatrimonio,
         boolean acessoFrota,
-        boolean acessoProtocolo
+        boolean acessoProtocolo,
+        String celular
 ) {
     public ColaboradorResponseDTO(UUID id, UUID cpcUsuarioId, UUID tenantId, String matricula, String cargo, String departamento) {
-        this(id, cpcUsuarioId, tenantId, matricula, cargo, departamento, false, false, false, false);
+        this(id, cpcUsuarioId, tenantId, matricula, cargo, departamento, false, false, false, false, null);
     }
 }

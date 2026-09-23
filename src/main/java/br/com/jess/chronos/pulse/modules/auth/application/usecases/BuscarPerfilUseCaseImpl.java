@@ -34,7 +34,9 @@ public class BuscarPerfilUseCaseImpl implements BuscarPerfilUseCase {
                 ? empresaRepository.buscarPorId(usuario.getTenantId()).map(Empresa::getSlug).orElse(null)
                 : null;
         List<String> modulos = usuario.getTenantId() != null
-                ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
+                ? (usuario.getRole() == br.com.jess.chronos.pulse.modules.auth.domain.model.Role.ADMIN_EMPRESA
+                    ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
+                    : modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId()))
                 : Collections.emptyList();
 
         return new Resultado(

@@ -37,6 +37,7 @@ public class ListarColaboradoresUseCaseImpl implements ListarColaboradoresUseCas
                         usuario.getCpf(),
                         usuario.getNome(),
                         usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
+                        usuario.getCelular(),
                         colab.getMatricula(),
                         colab.getCargo(),
                         colab.getDepartamento(),

@@ -12,6 +12,7 @@ public interface ListarColaboradoresUseCase {
             String cpf,
             String nome,
             String email,
+            String celular,
             String matricula,
             String cargo,
             String departamento,

@@ -115,6 +115,22 @@ public class CpcUsuario {
         this.emailPessoal = emailPessoal;
     }
 
+    /**
+     * Devolve uma cópia com outro papel e flags de acesso (transferência de
+     * titularidade: novo tit ADMIN_EMPRESA, antigo COLABORADOR). O role é
+     * final, então a troca é imutável — persistir o retorno via repositório.
+     */
+    public CpcUsuario comRole(Role novaRole, boolean acessoEstoque, boolean acessoPatrimonio,
+                              boolean acessoFrota, boolean acessoProtocolo) {
+        CpcUsuario copia = new CpcUsuario(id, cpcId, cpf, nome, emailCorporativo, emailPessoal,
+                apelido, celular, foto, senhaHash, novaRole, tenantId,
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo, ativo, criadoEm);
+        copia.senhaAlteradaEm = this.senhaAlteradaEm;
+        copia.tentativasLoginFalhas = this.tentativasLoginFalhas;
+        copia.bloqueioLoginAte = this.bloqueioLoginAte;
+        return copia;
+    }
+
     public void atualizarFoto(String foto) {
         this.foto = foto;
     }

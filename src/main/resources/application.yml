@@ -16,6 +16,10 @@ chronos:
     secret: ${JWT_SECRET}
     expiration-ms: 3600000        # 1 hora (access token)
     refresh-expiration-ms: 28800000  # 8 horas (limite absoluto da sessão)
+  admin:
+    # true (produção): 2FA do Administrator é obrigatório — login força o
+    # wizard de setup e /2fa/disable retorna 403. false (dev): opt-in.
+    two-factor-required: ${CHRONOS_ADMIN_2FA_REQUIRED:true}
   cors:
     allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:3030,http://localhost:4200,https://chronos-pulse-portal.vercel.app}
   telemetria:
@@ -48,3 +52,6 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+  paths-to-match: /api/v1/**
+  paths-to-exclude: /admin/**
+  show-actuator: false

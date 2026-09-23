@@ -65,6 +65,44 @@ public class JwtService {
                 .compact();
     }
 
+    // Admin tokens (sem CPF, sem tenant, sem roles de módulos)
+    public String gerarAccessTokenAdmin(String username, String adminId) {
+        return Jwts.builder()
+                .subject(username)
+                .claim("typ", "access")
+                .claim("role", "ADMIN_PLATAFORMA")
+                .claim("adminId", adminId)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String gerarRefreshTokenAdmin(String username, String adminId) {
+        return Jwts.builder()
+                .subject(username)
+                .claim("typ", "refresh")
+                .claim("adminId", adminId)
+                .id(UUID.randomUUID().toString())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    // Token temporário entre senha OK e código 2FA (5 minutos)
+    public String gerarTempTokenTwoFactor(String adminId) {
+        return Jwts.builder()
+                .subject(adminId)
+                .claim("typ", "two_factor")
+                .claim("adminId", adminId)
+                .id(UUID.randomUUID().toString())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 300_000L))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Claims extrairClaims(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
     }
@@ -85,6 +123,10 @@ public class JwtService {
     public boolean isAccessToken(Claims claims) {
         String typ = claims.get("typ", String.class);
         return typ == null || "access".equals(typ);
+    }
+
+    public boolean isTwoFactorToken(Claims claims) {
+        return "two_factor".equals(claims.get("typ", String.class));
     }
 
     public boolean isTokenValido(String token) {

@@ -13,5 +13,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequiresModulo {
 
-    String codigo();
+    String value() default "";
+
+    String codigo() default "";
 }

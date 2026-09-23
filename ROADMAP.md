@@ -15,7 +15,7 @@
 
 ## Requisitos (R-series)
 
-Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (330 no backend, 207 no app) refletem o estado atual.
+Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (363 no backend, 217 no app) refletem o estado atual.
 
 | Req | Entrega | Status |
 |---|---|---|

@@ -66,7 +66,7 @@ class AutenticarUsuarioUseCaseImplTest {
                 false, false, false, false))
                 .thenReturn("access-token");
         when(jwtService.gerarRefreshToken("12345678901")).thenReturn("refresh-token");
-        when(modulosPort.listarCodigosAtivos(tenantId)).thenReturn(java.util.List.of("PONTO"));
+        when(modulosPort.listarCodigosDoUsuario(usuario.getId(), tenantId)).thenReturn(java.util.List.of("PONTO"));
 
         Resultado resultado = useCase.executar(new Comando("12345678901", "senha123"));
 
@@ -153,7 +153,7 @@ class AutenticarUsuarioUseCaseImplTest {
         when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", usuario.getCpcId().toString(),
                 usuario.getTenantId().toString(), false, false, false, false))
                 .thenReturn("access-token");
-        when(modulosPort.listarCodigosAtivos(usuario.getTenantId())).thenReturn(java.util.List.of());
+        when(modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId())).thenReturn(java.util.List.of());
 
         useCase.executar(new Comando("12345678901", "senha123"));
 

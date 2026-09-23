@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.auth.application.usecases;
 
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
+import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuarioUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
@@ -83,7 +84,9 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
                 usuario.isAcessoFrota(), usuario.isAcessoProtocolo());
         String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
         List<String> modulos = usuario.getTenantId() != null
-                ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
+                ? (usuario.getRole() == Role.ADMIN_EMPRESA
+                    ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
+                    : modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId()))
                 : Collections.emptyList();
 
         loginMetricsRecorder.registrarSucesso(usuario.getTenantId(), usuario.getCpcId(),

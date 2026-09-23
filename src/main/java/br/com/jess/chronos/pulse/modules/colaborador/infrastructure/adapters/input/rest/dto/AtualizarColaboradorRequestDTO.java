@@ -15,5 +15,6 @@ public record AtualizarColaboradorRequestDTO(
         Boolean acessoEstoque,
         Boolean acessoPatrimonio,
         Boolean acessoFrota,
-        Boolean acessoProtocolo
+        Boolean acessoProtocolo,
+        String celular
 ) {}

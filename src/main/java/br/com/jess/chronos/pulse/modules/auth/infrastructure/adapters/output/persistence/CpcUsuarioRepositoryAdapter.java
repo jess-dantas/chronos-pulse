@@ -49,4 +49,12 @@ public class CpcUsuarioRepositoryAdapter implements CpcUsuarioRepositoryPort {
             jpaRepository.save(entity);
         });
     }
+
+    @Override
+    public java.util.List<CpcUsuario> listarPorTenant(UUID tenantId) {
+        if (tenantId == null) {
+            return java.util.List.of();
+        }
+        return jpaRepository.findByTenantId(tenantId).stream().map(mapper::toModel).toList();
+    }
 }

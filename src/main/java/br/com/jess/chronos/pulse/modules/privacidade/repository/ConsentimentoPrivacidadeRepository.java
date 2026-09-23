@@ -12,4 +12,6 @@ public interface ConsentimentoPrivacidadeRepository extends JpaRepository<Consen
     List<ConsentimentoPrivacidade> findByCpcIdOrderByDataConsentimentoDesc(UUID cpcId);
 
     Optional<ConsentimentoPrivacidade> findTopByCpcIdOrderByDataConsentimentoDesc(UUID cpcId);
+
+    boolean existsByCpcIdAndVersaoPoliticaAndAceitoTrue(UUID cpcId, String versaoPolitica);
 }
