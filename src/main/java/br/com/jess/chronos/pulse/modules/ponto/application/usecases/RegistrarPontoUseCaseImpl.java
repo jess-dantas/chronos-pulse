@@ -28,6 +28,9 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
         Long nsrLogico = repositoryPort.obterProximoNsrLogico(registro.getColaboradorId(), tenantId);
         registro.atribuirNsrLogico(nsrLogico);
 
+        Long nsr = repositoryPort.obterProximoNsr();
+        registro.atribuirNsr(nsr);
+
         String hash = GeradorHashService.gerarHashRegistro(registro, cpfColaborador);
         registro.atribuirHash(hash);
 
