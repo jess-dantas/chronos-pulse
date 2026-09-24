@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AutenticarAdminPlataformaUseCaseImpl implements AutenticarAdminPlataformaUseCase {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AutenticarAdminPlataformaUseCaseImpl.class);
+
     private final AdminPlataformaRepositoryPort repositoryPort;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -32,19 +34,25 @@ public class AutenticarAdminPlataformaUseCaseImpl implements AutenticarAdminPlat
     @Override
     public Resultado executar(Comando comando) {
         AdminPlataforma admin = repositoryPort.buscarPorUsername(comando.username())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas"));
+                .orElseThrow(() -> {
+                    log.warn("Falha de login admin: usuário não encontrado (username={})", comando.username());
+                    return new IllegalArgumentException("Credenciais inválidas");
+                });
 
         if (!admin.isAtivo()) {
+            log.warn("Falha de login admin: conta desativada (username={})", comando.username());
             throw new IllegalStateException("Conta desativada");
         }
 
         if (!passwordEncoder.matches(comando.senha(), admin.getSenhaHash())) {
+            log.warn("Falha de login admin: senha inválida (username={})", comando.username());
             admin.registrarFalhaLogin();
             repositoryPort.salvar(admin);
             throw new IllegalArgumentException("Credenciais inválidas");
         }
 
         if (admin.isLoginBloqueado()) {
+            log.warn("Falha de login admin: conta bloqueada por excesso de tentativas (username={})", comando.username());
             throw new IllegalStateException("Conta temporariamente bloqueada por excesso de tentativas");
         }
 
