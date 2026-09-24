@@ -32,6 +32,7 @@ public class SolicitarAjustePontoUseCaseImpl implements SolicitarAjustePontoUseC
         }
 
         Long nsrLogico = repositoryPort.obterProximoNsrLogico(comando.colaboradorId(), comando.tenantId());
+        Long nsr = repositoryPort.obterProximoNsr();
 
         RegistroPonto registro = new RegistroPonto(
                 UUID.randomUUID(),
@@ -45,7 +46,7 @@ public class SolicitarAjustePontoUseCaseImpl implements SolicitarAjustePontoUseC
                 BigDecimal.ZERO,
                 null,
                 false,
-                null,
+                nsr,
                 nsrLogico,
                 true,
                 comando.justificativa().trim(),

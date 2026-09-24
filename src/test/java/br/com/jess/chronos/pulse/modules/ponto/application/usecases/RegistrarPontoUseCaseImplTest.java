@@ -44,16 +44,19 @@ class RegistrarPontoUseCaseImplTest {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(10L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
 
         RegistroPonto resultado = useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.ENTRADA);
         assertThat(registro.getNsrLogico()).isEqualTo(1L);
+        assertThat(registro.getNsr()).isEqualTo(10L);
         assertThat(registro.getHashIntegridade()).isNotNull().hasSize(64);
         assertThat(resultado).isNotNull();
         verify(repositoryPort).buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
         verify(repositoryPort).obterProximoNsrLogico(colaboradorId, tenantId);
+        verify(repositoryPort).obterProximoNsr();
         verify(repositoryPort).salvar(registro);
     }
 
@@ -62,12 +65,14 @@ class RegistrarPontoUseCaseImplTest {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.ENTRADA));
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(2L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(11L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
 
         useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.INTERVALO);
         assertThat(registro.getNsrLogico()).isEqualTo(2L);
+        assertThat(registro.getNsr()).isEqualTo(11L);
     }
 
     @Test
@@ -75,12 +80,14 @@ class RegistrarPontoUseCaseImplTest {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.SAIDA));
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(3L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(12L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
 
         useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.ENTRADA);
         assertThat(registro.getNsrLogico()).isEqualTo(3L);
+        assertThat(registro.getNsr()).isEqualTo(12L);
     }
 
     @Test
@@ -88,10 +95,28 @@ class RegistrarPontoUseCaseImplTest {
         RegistroPonto registro = novoRegistro();
         when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(10L);
         when(repositoryPort.salvar(any())).thenThrow(new RuntimeException("DB error"));
 
         assertThatThrownBy(() -> useCase.executar(registro, "12345678901", tenantId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("DB error");
+    }
+
+    @Test
+    void deveAtribuirNsrAntesDePersistirParaNaoViolarNotNullDoBanco() {
+        RegistroPonto registro = novoRegistro();
+        when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(77L);
+        when(repositoryPort.salvar(any())).thenAnswer(inv -> {
+            RegistroPonto salvo = inv.getArgument(0);
+            assertThat(salvo.getNsr()).as("nsr deve estar atribuído antes do save").isNotNull();
+            return salvo;
+        });
+
+        useCase.executar(registro, "12345678901", tenantId);
+
+        assertThat(registro.getNsr()).isEqualTo(77L);
     }
 }

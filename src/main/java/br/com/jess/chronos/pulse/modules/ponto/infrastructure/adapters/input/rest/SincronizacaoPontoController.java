@@ -8,6 +8,8 @@ import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.res
 import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.SincronizacaoLoteDTO;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -21,6 +23,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/pontos/sincronizar")
 @RequiresModulo("PONTO")
 public class SincronizacaoPontoController {
+
+    private static final Logger log = LoggerFactory.getLogger(SincronizacaoPontoController.class);
 
     private final RegistrarPontoUseCase registrarPontoUseCase;
     private final EmailComprovantePontoService emailComprovantePontoService;
@@ -59,6 +63,8 @@ public class SincronizacaoPontoController {
                     );
                 }
             } catch (Exception e) {
+                log.error("Falha ao sincronizar registro idLocal={} colaboradorId={}: {}",
+                        dto.idLocal(), colaboradorId, e.getMessage(), e);
                 falhas.add(dto.idLocal());
             }
         }
