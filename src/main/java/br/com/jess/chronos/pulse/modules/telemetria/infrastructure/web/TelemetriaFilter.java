@@ -55,7 +55,15 @@ public class TelemetriaFilter extends OncePerRequestFilter {
             MDC.put("modulo", derivarModulo(request.getRequestURI()));
 
             if (properties.isRequestLog() && !ehEndpointRuidoso(request)) {
-                log.info("Requisição {} {} concluída.", request.getMethod(), request.getRequestURI());
+                int status = response.getStatus();
+                String mensagem = "Requisição {} {} concluída. status={} duração={}ms";
+                if (status >= 500) {
+                    log.error(mensagem, request.getMethod(), request.getRequestURI(), status, duracaoMs);
+                } else if (status >= 400) {
+                    log.warn(mensagem, request.getMethod(), request.getRequestURI(), status, duracaoMs);
+                } else {
+                    log.info(mensagem, request.getMethod(), request.getRequestURI(), status, duracaoMs);
+                }
             }
 
             MDC.clear();

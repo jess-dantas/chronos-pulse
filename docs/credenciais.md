@@ -21,34 +21,8 @@
 | `COLABORADOR` | Colaborador 1 | `12345678901` | `senha123` | Apenas ponto eletrônico |
 | `COLABORADOR` | Colaborador 2 | `98765432100` | `senha123` | Ponto + estoque (`acessoEstoque=true`, authority `ROLE_ESTOQUE`) |
 
-> **Zero-trace:** nenhum usuário com CPF `99999999999` (ex-Fundador) é criado
-> nos seeds — em produção o Administrator nasce apenas pelo first-run wizard.
-
-## Administrator (Admin Plataforma)
-
-- **Username:** `Administrator` (tabela `admin_plataforma` — entidade separada, **sem CPF, sem tenant**). Login na tela "Login Administrator" (`/admin/auth/login`, fora de `/api/v1`).
-- **2FA TOTP é obrigatório em produção** (`chronos.admin.two-factor-required`, default `true`; `CHRONOS_ADMIN_2FA_REQUIRED` sobrepõe). A tabela nasce **vazia em produção** — ver abaixo.
-
-### Produção — first-run wizard (zero-trace)
-
-1. `GET /admin/auth/bootstrap/status` → `{ bootstrapAvailable: true }` enquanto `admin_plataforma` estiver vazia; a tela de login exibe o link de criação (`/admin/auth/bootstrap`).
-2. `POST /admin/auth/bootstrap` `{ username (≤20), senha (8–100), nomeCompleto, email }` → cria o Administrator e responde `requiresTwoFactor: true`, `setupRequired: true` + `tempToken` (5 min).
-3. Setup **obrigatório** do 2FA: `POST /admin/auth/2fa/setup` → `POST /admin/auth/2fa/confirm { codigo }` → emite os tokens finais **e 8 códigos de recuperação** (`XXXXX-XXXXX`, exibidos uma única vez; hash SHA-256, uso único, tabela `admin_recovery_code`).
-4. Sem senha seed — nada é gravado em `V1` para o Administrator.
-
-### Desenvolvimento — seed dedicado
-
-- `db/seed/R__seed_admin_dev.sql` (flyway locations incluem `classpath:db/seed` **apenas no profile dev**):
-  - **Username:** `Administrator` · **Senha:** `admin123` · 2FA desabilitado.
-  - `chronos.admin.two-factor-required: false` em `application-dev.yml` — login direto, sem setup forçado; ativação continua opt-in pela tela **Segurança**.
-- Em dev, `chronos.mail.enabled` é `false` por default: os OTPs do wizard de titularidade são logados no console (INFO) para smoke test sem SMTP.
-
-### Recuperação de acesso (qualquer ambiente)
-
-- `POST /admin/auth/2fa/recover` `{ username, senha, recoveryCode }` → tokens + **8 novos códigos** de recuperação (os antigos deixam de valer).
-- `POST /admin/auth/2fa/disable` retorna **403** enquanto `chronos.admin.two-factor-required=true` (2FA não pode ser desativado em produção).
-
-> Senhas em texto plano acima são **apenas para demonstração**. Nunca reuse
-> essas senhas em ambientes reais; o hash bcrypt correspondente está no seed.
+> **Administrator (Admin Plataforma):** credenciais, first-run wizard e
+> recuperação de acesso movidos para `C:\app\_projeto\admin-plataforma.md`
+> (fora do repositório — material sensível).
 
 Para saber como subir a aplicação, ver [`README.md`](../README.md). Checklist de smoke: [`smoke.md`](smoke.md).
