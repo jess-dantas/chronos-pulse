@@ -6,11 +6,17 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPonto
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,5 +70,27 @@ class ConsultarEspelhoPontoUseCaseImplTest {
 
         assertThat(resultado).hasSize(1);
         verify(repositoryPort).listarPorColaborador(colaboradorId, tenantId);
+    }
+
+    @Test
+    void deveCalcularJanelaDoMesNoFusoBrasileiro() {
+        ArgumentCaptor<Instant> inicio = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> fim = ArgumentCaptor.forClass(Instant.class);
+        when(repositoryPort.listarPorColaboradorEPeriodo(eq(colaboradorId), eq(tenantId),
+                inicio.capture(), fim.capture())).thenReturn(List.of());
+
+        useCase.consultar(colaboradorId, tenantId, 9, 2026);
+
+        ZoneId brasil = ZoneId.of("America/Sao_Paulo");
+        YearMonth setembro = YearMonth.of(2026, 9);
+        assertThat(inicio.getValue())
+                .isEqualTo(setembro.atDay(1).atStartOfDay(brasil).toInstant());
+        assertThat(fim.getValue())
+                .isEqualTo(LocalDate.of(2026, 9, 30).atTime(LocalTime.MAX).atZone(brasil).toInstant());
+        // Regressão: em UTC as marcações das 21h–23h59 do dia 30 sairiam do mês
+        assertThat(inicio.getValue())
+                .isNotEqualTo(setembro.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC));
+        assertThat(fim.getValue())
+                .isNotEqualTo(LocalDate.of(2026, 9, 30).atTime(LocalTime.MAX).toInstant(ZoneOffset.UTC));
     }
 }

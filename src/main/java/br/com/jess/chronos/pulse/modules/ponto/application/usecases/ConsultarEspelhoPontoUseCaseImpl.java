@@ -6,11 +6,15 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPonto
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
 public class ConsultarEspelhoPontoUseCaseImpl implements ConsultarEspelhoPontoUseCase {
+
+    /** Janela do mês em fuso local (Brasil), igual aos demais use cases de ponto —
+     *  em UTC, marcações das 21h–24h do último dia sairiam do mês. */
+    private static final ZoneId FUSO_PONTO = ZoneId.of("America/Sao_Paulo");
 
     private final RegistroPontoRepositoryPort repositoryPort;
 
@@ -26,8 +30,8 @@ public class ConsultarEspelhoPontoUseCaseImpl implements ConsultarEspelhoPontoUs
 
         if (mes != null && ano != null) {
             YearMonth ym = YearMonth.of(ano, mes);
-            var inicio = ym.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
-            var fim = ym.atEndOfMonth().atTime(23, 59, 59, 999_999_999).toInstant(ZoneOffset.UTC);
+            var inicio = ym.atDay(1).atStartOfDay(FUSO_PONTO).toInstant();
+            var fim = ym.atEndOfMonth().atTime(23, 59, 59, 999_999_999).atZone(FUSO_PONTO).toInstant();
             return repositoryPort.listarPorColaboradorEPeriodo(colaboradorId, tenantId, inicio, fim);
         }
 
