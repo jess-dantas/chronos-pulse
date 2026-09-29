@@ -15,7 +15,7 @@
 
 ## Requisitos (R-series)
 
-Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (363 no backend, 217 no app) refletem o estado atual.
+Cada requisito entrega backend + app (Flutter), com testes e migrações. `docs/api.md` e testes (376 no backend, 246 no app) refletem o estado atual.
 
 | Req | Entrega | Status |
 |---|---|---|
@@ -52,8 +52,8 @@ Ver detalhes em `docs/modulos-saas.md`. Ativação por tenant com seeds em `V11`
 
 | Marco | Status |
 |---|---|
-| CI: build, 330 testes, security (Trivy) com upload SARIF para Code Scanning | ✅ |
-| CI app: analyze, 204 testes, build Android (APK+AppBundle), build Web (Vercel) e build iOS | ✅ |
+| CI: build, 376 testes, security (Trivy) com upload SARIF para Code Scanning | ✅ |
+| CI app: analyze, 204 testes, build Android (APK+AppBundle), build Web (Vercel) e build iOS (no-codesign) | ✅ |
 | Secretos fora do código — `JWT_SECRET` via env (sem default em `docker-compose.yml`); senhas de seed só no perfil dev; CPFs de seed desativados em produção via `V36` | ✅ |
 | Segurança (auditoria + correções): lockout de login, reset de senha com código de 8 dígitos, revogação de JWT por troca de senha, `senhaAtual` no alterar-senha, foto validada por magic-bytes, CORS sem wildcard, Swagger/Actuator restritos | ✅ |
 | App endurecido: `allowBackup=false`, cleartext só em debug, keystore de release fora do repositório, perfil (nome/CPF/foto/e-mail) no armazenamento seguro, fila offline apagada no logout/LGPD, ajuste de ponto só p/ gestores, erros amigáveis sem `e.toString()` | ✅ |

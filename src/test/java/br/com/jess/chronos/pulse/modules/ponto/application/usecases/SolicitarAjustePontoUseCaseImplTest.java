@@ -17,6 +17,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,5 +76,53 @@ class SolicitarAjustePontoUseCaseImplTest {
                 .hasMessageContaining("justificativa");
 
         verifyNoInteractions(repositoryPort);
+    }
+
+    private RegistroPonto registroComStatus(AjusteStatus status, Instant dataHora) {
+        return new RegistroPonto(UUID.randomUUID(), colaboradorId, tenantId, dataHora,
+                Instant.now(), TipoRegistro.ENTRADA, java.math.BigDecimal.ZERO, java.math.BigDecimal.ZERO,
+                java.math.BigDecimal.ZERO, null, false, 1L, 1L, true,
+                "Justificativa original", null, status, null, UUID.randomUUID(), Instant.now());
+    }
+
+    @Test
+    void deveBloquearSolicitacaoQuandoDiaJaPossuiAjusteAprovado() {
+        Instant dataHora = Instant.parse("2026-09-10T12:00:00Z");
+
+        when(repositoryPort.listarPorColaboradorEPeriodo(eq(colaboradorId), eq(tenantId), any(), any()))
+                .thenReturn(java.util.List.of(registroComStatus(AjusteStatus.APROVADO, dataHora)));
+
+        SolicitarAjustePontoUseCase.Comando comando = new SolicitarAjustePontoUseCase.Comando(
+                colaboradorId, tenantId, "12345678901", dataHora,
+                TipoRegistro.ENTRADA, "Mais uma correção no mesmo dia", null);
+
+        assertThatThrownBy(() -> useCase.executar(comando))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("já possui ajuste aprovado")
+                .hasMessageContaining("bloqueadas");
+
+        verify(repositoryPort, never()).salvar(any());
+        verify(repositoryPort, never()).obterProximoNsr();
+        verify(repositoryPort, never()).obterProximoNsrLogico(any(), any());
+    }
+
+    @Test
+    void devePermitirSolicitacaoQuandoAjusteDoDiaNaoEstaAprovado() {
+        Instant dataHora = Instant.parse("2026-09-10T12:00:00Z");
+
+        when(repositoryPort.listarPorColaboradorEPeriodo(eq(colaboradorId), eq(tenantId), any(), any()))
+                .thenReturn(java.util.List.of(registroComStatus(AjusteStatus.PENDENTE, dataHora)));
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(5L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(42L);
+        when(repositoryPort.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        SolicitarAjustePontoUseCase.Comando comando = new SolicitarAjustePontoUseCase.Comando(
+                colaboradorId, tenantId, "12345678901", dataHora,
+                TipoRegistro.ENTRADA, "Justificativa válida", null);
+
+        RegistroPonto resultado = useCase.executar(comando);
+
+        assertThat(resultado.getAjusteStatus()).isEqualTo(AjusteStatus.PENDENTE);
+        verify(repositoryPort).salvar(any());
     }
 }

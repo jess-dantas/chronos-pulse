@@ -3,11 +3,13 @@ package br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.re
 import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
+import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
 import br.com.jess.chronos.pulse.modules.notificacao.service.EmailComprovantePontoService;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.AjustarPontoManualUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.AprovarAjustePontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsultarEspelhoPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsultarRelatorioEspelhoPontoUseCase;
+import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsolidarFilaAjustesUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ListarAjustesPendentesUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RejeitarAjustePontoUseCase;
 import br.com.jess.chronos.pulse.modules.modulo.infrastructure.security.RequiresModulo;
@@ -15,6 +17,7 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.SolicitarAjust
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.AjustePontoManualDTO;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.EspelhoPontoItemDTO;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.RelatorioEspelhoPontoDTO;
+import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.ResumoAjustePontoDTO;
 import br.com.jess.chronos.pulse.modules.ponto.infrastructure.adapters.input.rest.dto.SolicitarAjusteDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -38,7 +41,9 @@ public class EspelhoPontoController {
     private final AprovarAjustePontoUseCase aprovarAjustePontoUseCase;
     private final RejeitarAjustePontoUseCase rejeitarAjustePontoUseCase;
     private final ListarAjustesPendentesUseCase listarAjustesPendentesUseCase;
+    private final ConsolidarFilaAjustesUseCase consolidarFilaAjustesUseCase;
     private final EmailComprovantePontoService emailComprovantePontoService;
+    private final CpcUsuarioRepositoryPort usuarioRepository;
     private final AuditoriaService auditoriaService;
 
     public EspelhoPontoController(ConsultarEspelhoPontoUseCase consultarEspelhoPontoUseCase,
@@ -48,7 +53,9 @@ public class EspelhoPontoController {
                                   AprovarAjustePontoUseCase aprovarAjustePontoUseCase,
                                   RejeitarAjustePontoUseCase rejeitarAjustePontoUseCase,
                                   ListarAjustesPendentesUseCase listarAjustesPendentesUseCase,
+                                  ConsolidarFilaAjustesUseCase consolidarFilaAjustesUseCase,
                                   EmailComprovantePontoService emailComprovantePontoService,
+                                  CpcUsuarioRepositoryPort usuarioRepository,
                                   AuditoriaService auditoriaService) {
         this.consultarEspelhoPontoUseCase = consultarEspelhoPontoUseCase;
         this.consultarRelatorioEspelhoPontoUseCase = consultarRelatorioEspelhoPontoUseCase;
@@ -57,8 +64,26 @@ public class EspelhoPontoController {
         this.aprovarAjustePontoUseCase = aprovarAjustePontoUseCase;
         this.rejeitarAjustePontoUseCase = rejeitarAjustePontoUseCase;
         this.listarAjustesPendentesUseCase = listarAjustesPendentesUseCase;
+        this.consolidarFilaAjustesUseCase = consolidarFilaAjustesUseCase;
         this.emailComprovantePontoService = emailComprovantePontoService;
+        this.usuarioRepository = usuarioRepository;
         this.auditoriaService = auditoriaService;
+    }
+
+    /**
+     * E-mail do colaborador dono do registro (corporativo, senão pessoal).
+     * {@code null} quando o usuário não tem e-mail cadastrado — o serviço de e-mail ignora.
+     */
+    private String emailDoColaborador(UUID colaboradorId) {
+        return usuarioRepository.buscarPorId(colaboradorId)
+                .map(u -> u.getEmailCorporativo() != null && !u.getEmailCorporativo().isBlank()
+                        ? u.getEmailCorporativo()
+                        : u.getEmailPessoal())
+                .orElse(null);
+    }
+
+    private CpcUsuario colaboradorDe(UUID colaboradorId) {
+        return usuarioRepository.buscarPorId(colaboradorId).orElse(null);
     }
 
     @GetMapping("/espelho")
@@ -159,11 +184,16 @@ public class EspelhoPontoController {
                 usuarioLogado.getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
                 usuarioLogado.getRole().name(), null, null, null);
 
-        // Envia e-mail de confirmação para o colaborador
-        String emailColaborador = "jess.dantas.it@outlook.com"; // Conforme solicitado
+        // Envia e-mail de confirmação para o colaborador (nunca um destinatário fixo)
+        CpcUsuario colaborador = colaboradorDe(targetColaboradorId);
+        String emailColaborador = emailDoColaborador(targetColaboradorId);
         if (emailComprovantePontoService != null && emailColaborador != null && !emailColaborador.isBlank()) {
             emailComprovantePontoService.enviarComprovantePontoAsync(
-                    emailColaborador, usuarioLogado.getNome(), registro, usuarioLogado.getCpf(), "Chronos Pulse - Solicitação de Ajuste"
+                    emailColaborador,
+                    colaborador != null ? colaborador.getNome() : usuarioLogado.getNome(),
+                    registro,
+                    colaborador != null ? colaborador.getCpf() : usuarioLogado.getCpf(),
+                    "Chronos Pulse"
             );
         }
 
@@ -182,6 +212,22 @@ public class EspelhoPontoController {
         return ResponseEntity.ok(ajustes.stream().map(EspelhoPontoItemDTO::fromDomain).toList());
     }
 
+    /**
+     * Fila consolidada do gestor RH: pendentes do tenant com nome do colaborador
+     * e marcações do dia (contexto do espelho) para aprovar/recusar sem sair da tela.
+     */
+    @GetMapping("/ajustes/resumo")
+    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
+    public ResponseEntity<List<ResumoAjustePontoDTO>> consolidarFilaAjustes(
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+
+        var fila = consolidarFilaAjustesUseCase.executar(new ConsolidarFilaAjustesUseCase.Comando(
+                usuarioLogado.getTenantId(), usuarioLogado.getCpcId()
+        ));
+
+        return ResponseEntity.ok(fila.stream().map(ResumoAjustePontoDTO::fromDomain).toList());
+    }
+
     @PutMapping("/ajustes/{id}/aprovar")
     @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
     public ResponseEntity<EspelhoPontoItemDTO> aprovarAjuste(
@@ -197,11 +243,16 @@ public class EspelhoPontoController {
                 usuarioLogado.getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
                 usuarioLogado.getRole().name(), null, null, null);
 
-        // Envia e-mail de confirmação para o colaborador
-        String emailColaborador = "jess.dantas.it@outlook.com";
+        // Envia e-mail de confirmação para o colaborador dono do registro
+        CpcUsuario colaborador = colaboradorDe(registro.getColaboradorId());
+        String emailColaborador = emailDoColaborador(registro.getColaboradorId());
         if (emailComprovantePontoService != null && emailColaborador != null && !emailColaborador.isBlank()) {
             emailComprovantePontoService.enviarComprovantePontoAsync(
-                    emailColaborador, usuarioLogado.getNome(), registro, usuarioLogado.getCpf(), "Chronos Pulse - Ajuste Aprovado"
+                    emailColaborador,
+                    colaborador != null ? colaborador.getNome() : usuarioLogado.getNome(),
+                    registro,
+                    colaborador != null ? colaborador.getCpf() : usuarioLogado.getCpf(),
+                    "Chronos Pulse"
             );
         }
 
@@ -224,11 +275,16 @@ public class EspelhoPontoController {
                 usuarioLogado.getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
                 usuarioLogado.getRole().name(), null, null, null);
 
-        // Envia e-mail de notificação para o colaborador
-        String emailColaborador = "jess.dantas.it@outlook.com";
+        // Envia e-mail de notificação para o colaborador dono do registro
+        CpcUsuario colaborador = colaboradorDe(registro.getColaboradorId());
+        String emailColaborador = emailDoColaborador(registro.getColaboradorId());
         if (emailComprovantePontoService != null && emailColaborador != null && !emailColaborador.isBlank()) {
             emailComprovantePontoService.enviarComprovantePontoAsync(
-                    emailColaborador, usuarioLogado.getNome(), registro, usuarioLogado.getCpf(), "Chronos Pulse - Ajuste Rejeitado"
+                    emailColaborador,
+                    colaborador != null ? colaborador.getNome() : usuarioLogado.getNome(),
+                    registro,
+                    colaborador != null ? colaborador.getCpf() : usuarioLogado.getCpf(),
+                    "Chronos Pulse"
             );
         }
 

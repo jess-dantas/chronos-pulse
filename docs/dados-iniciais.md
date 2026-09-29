@@ -42,7 +42,7 @@ Local: `src/main/resources/db/migration/` — **arquivo único** `V001` (pré-pr
 
 | Migration / Seed | Conteúdo |
 |---|---|
-| `V001__baseline_chronos_pulse.sql` | Baseline completo consolidado: schema de todas as tabelas (auth, tenant, colaborador, ponto, fiscal, estoque, compras, licitações, patrimônio, frota, protocolo, transparência, privacidade/LGPD **com auditoria reforçada `tenant_id`/`user_agent`/`hash_termo`**, auditoria, telemetria, módulos, **admin_recovery_code**, **titularidade_transferencia/codigo**), catálogo `modulo_plataforma` (9 códigos + `PRIVACIDADE`), `empresa_modulo`, `usuario_modulo` (associação usuário↔módulo com backfill), seeds de tenants/usuários/módulos/dados demo — **sem** linha de `admin_plataforma` (provisionamento via first-run wizard) |
+| `V001__baseline_chronos_pulse.sql` | Baseline completo consolidado: schema de todas as tabelas (auth, tenant, colaborador, ponto, fiscal, estoque, compras, licitações, patrimônio, frota, protocolo, transparência, privacidade/LGPD **com auditoria reforçada `tenant_id`/`user_agent`/`hash_termo`**, auditoria, telemetria, módulos, **admin_recovery_code**, **titularidade_transferencia/codigo**), catálogo `modulo_plataforma` (9 códigos + `PRIVACIDADE`), `empresa_modulo`, `usuario_modulo` (associação usuário↔módulo com backfill), seeds de tenants/usuários/módulos/dados demo (inclui **1 contrato ativo** `CP-2026/0001` no tenant Demonstração, usado pela tela admin "Contratos", pela métrica `contratosAtivos` do dashboard e pelos resumos de Transparência/Portal) — **sem** linha de `admin_plataforma` (provisionamento via first-run wizard) |
 | `db/seed/R__seed_admin_dev.sql` | Seed **apenas dev** (profile dev, `classpath:db/seed`): `Administrator` / `admin123`, 2FA desabilitado |
 
 > **Regra pré-produção (migration única):** enquanto o software não estiver em
@@ -69,7 +69,7 @@ Local: `src/main/resources/db/migration/` — **arquivo único** `V001` (pré-pr
 .\mvnw.cmd test
 ```
 
-**Total: 363 testes (61 suites), 0 falhas.** Principais coberturas:
+**Total: 376 testes (65 suites), 0 falhas.** Principais coberturas:
 
 | Camada / Módulo | Objetivo |
 |---|---|
@@ -98,7 +98,7 @@ Frontend (Flutter), no repositório do app:
 
 ```bash
 flutter analyze
-flutter test   # 217 testes, 0 falhas
+flutter test   # 246 testes, 0 falhas
 ```
 
 ## Coleção Insomnia

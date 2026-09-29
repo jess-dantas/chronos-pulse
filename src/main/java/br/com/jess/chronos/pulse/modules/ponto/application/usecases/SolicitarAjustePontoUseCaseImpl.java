@@ -9,9 +9,17 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.service.GeradorHashService
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 public class SolicitarAjustePontoUseCaseImpl implements SolicitarAjustePontoUseCase {
+
+    /** Regra: um dia com ajuste aprovado fica fechado para novas solicitações. */
+    private static final ZoneId FUSO_PONTO = ZoneId.of("America/Sao_Paulo");
+    private static final DateTimeFormatter FORMATO_DIA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final RegistroPontoRepositoryPort repositoryPort;
 
@@ -30,6 +38,8 @@ public class SolicitarAjustePontoUseCaseImpl implements SolicitarAjustePontoUseC
         if (comando.dataHora() == null || comando.tipoRegistro() == null) {
             throw new IllegalArgumentException("Data/hora e tipo de registro são obrigatórios.");
         }
+
+        verificarDiaSemAjusteAprovado(comando);
 
         Long nsrLogico = repositoryPort.obterProximoNsrLogico(comando.colaboradorId(), comando.tenantId());
         Long nsr = repositoryPort.obterProximoNsr();
@@ -61,5 +71,26 @@ public class SolicitarAjustePontoUseCaseImpl implements SolicitarAjustePontoUseC
         registro.atribuirHash(hash);
 
         return repositoryPort.salvar(registro);
+    }
+
+    /**
+     * Bloqueia nova solicitação no mesmo dia (fuso America/Sao_Paulo) de um ajuste
+     * já aprovado: o dia fica fechado para alterações.
+     */
+    private void verificarDiaSemAjusteAprovado(Comando comando) {
+        LocalDate dia = comando.dataHora().atZone(FUSO_PONTO).toLocalDate();
+        Instant inicio = dia.atStartOfDay(FUSO_PONTO).toInstant();
+        Instant fim = LocalDateTime.of(dia, java.time.LocalTime.MAX).atZone(FUSO_PONTO).toInstant();
+
+        boolean jaAprovado = repositoryPort
+                .listarPorColaboradorEPeriodo(comando.colaboradorId(), comando.tenantId(), inicio, fim)
+                .stream()
+                .anyMatch(r -> r.getAjusteStatus() == AjusteStatus.APROVADO);
+
+        if (jaAprovado) {
+            throw new IllegalArgumentException(
+                    "O dia " + dia.format(FORMATO_DIA)
+                            + " já possui ajuste aprovado; novas solicitações de ajuste estão bloqueadas para este dia.");
+        }
     }
 }

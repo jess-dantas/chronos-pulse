@@ -64,7 +64,7 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 | `GET` | `/admin/auth/2fa/status` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ enabled }` |
 | `POST` | `/admin/auth/2fa/setup` | 🛡️ (`ADMIN_PLATAFORMA`) | Gera segredo TOTP → `{ secret, otpauthUri }` (segredo fica pendente até o confirm) |
 | `POST` | `/admin/auth/2fa/confirm` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — valida TOTP, **ativa** o 2FA e, no fluxo de bootstrap/setup, emite os tokens finais **e 8 códigos de recuperação** (exibidos uma única vez) |
-| `POST` | `/admin/auth/2fa/disable` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA; **403** quando `chronos.admin.two-factor-required=true` |
+| `POST` | `/admin/auth/2fa/disable` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA (sempre permitido; com `chronos.admin.two-factor-required=true` o próximo login força o wizard de setup novamente) |
 | `POST` | `/admin/auth/alterar-senha` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ senhaAtual, novaSenha }` (nova 8–100) |
 
 Regras de acesso de `/admin/**` ficam em `AdminSecurityConfig` (chain separada com `securityMatcher("/admin/**")`); o token admin tem claim `adminId` e `role=ADMIN_PLATAFORMA` (sem CPF/tenant). O `JwtAuthFilter` autentica tokens com `adminId` direto com `ADMIN_PLATAFORMA`, sem lookup em `cpc_usuario`.
@@ -140,10 +140,11 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 | `GET` | `/pontos/espelho?mes=9&ano=2026` | 🛡️ (mesmos perfis) | Espelho de ponto mensal |
 | `GET` | `/pontos/espelho/relatorio?colaboradorId=...&mes=9&ano=2026` | 🛡️ (mesmos perfis) | Relatório do espelho conforme art. 84 da Portaria MTP 671/2021: empregador (nome/CNPJ), trabalhador (nome, CPF, admissão, cargo/função, matrícula), data de emissão, período apurado, jornada contratual, marcações tratadas e **código de verificação** SHA-256 |
 | `POST` | `/pontos/ajustar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Ajuste manual com justificativa obrigatória |
-| `POST` | `/pontos/ajustar/solicitar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Colaborador solicita ajuste (vai para fila de aprovação) |
+| `POST` | `/pontos/ajustar/solicitar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Colaborador solicita ajuste (vai para fila de aprovação). **Bloqueado** quando o dia da data/hora (fuso `America/Sao_Paulo`) já tem ajuste **APROVADO** → `400` "O dia DD/MM/AAAA já possui ajuste aprovado; novas solicitações de ajuste estão bloqueadas para este dia." |
 | `GET` | `/pontos/ajustes/pendentes` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Fila de aprovação de ajustes |
-| `PUT` | `/pontos/ajustes/{id}/aprovar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Aprova ajuste pendente |
-| `PUT` | `/pontos/ajustes/{id}/rejeitar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Rejeita ajuste pendente |
+| `GET` | `/pontos/ajustes/resumo` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Fila **consolidada**: pendentes do tenant + `colaboradorNome` + `marcacoesDoDia` (marcações do dia no fuso `America/Sao_Paulo`, com flag `ajuste`) para aprovar/recusar sem sair da tela |
+| `PUT` | `/pontos/ajustes/{id}/aprovar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Aprova ajuste pendente (comprovante por e-mail para o **colaborador dono do registro**) |
+| `PUT` | `/pontos/ajustes/{id}/rejeitar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Rejeita ajuste pendente (notificação por e-mail para o **colaborador dono do registro**) |
 
 ---
 

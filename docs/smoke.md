@@ -13,7 +13,8 @@ Validação manual ponta a ponta após `docker compose down -v && docker compose
 - [ ] Setup forçado: `2fa/setup` → `2fa/confirm` → dialog com **8 códigos de recuperação** (salvar) → `/admin/dashboard`.
 - [ ] Login subsequente com 2FA desligado e `two-factor-required=true` cai no mesmo setup (`setupRequired`).
 - [ ] `POST /admin/auth/2fa/recover` com um código usado → tokens + 8 novos códigos; código antigo não reutiliza.
-- [ ] `POST /admin/auth/2fa/disable` com required=true → **403**.
+- [ ] `POST /admin/auth/2fa/disable` com código TOTP válido → **200** e `GET /admin/auth/2fa/status` → `enabled=false` (com required=true, o login seguinte volta a exigir setup).
+- [ ] `POST /admin/auth/2fa/disable` com código inválido → **400**.
 - [ ] CPF `99999999999` **não** existe em nenhum seed (login falha).
 
 ## 2. Tenants / Portal público
@@ -51,5 +52,5 @@ Pré-condição: login `11111111111`/`admin123`, `chronos.mail.enabled=false` (d
 
 ## 6. Suítes automatizadas
 
-- [ ] Backend: `.\mvnw.cmd test` → **363 testes (61 suites), 0 falhas** (inclui `AdminPlataformaJpaEntityPersistTest` — regressão do `criado_em`; `PrivacidadeServiceTest` com status/auditoria/idempotência do Termo de Ciência).
-- [ ] Frontend: `flutter analyze` sem issues · `flutter test` → **217 testes, 0 falhas** (inclui `shell_layout_test.dart` — regressão do layout + grupo "Consentimento bloqueante").
+- [ ] Backend: `.\mvnw.cmd test` → **376 testes (65 suites), 0 falhas** (inclui `AdminPlataformaJpaEntityPersistTest` — regressão do `criado_em`; `PrivacidadeServiceTest` com status/auditoria/idempotência do Termo de Ciência).
+- [ ] Frontend: `flutter analyze` sem issues · `flutter test` → **246 testes, 0 falhas** (inclui `shell_layout_test.dart` — regressão do layout + grupo "Consentimento bloqueante").
