@@ -67,9 +67,10 @@ management:
   endpoint:
     health:
       show-details: when_authorized
-      # O MailHealthIndicator conecta no SMTP para checar a saúde; sem
-      # SPRING_MAIL_USERNAME/PASSWORD (Render) ele falha e derruba o
-      # /actuator/health agregado (503 DOWN), mesmo com a API funcionando.
-      # Habilitar com MAIL_HEALTH_ENABLED=true quando as credenciais existirem.
-      mail:
-        enabled: ${MAIL_HEALTH_ENABLED:false}
+  health:
+    # MailHealthIndicator conecta no SMTP para checar a saúde; sem
+    # SPRING_MAIL_USERNAME/PASSWORD (Render) ele falha e derruba o
+    # /actuator/health agregado (503 DOWN), mesmo com a API funcionando.
+    # Habilitar com MAIL_HEALTH_ENABLED=true quando as credenciais existirem.
+    mail:
+      enabled: ${MAIL_HEALTH_ENABLED:false}
