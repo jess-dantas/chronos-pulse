@@ -16,11 +16,15 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.service.GeradorCodigoVerif
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
 public class ConsultarRelatorioEspelhoPontoUseCaseImpl implements ConsultarRelatorioEspelhoPontoUseCase {
+
+    /** Janela do mês em fuso local (Brasil) — em UTC, marcações noturnas do
+     *  último dia sairiam do período do relatório. */
+    private static final ZoneId FUSO_PONTO = ZoneId.of("America/Sao_Paulo");
 
     private final RegistroPontoRepositoryPort registroPontoRepository;
     private final ColaboradorRepositoryPort colaboradorRepository;
@@ -48,8 +52,8 @@ public class ConsultarRelatorioEspelhoPontoUseCaseImpl implements ConsultarRelat
         YearMonth ym = YearMonth.of(ano, mes);
         LocalDate dataInicio = ym.atDay(1);
         LocalDate dataFim = ym.atEndOfMonth();
-        Instant inicio = dataInicio.atStartOfDay().toInstant(ZoneOffset.UTC);
-        Instant fim = dataFim.atTime(23, 59, 59, 999_999_999).toInstant(ZoneOffset.UTC);
+        Instant inicio = dataInicio.atStartOfDay(FUSO_PONTO).toInstant();
+        Instant fim = dataFim.atTime(23, 59, 59, 999_999_999).atZone(FUSO_PONTO).toInstant();
 
         Empresa empresa = empresaRepository.buscarPorId(tenantId).orElse(null);
         Colaborador colaborador = colaboradorRepository.buscarPorCpcUsuarioId(colaboradorId)

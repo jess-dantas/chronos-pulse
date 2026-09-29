@@ -25,4 +25,4 @@
 > recuperação de acesso movidos para `C:\app\_projeto\admin-plataforma.md`
 > (fora do repositório — material sensível).
 
-Para saber como subir a aplicação, ver [`README.md`](../README.md). Checklist de smoke: [`smoke.md`](smoke.md).
+Para saber como subir a aplicação, ver [`infra.md`](infra.md). Checklist de smoke: [`smoke.md`](smoke.md).

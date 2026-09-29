@@ -19,7 +19,6 @@ import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.res
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +33,6 @@ public class AdminAuthController {
     private final BootstrapAdminUseCase bootstrapAdminUseCase;
     private final RecuperarAcessoAdminUseCase recuperarAcessoAdminUseCase;
     private final JwtService jwtService;
-    private final boolean twoFactorRequired;
 
     public AdminAuthController(
             AutenticarAdminPlataformaUseCase autenticarAdminPlataformaUseCase,
@@ -43,8 +41,7 @@ public class AdminAuthController {
             AlterarSenhaAdminUseCase alterarSenhaAdminUseCase,
             BootstrapAdminUseCase bootstrapAdminUseCase,
             RecuperarAcessoAdminUseCase recuperarAcessoAdminUseCase,
-            JwtService jwtService,
-            @Value("${chronos.admin.two-factor-required:true}") boolean twoFactorRequired) {
+            JwtService jwtService) {
         this.autenticarAdminPlataformaUseCase = autenticarAdminPlataformaUseCase;
         this.verificarTwoFactorAdminUseCase = verificarTwoFactorAdminUseCase;
         this.gerenciarTwoFactorAdminUseCase = gerenciarTwoFactorAdminUseCase;
@@ -52,7 +49,6 @@ public class AdminAuthController {
         this.bootstrapAdminUseCase = bootstrapAdminUseCase;
         this.recuperarAcessoAdminUseCase = recuperarAcessoAdminUseCase;
         this.jwtService = jwtService;
-        this.twoFactorRequired = twoFactorRequired;
     }
 
     @PostMapping("/login")
@@ -165,9 +161,9 @@ public class AdminAuthController {
     public ResponseEntity<Void> twoFactorDisable(
             @RequestHeader("Authorization") String authorization,
             @RequestBody @Valid AdminTwoFactorCodigoRequestDTO request) {
-        if (twoFactorRequired) {
-            throw new IllegalStateException("2FA é obrigatório e não pode ser desativado");
-        }
+        // Sempre permitido: exige apenas código TOTP válido do dispositivo
+        // atual. Perda/troca de celular é coberta pelos recovery codes
+        // (POST /2fa/recover) na próxima autenticação.
         String adminId = extrairAdminId(authorization);
         gerenciarTwoFactorAdminUseCase.desabilitar(adminId, request.getCodigo());
         return ResponseEntity.ok().build();

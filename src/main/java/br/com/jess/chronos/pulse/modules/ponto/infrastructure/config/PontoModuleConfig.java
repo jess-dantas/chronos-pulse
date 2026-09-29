@@ -8,6 +8,7 @@ import br.com.jess.chronos.pulse.modules.ponto.application.usecases.AjustarPonto
 import br.com.jess.chronos.pulse.modules.ponto.application.usecases.AprovarAjustePontoUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.ponto.application.usecases.ConsultarEspelhoPontoUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.ponto.application.usecases.ConsultarRelatorioEspelhoPontoUseCaseImpl;
+import br.com.jess.chronos.pulse.modules.ponto.application.usecases.ConsolidarFilaAjustesUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.ponto.application.usecases.ListarAjustesPendentesUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.ponto.application.usecases.RejeitarAjustePontoUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.ponto.application.usecases.RegistrarPontoUseCaseImpl;
@@ -16,6 +17,7 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.AjustarPontoMa
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.AprovarAjustePontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsultarEspelhoPontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsultarRelatorioEspelhoPontoUseCase;
+import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ConsolidarFilaAjustesUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.ListarAjustesPendentesUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RejeitarAjustePontoUseCase;
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RegistrarPontoUseCase;
@@ -71,5 +73,12 @@ public class PontoModuleConfig {
     @Bean
     public ListarAjustesPendentesUseCase listarAjustesPendentesUseCase(RegistroPontoRepositoryPort repositoryPort) {
         return new ListarAjustesPendentesUseCaseImpl(repositoryPort);
+    }
+
+    @Bean
+    public ConsolidarFilaAjustesUseCase consolidarFilaAjustesUseCase(
+            RegistroPontoRepositoryPort repositoryPort,
+            CpcUsuarioRepositoryPort usuarioRepository) {
+        return new ConsolidarFilaAjustesUseCaseImpl(repositoryPort, usuarioRepository);
     }
 }
