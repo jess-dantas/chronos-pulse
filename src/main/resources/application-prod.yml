@@ -46,6 +46,7 @@ chronos:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:28800000}
+    device-expiration-ms: ${JWT_DEVICE_EXPIRATION_MS:604800000}
   mail:
     enabled: ${CHRONOS_MAIL_ENABLED:true}
     from: ${CHRONOS_MAIL_FROM:no-reply@chronospulse.com.br}

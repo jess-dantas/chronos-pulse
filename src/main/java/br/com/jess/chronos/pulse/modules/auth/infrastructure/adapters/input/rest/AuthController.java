@@ -1,6 +1,7 @@
 package br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest;
 
 import br.com.jess.chronos.pulse.modules.auditoria.service.AuditoriaService;
+import br.com.jess.chronos.pulse.modules.auth.application.service.DeviceTokenService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AlterarFotoPerfilUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AlterarSenhaUseCase;
@@ -12,6 +13,8 @@ import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.RefreshTokenUse
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.SolicitarRecuperacaoSenhaUseCase;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.AlterarSenhaRequestDTO;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.CadastrarEmpresaCompletoRequestDTO;
+import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.DeviceVinculoRequestDTO;
+import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.DeviceVinculoResponseDTO;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.EsqueciSenhaRequestDTO;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.LoginRequestDTO;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.adapters.input.rest.dto.LoginResponseDTO;
@@ -38,6 +41,7 @@ public class AuthController {
     private final RedefinirSenhaUseCase redefinirSenhaUseCase;
     private final AlterarFotoPerfilUseCase alterarFotoPerfilUseCase;
     private final AuditoriaService auditoriaService;
+    private final DeviceTokenService deviceTokenService;
 
     public AuthController(AutenticarUsuarioUseCase autenticarUsuarioUseCase,
                           CadastrarEmpresaCompletoUseCase cadastrarEmpresaCompletoUseCase,
@@ -47,7 +51,8 @@ public class AuthController {
                           SolicitarRecuperacaoSenhaUseCase solicitarRecuperacaoSenhaUseCase,
                           RedefinirSenhaUseCase redefinirSenhaUseCase,
                           AlterarFotoPerfilUseCase alterarFotoPerfilUseCase,
-                          AuditoriaService auditoriaService) {
+                          AuditoriaService auditoriaService,
+                          DeviceTokenService deviceTokenService) {
         this.autenticarUsuarioUseCase = autenticarUsuarioUseCase;
         this.cadastrarEmpresaCompletoUseCase = cadastrarEmpresaCompletoUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
@@ -57,6 +62,7 @@ public class AuthController {
         this.redefinirSenhaUseCase = redefinirSenhaUseCase;
         this.alterarFotoPerfilUseCase = alterarFotoPerfilUseCase;
         this.auditoriaService = auditoriaService;
+        this.deviceTokenService = deviceTokenService;
     }
 
     @GetMapping("/ping")
@@ -175,5 +181,41 @@ return ResponseEntity.ok(new LoginResponseDTO(
         } catch (java.io.IOException e) {
             throw new IllegalArgumentException("Erro ao ler o arquivo de imagem.");
         }
+    }
+
+    /// Vincula o dispositivo ao usuário ("Modo Ponto"): exige sessão ativa e
+    /// aceite do termo de privacidade. Devolve o token cru uma única vez.
+    @PostMapping("/device/vincular")
+    public ResponseEntity<DeviceVinculoResponseDTO> vincularDeviceToken(
+            @AuthenticationPrincipal CpcUsuario usuarioLogado,
+            @RequestBody(required = false) @Valid DeviceVinculoRequestDTO request) {
+        if (usuarioLogado == null) {
+            return ResponseEntity.status(401).build();
+        }
+        var vinculo = deviceTokenService.vincular(usuarioLogado,
+                request != null ? request.deviceName() : null);
+        auditoriaService.registrar("VINCULO_DEVICE_TOKEN", "USUARIO", usuarioLogado.getId(),
+                "Vinculo de dispositivo para modo ponto (7 dias)",
+                usuarioLogado.getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole() != null ? usuarioLogado.getRole().name() : null,
+                null, null, null);
+        return ResponseEntity.ok(
+                new DeviceVinculoResponseDTO(vinculo.deviceToken(), vinculo.expiraEm()));
+    }
+
+    /// Desvincula o dispositivo: revoga todos os vínculos ativos do usuário.
+    @PostMapping("/device/revogar")
+    public ResponseEntity<Map<String, Object>> revogarDeviceToken(
+            @AuthenticationPrincipal CpcUsuario usuarioLogado) {
+        if (usuarioLogado == null) {
+            return ResponseEntity.status(401).build();
+        }
+        int revogados = deviceTokenService.revogarTodos(usuarioLogado.getId());
+        auditoriaService.registrar("REVOGACAO_DEVICE_TOKEN", "USUARIO", usuarioLogado.getId(),
+                "Revogacao de vinculos de dispositivo do modo ponto",
+                usuarioLogado.getTenantId(), usuarioLogado.getCpcId(), usuarioLogado.getCpf(),
+                usuarioLogado.getRole() != null ? usuarioLogado.getRole().name() : null,
+                null, null, null);
+        return ResponseEntity.ok(Map.of("revogados", revogados));
     }
 }

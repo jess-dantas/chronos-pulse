@@ -9,8 +9,12 @@ import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.privacidade.domain.ConsentimentoPrivacidade;
 import br.com.jess.chronos.pulse.modules.privacidade.repository.ConsentimentoPrivacidadeRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -22,6 +26,8 @@ import java.util.UUID;
 public class PrivacidadeService {
 
     public static final String VERSAO_POLITICA_ATUAL = "1.0";
+
+    private static final Logger log = LoggerFactory.getLogger(PrivacidadeService.class);
 
     private final CpcUsuarioRepositoryPort usuarioRepository;
     private final ColaboradorRepositoryPort colaboradorRepository;
@@ -139,11 +145,41 @@ public class PrivacidadeService {
 
         // Admin Empresa: na primeira aceitação, associa todos os módulos
         // contratados pela empresa ao seu usuário (raiz da hierarquia de acesso).
+        //
+        // REGRA PRIMORDIAL: o aceite do termo é o que libera o sistema e NÃO
+        // pode ser perdido por falha deste provisionamento. Por isso ele roda
+        // depois do commit (afterCommit): uma exceção aqui (ex.: uk_usuario_modulo)
+        // nunca marca a transação do consentimento como rollback-only.
         if (usuario.getRole() == Role.ADMIN_EMPRESA && usuario.getTenantId() != null) {
-            var contratados = modulosPort.listarCodigosAtivos(usuario.getTenantId());
-            if (!contratados.isEmpty()) {
-                modulosPort.definirModulosDoUsuario(usuario.getId(), usuario.getTenantId(), contratados);
+            Runnable provisao = () ->
+                    provisionarModulosAdminComSeguranca(usuario.getId(), usuario.getTenantId());
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(
+                        new TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                provisao.run();
+                            }
+                        });
+            } else {
+                // Sem transação ativa (testes unitários): executa direto.
+                provisao.run();
             }
+        }
+    }
+
+    /// Provisiona os módulos do ADMIN_EMPRESA sem nunca propagar a falha:
+    /// o aceite do termo já está gravado e o acesso não pode ficar bloqueado
+    /// por erro de provisionamento (fica no log para correção/retry).
+    private void provisionarModulosAdminComSeguranca(UUID usuarioId, UUID tenantId) {
+        try {
+            var contratados = modulosPort.listarCodigosAtivos(tenantId);
+            if (!contratados.isEmpty()) {
+                modulosPort.definirModulosDoUsuario(usuarioId, tenantId, contratados);
+            }
+        } catch (Exception e) {
+            log.warn("Falha ao provisionar módulos do ADMIN_EMPRESA {} após o aceite do "
+                    + "termo (consentimento mantido): {}", usuarioId, e.getMessage(), e);
         }
     }
 

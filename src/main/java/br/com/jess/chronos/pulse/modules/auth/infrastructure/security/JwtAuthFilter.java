@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.auth.infrastructure.security;
 
+import br.com.jess.chronos.pulse.modules.auth.application.service.DeviceTokenService;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
@@ -22,17 +23,41 @@ import java.util.List;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    /// Header do vínculo de dispositivo ("Modo Ponto"). Autentica SOMENTE o
+    /// endpoint de sincronização de ponto — nunca rotas de sessão.
+    public static final String HEADER_DEVICE_TOKEN = "X-Device-Token";
+    private static final String CAMINHO_SYNC_PONTO = "/api/v1/pontos/sincronizar";
+
     private final JwtService jwtService;
     private final CpcUsuarioRepositoryPort usuarioRepository;
+    private final DeviceTokenService deviceTokenService;
 
-    public JwtAuthFilter(JwtService jwtService, CpcUsuarioRepositoryPort usuarioRepository) {
+    public JwtAuthFilter(JwtService jwtService, CpcUsuarioRepositoryPort usuarioRepository,
+                         DeviceTokenService deviceTokenService) {
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
+        this.deviceTokenService = deviceTokenService;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        // Vinculo de dispositivo (X-Device-Token): escopo restrito ao lote de
+        // sincronização de ponto. Fora desse caminho o header é ignorado; nele,
+        // token inválido/expirado/revogado cai no fluxo normal (sem Bearer =
+        // não autenticado → 401/403 do framework).
+        String deviceToken = request.getHeader(HEADER_DEVICE_TOKEN);
+        if (deviceToken != null && !deviceToken.isBlank()
+                && request.getRequestURI() != null
+                && request.getRequestURI().startsWith(CAMINHO_SYNC_PONTO)) {
+            var usuarioDevice = deviceTokenService.autenticar(deviceToken).orElse(null);
+            if (usuarioDevice != null && usuarioDevice.isAtivo()) {
+                aplicarAutenticacao(usuarioDevice);
+                filterChain.doFilter(request, response);
+                return;
+            }
+        }
+
         String header = request.getHeader("Authorization");
 
         if (header == null || !header.startsWith("Bearer ")) {
@@ -93,6 +118,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         }
 
+        aplicarAutenticacao(usuario);
+        filterChain.doFilter(request, response);
+    }
+
+    /// Resolve MDC de observabilidade (R27) e monta a autenticação com
+    /// autoridades derivadas do banco — compartilhado entre o fluxo JWT de
+    /// sessão e o vínculo de dispositivo.
+    private void aplicarAutenticacao(CpcUsuario usuario) {
         // Contexto de observabilidade no MDC (R27) — limpo ao final da
         // requisição pelo TelemetriaFilter, que envolve toda a cadeia.
         if (usuario.getTenantId() != null) {
@@ -121,8 +154,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         var auth = new UsernamePasswordAuthenticationToken(usuario, null, authorities);
         SecurityContextHolder.getContext().setAuthentication(auth);
-
-        filterChain.doFilter(request, response);
     }
 
     private boolean isEndpointPublico(String uri) {

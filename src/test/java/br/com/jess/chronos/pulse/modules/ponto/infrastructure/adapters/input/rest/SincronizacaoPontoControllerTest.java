@@ -54,7 +54,7 @@ class SincronizacaoPontoControllerTest {
     @Test
     void deveProcessarLoteComSucesso() {
         UUID id = UUID.randomUUID();
-        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(List.of(dto(id)));
+        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(null, List.of(dto(id)));
         when(registrarPontoUseCase.executar(any(), eq("12345678901"), eq(tenantId))).thenReturn(mock(RegistroPonto.class));
 
         ResponseEntity<ResultadoSincronizacaoDTO> response = controller.sincronizarLote(lote, authentication);
@@ -65,9 +65,37 @@ class SincronizacaoPontoControllerTest {
     }
 
     @Test
+    void deveProcessarLoteComColaboradorIdDoDono() {
+        UUID id = UUID.randomUUID();
+        // cliente novo informa o dono (vínculo de dispositivo) e casa com o autenticado
+        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(colaboradorId, List.of(dto(id)));
+        when(registrarPontoUseCase.executar(any(), eq("12345678901"), eq(tenantId))).thenReturn(mock(RegistroPonto.class));
+
+        ResponseEntity<ResultadoSincronizacaoDTO> response = controller.sincronizarLote(lote, authentication);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().idsSucesso()).containsExactly(id);
+    }
+
+    @Test
+    void deveRejeitarLoteDeOutroColaborador() {
+        UUID id = UUID.randomUUID();
+        UUID outroColaborador = UUID.randomUUID();
+        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(outroColaborador, List.of(dto(id)));
+
+        // Defesa de posse: lote declarado para outro colaborador nunca é aceito
+        // (403 via GlobalExceptionHandler) — valem para sessão e device token.
+        assertThatThrownBy(() -> controller.sincronizarLote(lote, authentication))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("outro colaborador");
+
+        verify(registrarPontoUseCase, never()).executar(any(), any(), any());
+    }
+
+    @Test
     void deveRegistrarFalhaQuandoUseCaseLancaExcecao() {
         UUID id = UUID.randomUUID();
-        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(List.of(dto(id)));
+        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(null, List.of(dto(id)));
         when(registrarPontoUseCase.executar(any(), any(), any())).thenThrow(new RuntimeException("erro"));
 
         ResponseEntity<ResultadoSincronizacaoDTO> response = controller.sincronizarLote(lote, authentication);
@@ -80,7 +108,7 @@ class SincronizacaoPontoControllerTest {
     void deveProcessarLoteMistoComSucessoEFalha() {
         UUID idSucesso = UUID.randomUUID();
         UUID idFalha = UUID.randomUUID();
-        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(List.of(
+        SincronizacaoLoteDTO lote = new SincronizacaoLoteDTO(null, List.of(
                 dto(idSucesso),
                 dto(idFalha)
         ));
