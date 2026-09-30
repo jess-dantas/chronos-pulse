@@ -116,7 +116,7 @@ class TelemetriaControllerTest {
 
         assertThat(resposta.getStatusCode().value()).isEqualTo(200);
         verify(telemetriaService).registrar(TipoEventoTelemetria.API_REQUEST, "COMPRAS", tenantId, cpcId,
-                "/api/v1/compras/pedidos", 200, 5L, "OK", null);
+                "/api/v1/compras/pedidos", 200, 5L, "OK", null, "MOBILE");
     }
 
     @Test

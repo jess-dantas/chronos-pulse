@@ -56,7 +56,29 @@ class TelemetriaServiceTest {
         assertThat(evento.getStatusHttp()).isEqualTo(200);
         assertThat(evento.getLatencyMs()).isEqualTo(12L);
         assertThat(evento.getAppVersao()).isEqualTo("1.0.0");
+        assertThat(evento.getPlataforma()).isNull(); // overload legado sem plataforma
         assertThat(evento.getCriadoEm()).isNotNull();
+    }
+
+    @Test
+    void devePersistirPlataformaQuandoInformada() {
+        service.registrar(TipoEventoTelemetria.CONEXAO_OFFLINE, "HOME", null, null,
+                null, null, null, "Sem conexão na abertura", null, "Android");
+
+        verify(repository).save(captor.capture());
+        TelemetriaEvento evento = captor.getValue();
+
+        assertThat(evento.getTipo()).isEqualTo(TipoEventoTelemetria.CONEXAO_OFFLINE);
+        assertThat(evento.getPlataforma()).isEqualTo("Android");
+    }
+
+    @Test
+    void deveTruncarPlataformaParaOTamanhoDaColuna() {
+        service.registrar(TipoEventoTelemetria.API_REQUEST, "APP", null, null,
+                null, null, null, null, null, "PlataformaMuitoLongaDemais");
+
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getPlataforma()).hasSize(20);
     }
 
     @Test

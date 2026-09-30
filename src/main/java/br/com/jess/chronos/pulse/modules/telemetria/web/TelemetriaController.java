@@ -67,7 +67,10 @@ public class TelemetriaController {
                     evento.statusHttp(),
                     evento.latencyMs(),
                     evento.mensagem(),
-                    evento.detalhe());
+                    evento.detalhe(),
+                    // traceId já vem do MDC via header X-Trace-Id (TelemetriaFilter);
+                    // o campo do payload é apenas o trace do cliente (fallback).
+                    evento.plataforma());
         }
         return ResponseEntity.ok(java.util.Map.of("registrados", eventos.size()));
     }

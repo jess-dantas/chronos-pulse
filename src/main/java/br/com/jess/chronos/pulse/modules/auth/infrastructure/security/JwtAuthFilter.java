@@ -23,10 +23,12 @@ import java.util.List;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    /// Header do vínculo de dispositivo ("Modo Ponto"). Autentica SOMENTE o
-    /// endpoint de sincronização de ponto — nunca rotas de sessão.
+    /// Header do vínculo de dispositivo ("Modo Ponto"). Autentica SOMENTE a
+    /// sincronização de ponto e a ingestão de telemetria (best-effort) —
+    /// nunca rotas de sessão.
     public static final String HEADER_DEVICE_TOKEN = "X-Device-Token";
     private static final String CAMINHO_SYNC_PONTO = "/api/v1/pontos/sincronizar";
+    private static final String CAMINHO_TELEMETRIA_EVENTOS = "/api/v1/telemetria/eventos";
 
     private final JwtService jwtService;
     private final CpcUsuarioRepositoryPort usuarioRepository;
@@ -42,14 +44,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        // Vinculo de dispositivo (X-Device-Token): escopo restrito ao lote de
-        // sincronização de ponto. Fora desse caminho o header é ignorado; nele,
-        // token inválido/expirado/revogado cai no fluxo normal (sem Bearer =
-        // não autenticado → 401/403 do framework).
+        // Vinculo de dispositivo (X-Device-Token): escopo restrito à
+        // sincronização de ponto e à ingestão de telemetria. Fora desses
+        // caminhos o header é ignorado; neles, token inválido/expirado/revogado
+        // cai no fluxo normal (sem Bearer = não autenticado → 401/403).
         String deviceToken = request.getHeader(HEADER_DEVICE_TOKEN);
         if (deviceToken != null && !deviceToken.isBlank()
                 && request.getRequestURI() != null
-                && request.getRequestURI().startsWith(CAMINHO_SYNC_PONTO)) {
+                && (request.getRequestURI().startsWith(CAMINHO_SYNC_PONTO)
+                    || request.getRequestURI().startsWith(CAMINHO_TELEMETRIA_EVENTOS))) {
             var usuarioDevice = deviceTokenService.autenticar(deviceToken).orElse(null);
             if (usuarioDevice != null && usuarioDevice.isAtivo()) {
                 aplicarAutenticacao(usuarioDevice);
