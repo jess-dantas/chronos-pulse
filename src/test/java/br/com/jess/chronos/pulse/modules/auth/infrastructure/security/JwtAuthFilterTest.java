@@ -25,13 +25,15 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /// Escopo do vínculo de dispositivo: o header X-Device-Token só autentica a
-/// sincronização de ponto e a ingestão de telemetria; em qualquer outra rota
-/// ele é ignorado.
+/// sincronização de ponto, a leitura do espelho do próprio dono e a ingestão
+/// de telemetria; em qualquer outra rota ele é ignorado.
 @ExtendWith(MockitoExtension.class)
 class JwtAuthFilterTest {
 
     private static final String SYNC = "/api/v1/pontos/sincronizar";
     private static final String TELEMETRIA = "/api/v1/telemetria/eventos";
+    private static final String ESPELHO = "/api/v1/pontos/espelho";
+    private static final String ESPELHO_RELATORIO = "/api/v1/pontos/espelho/relatorio";
 
     @Mock private JwtService jwtService;
     @Mock private CpcUsuarioRepositoryPort usuarioRepository;
@@ -96,6 +98,35 @@ class JwtAuthFilterTest {
         assertThat(auth.getPrincipal()).isEqualTo(dono);
         verify(filterChain).doFilter(request, response);
         verifyNoInteractions(jwtService, usuarioRepository);
+    }
+
+    @Test
+    void deviceTokenValidoAutenticaNaLeituraDoEspelho() throws Exception {
+        var dono = colaborador();
+        stubHeaderDevice("dt-valor");
+        when(request.getRequestURI()).thenReturn(ESPELHO);
+        when(deviceTokenService.autenticar("dt-valor")).thenReturn(Optional.of(dono));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isEqualTo(dono);
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(jwtService, usuarioRepository);
+    }
+
+    @Test
+    void deviceTokenNaoCobreORelatorioDoEspelho() throws Exception {
+        // Igualdade exata: o PDF (dados da empresa) não faz parte do escopo.
+        stubHeaderDevice("dt-valor");
+        when(request.getRequestURI()).thenReturn(ESPELHO_RELATORIO);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(deviceTokenService, jwtService);
     }
 
     @Test
