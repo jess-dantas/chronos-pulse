@@ -6,5 +6,9 @@ public enum TipoEventoTelemetria {
     API_REQUEST,
     API_ERRO,
     UI_ERRO,
-    CONEXAO_BD
+    CONEXAO_BD,
+    // Eventos de app (contingência / modo dispositivo) — coluna STRING, sem migration.
+    CONEXAO_OFFLINE,
+    CONTINGENCIA,
+    MODO_DISPOSITIVO
 }

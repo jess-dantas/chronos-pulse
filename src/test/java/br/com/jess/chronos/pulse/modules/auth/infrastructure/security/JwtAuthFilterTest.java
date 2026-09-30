@@ -24,12 +24,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-/// Escopo do vínculo de dispositivo: o header X-Device-Token só autentica o
-/// lote de sincronização de ponto; em qualquer outra rota ele é ignorado.
+/// Escopo do vínculo de dispositivo: o header X-Device-Token só autentica a
+/// sincronização de ponto e a ingestão de telemetria; em qualquer outra rota
+/// ele é ignorado.
 @ExtendWith(MockitoExtension.class)
 class JwtAuthFilterTest {
 
     private static final String SYNC = "/api/v1/pontos/sincronizar";
+    private static final String TELEMETRIA = "/api/v1/telemetria/eventos";
 
     @Mock private JwtService jwtService;
     @Mock private CpcUsuarioRepositoryPort usuarioRepository;
@@ -77,6 +79,22 @@ class JwtAuthFilterTest {
                 .contains("ROLE_COLABORADOR");
         verify(filterChain).doFilter(request, response);
         // fluxo de sessão não é tocado quando o device token vale
+        verifyNoInteractions(jwtService, usuarioRepository);
+    }
+
+    @Test
+    void deviceTokenValidoAutenticaNaIngestaoDeTelemetria() throws Exception {
+        var dono = colaborador();
+        stubHeaderDevice("dt-valor");
+        when(request.getRequestURI()).thenReturn(TELEMETRIA);
+        when(deviceTokenService.autenticar("dt-valor")).thenReturn(Optional.of(dono));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isEqualTo(dono);
+        verify(filterChain).doFilter(request, response);
         verifyNoInteractions(jwtService, usuarioRepository);
     }
 

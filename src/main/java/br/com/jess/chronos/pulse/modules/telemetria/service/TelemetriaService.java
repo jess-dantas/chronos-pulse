@@ -40,6 +40,14 @@ public class TelemetriaService {
     public void registrar(TipoEventoTelemetria tipo, String modulo, UUID tenantId, UUID usuarioId,
                           String endpoint, Integer statusHttp, Long latencyMs,
                           String mensagem, String detalhe) {
+        registrar(tipo, modulo, tenantId, usuarioId, endpoint, statusHttp, latencyMs,
+                mensagem, detalhe, null);
+    }
+
+    @Transactional
+    public void registrar(TipoEventoTelemetria tipo, String modulo, UUID tenantId, UUID usuarioId,
+                          String endpoint, Integer statusHttp, Long latencyMs,
+                          String mensagem, String detalhe, String plataforma) {
         if (!properties.isEnabled()) {
             return;
         }
@@ -56,6 +64,7 @@ public class TelemetriaService {
                     .detalhe(detalhe)
                     .traceId(org.slf4j.MDC.get("traceId"))
                     .appVersao(properties.getAppVersao())
+                    .plataforma(truncar(plataforma, 20))
                     .criadoEm(Instant.now())
                     .build();
             repository.save(evento);
