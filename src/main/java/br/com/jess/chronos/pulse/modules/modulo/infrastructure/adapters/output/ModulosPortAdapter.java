@@ -49,13 +49,14 @@ public class ModulosPortAdapter implements ModulosPort {
         var permitidos = new HashSet<>(listarCodigosAtivos(tenantId));
         var validos = codigos == null ? List.<String>of()
                 : codigos.stream().filter(permitidos::contains).distinct().toList();
-        usuarioModuloRepository.deleteByUsuarioIdAndTenantId(usuarioId, tenantId);
+        // Apaga por usuario_id (qualquer tenant / tenant_id NULL). Linhas órfãs
+        // com tenant divergente escapavam do filtro por tenant e o insert
+        // seguinte violava uk_usuario_modulo (duplicate key 23505), derrubando
+        // a transação do aceite do termo.
+        usuarioModuloRepository.deleteByUsuarioId(usuarioId);
         for (String codigo : validos) {
-            var entidade = new UsuarioModuloJpaEntity();
-            entidade.setUsuarioId(usuarioId);
-            entidade.setTenantId(tenantId);
-            entidade.setCodigo(codigo);
-            usuarioModuloRepository.save(entidade);
+            usuarioModuloRepository.upsertModulo(
+                    UUID.randomUUID(), tenantId, usuarioId, codigo);
         }
     }
 

@@ -188,6 +188,50 @@ class PrivacidadeServiceTest {
     }
 
     @Test
+    void falhaNoProvisionamentoNaoDevePerderAceiteDoAdminEmpresa() {
+        CpcUsuario adminEmpresa = new CpcUsuario(
+                UUID.randomUUID(), UUID.randomUUID(), "99988877766", "Admin Empresa",
+                "admin@empresa.com", "hash", Role.ADMIN_EMPRESA, usuario.getTenantId());
+
+        when(modulosPort.listarCodigosAtivos(adminEmpresa.getTenantId()))
+                .thenReturn(java.util.List.of("PONTO", "COMPRAS"));
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException(
+                        "duplicate key value violates unique constraint \"uk_usuario_modulo\""))
+                .when(modulosPort).definirModulosDoUsuario(any(), any(), any());
+
+        // Regra primordial: falha de provisionamento (23505) NÃO pode derrubar
+        // o aceite do termo — o consentimento já está salvo e o acesso é liberado.
+        org.assertj.core.api.Assertions.assertThatCode(() ->
+                        privacidadeService.registrarConsentimento(
+                                adminEmpresa, "1.0", true, "127.0.0.1", "Agent"))
+                .doesNotThrowAnyException();
+
+        verify(consentimentoRepository).save(any());
+        verify(auditoriaService).registrar(
+                org.mockito.ArgumentMatchers.eq("CONSENTIMENTO_PRIVACIDADE"),
+                org.mockito.ArgumentMatchers.eq("cpc_usuario"),
+                org.mockito.ArgumentMatchers.eq(adminEmpresa.getId()),
+                any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void falhaNoListarCodigosTambemNaoDevePerderAceite() {
+        CpcUsuario adminEmpresa = new CpcUsuario(
+                UUID.randomUUID(), UUID.randomUUID(), "99988877766", "Admin Empresa",
+                "admin@empresa.com", "hash", Role.ADMIN_EMPRESA, usuario.getTenantId());
+
+        when(modulosPort.listarCodigosAtivos(adminEmpresa.getTenantId()))
+                .thenThrow(new IllegalStateException("banco indisponível"));
+
+        org.assertj.core.api.Assertions.assertThatCode(() ->
+                        privacidadeService.registrarConsentimento(
+                                adminEmpresa, "1.0", true, "127.0.0.1", "Agent"))
+                .doesNotThrowAnyException();
+
+        verify(consentimentoRepository).save(any());
+    }
+
+    @Test
     void deveRejeitarConsentimentoNaoAfirmativo() {
         assertThatThrownBy(() -> privacidadeService.registrarConsentimento(
                 usuario, "1.0", false, "127.0.0.1", "Agent"))
