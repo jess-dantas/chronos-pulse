@@ -47,6 +47,15 @@ public class SincronizacaoPontoController {
 
         // colaboradorId = cpcId do usuário autenticado (identidade global)
         UUID colaboradorId = usuario.getCpcId();
+
+        // Posse do lote: quando o cliente informa o dono, ele precisa casar
+        // com o autenticado (sessão OU vínculo de dispositivo) — o lote de
+        // outro colaborador nunca é aceito. IllegalStateException → 403.
+        if (lote.colaboradorId() != null && !lote.colaboradorId().equals(colaboradorId)) {
+            throw new IllegalStateException(
+                    "O lote de sincronização pertence a outro colaborador.");
+        }
+
         String email = usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal();
 
         List<UUID> processadosComSucesso = new ArrayList<>();
