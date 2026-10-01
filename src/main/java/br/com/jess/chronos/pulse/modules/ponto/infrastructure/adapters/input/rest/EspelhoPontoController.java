@@ -201,7 +201,7 @@ public class EspelhoPontoController {
     }
 
     @GetMapping("/ajustes/pendentes")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasRole('GESTOR_RH')")
     public ResponseEntity<List<EspelhoPontoItemDTO>> listarAjustesPendentes(
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
@@ -217,7 +217,7 @@ public class EspelhoPontoController {
      * e marcações do dia (contexto do espelho) para aprovar/recusar sem sair da tela.
      */
     @GetMapping("/ajustes/resumo")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasRole('GESTOR_RH')")
     public ResponseEntity<List<ResumoAjustePontoDTO>> consolidarFilaAjustes(
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
 
@@ -229,7 +229,7 @@ public class EspelhoPontoController {
     }
 
     @PutMapping("/ajustes/{id}/aprovar")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasRole('GESTOR_RH')")
     public ResponseEntity<EspelhoPontoItemDTO> aprovarAjuste(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuarioLogado) {
@@ -260,7 +260,7 @@ public class EspelhoPontoController {
     }
 
     @PutMapping("/ajustes/{id}/rejeitar")
-    @PreAuthorize("hasAnyRole('GESTOR_RH', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasRole('GESTOR_RH')")
     public ResponseEntity<EspelhoPontoItemDTO> rejeitarAjuste(
             @PathVariable UUID id,
             @RequestParam String motivo,

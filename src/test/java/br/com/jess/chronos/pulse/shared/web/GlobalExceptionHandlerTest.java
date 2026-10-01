@@ -70,6 +70,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void deveRetornar403ParaSecurityExceptionComMensagem() {
+        var resposta = handler.handleSecurity(
+                new SecurityException("Acesso negado: registro não pertence ao tenant."));
+
+        assertThat(resposta.getStatusCode().value()).isEqualTo(403);
+        assertThat(resposta.getBody().status()).isEqualTo(403);
+        assertThat(resposta.getBody().mensagem()).contains("não pertence ao tenant");
+    }
+
+    @Test
     void deveRetornar404ParaNoHandlerFound() {
         var resposta = handler.handleNotFound(
                 new org.springframework.web.servlet.NoHandlerFoundException("GET",

@@ -31,7 +31,7 @@ public class PatrimonioController {
     private final AuditoriaService auditoriaService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
     public ResponseEntity<PatrimonioResponseDTO> cadastrar(
             @Valid @RequestBody CadastrarPatrimonioDTO dto,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -45,7 +45,7 @@ public class PatrimonioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
     public ResponseEntity<PatrimonioResponseDTO> atualizar(
             @PathVariable UUID id,
             @Valid @RequestBody CadastrarPatrimonioDTO dto,
@@ -60,7 +60,7 @@ public class PatrimonioController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
     public ResponseEntity<Void> desativar(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -74,7 +74,7 @@ public class PatrimonioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<Page<PatrimonioResponseDTO>> listar(
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal CpcUsuario usuario) {
@@ -82,13 +82,13 @@ public class PatrimonioController {
     }
 
     @GetMapping("/ativos")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<List<PatrimonioResponseDTO>> listarAtivos(@AuthenticationPrincipal CpcUsuario usuario) {
         return ResponseEntity.ok(patrimonioService.listarAtivos(usuario.getTenantId()));
     }
 
     @GetMapping("/buscar")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<List<PatrimonioResponseDTO>> buscar(
             @RequestParam("q") String q,
             @AuthenticationPrincipal CpcUsuario usuario) {
@@ -96,7 +96,7 @@ public class PatrimonioController {
     }
 
     @GetMapping("/qrcode/{codigo}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<PatrimonioResponseDTO> buscarPorQrCode(
             @PathVariable String codigo,
             @AuthenticationPrincipal CpcUsuario usuario) {
@@ -104,7 +104,7 @@ public class PatrimonioController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<PatrimonioResponseDTO> buscarPorId(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario) {

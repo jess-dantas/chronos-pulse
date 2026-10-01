@@ -29,7 +29,7 @@ public class FrotaController {
     private final FrotaService frotaService;
 
     @PostMapping("/veiculos")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
     public ResponseEntity<FrotaVeiculoResponseDTO> cadastrarVeiculo(
             @Valid @RequestBody CadastrarFrotaVeiculoDTO dto,
             Authentication authentication) {
@@ -39,7 +39,7 @@ public class FrotaController {
     }
 
     @GetMapping("/veiculos")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<Page<FrotaVeiculoResponseDTO>> listarVeiculos(
             @PageableDefault(size = 20) Pageable pageable,
             Authentication authentication) {
@@ -48,7 +48,7 @@ public class FrotaController {
     }
 
     @GetMapping("/veiculos/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<FrotaVeiculoResponseDTO> buscarVeiculo(
             @PathVariable UUID id,
             Authentication authentication) {
@@ -57,7 +57,7 @@ public class FrotaController {
     }
 
     @PostMapping("/abastecimentos")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
     public ResponseEntity<AbastecimentoResponseDTO> registrarAbastecimento(
             @Valid @RequestBody CadastrarAbastecimentoDTO dto,
             Authentication authentication) {
@@ -67,7 +67,7 @@ public class FrotaController {
     }
 
     @GetMapping("/abastecimentos")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
     public ResponseEntity<Page<AbastecimentoResponseDTO>> listarAbastecimentos(
             @PageableDefault(size = 20) Pageable pageable,
             Authentication authentication) {
