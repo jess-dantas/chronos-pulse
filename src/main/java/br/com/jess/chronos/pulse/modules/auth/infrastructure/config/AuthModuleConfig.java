@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.auth.infrastructure.config;
 
+import br.com.jess.chronos.pulse.modules.auth.application.service.LoginSessionFactory;
 import br.com.jess.chronos.pulse.modules.auth.application.usecases.AlterarFotoPerfilUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.auth.application.usecases.AlterarSenhaUseCaseImpl;
 import br.com.jess.chronos.pulse.modules.auth.application.usecases.AutenticarUsuarioUseCaseImpl;
@@ -35,12 +36,10 @@ public class AuthModuleConfig {
     @Bean
     public AutenticarUsuarioUseCase autenticarUsuarioUseCase(
             CpcUsuarioRepositoryPort repositoryPort,
-            JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            ModulosPort modulosPort,
             LoginMetricsRecorder loginMetricsRecorder,
-            EmpresaRepositoryPort empresaRepository) {
-        return new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder, empresaRepository);
+            LoginSessionFactory loginSessionFactory) {
+        return new AutenticarUsuarioUseCaseImpl(repositoryPort, passwordEncoder, loginMetricsRecorder, loginSessionFactory);
     }
 
     @Bean

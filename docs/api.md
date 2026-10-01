@@ -23,7 +23,16 @@ Base: `http://localhost:8080/api/v1` · Formato: JSON · Autenticação: `Author
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/auth/login` | 🔓 | Login por CPF/senha → `accessToken`, `refreshToken`, `role`, `modulos`, `cpcId`, `tenantId`, ... |
+| `POST` | `/auth/login` | 🔓 | Login por CPF/senha → `accessToken`, `refreshToken`, `role`, `modulos`, `cpcId`, `tenantId`, ... **2FA-first (colaborador):** senha opcional — com `twoFactorEnabled` responde `requiresTwoFactor: true` + `tempToken` (5 min) em vez dos tokens; **sem senha** exige 2FA habilitado e emite `tempToken` direto (`400 "Senha é obrigatória"` se desligado) |
+| `POST` | `/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos TOTP) → troca pelos tokens finais; código errado conta no lockout (`registrarFalhaLogin`, 5 falhas / 15 min) |
+| `POST` | `/auth/2fa/email/send` | 🔓 | `{ tempToken }` → gera OTP de 8 dígitos (15 min, hash bcrypt) e envia por e-mail |
+| `POST` | `/auth/2fa/email/verify` | 🔓 | `{ tempToken, codigo }` (8 dígitos) → tokens finais; 5 tentativas erradas bloqueiam o código até expirar |
+| `GET` | `/auth/2fa/status` | 👤 | `{ enabled }` |
+| `POST` | `/auth/2fa/setup` | 👤 | Gera segredo TOTP → `{ secret, otpauthUri }` (segredo fica pendente até o confirm) |
+| `POST` | `/auth/2fa/confirm` | 👤 | `{ codigo }` — valida TOTP e **ativa** o 2FA |
+| `POST` | `/auth/2fa/disable` | 👤 | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA (limpa também o OTP de e-mail) |
+| `GET` | `/auth/device/status` | 🔓 | Header `X-Device-Token` → `{ cpcId, nome, twoFactorEnabled, vinculoAtivo, expiraEm }`; sem vínculo/expirado → `401` |
+| `POST` | `/auth/device/verificar` | 🔓 | Header `X-Device-Token` + `{ metodo: "TOTP"\|"EMAIL", codigo? }` (modo sem login, ordem biometria → 2FA → vínculo). `EMAIL` **sem `codigo`** gera e envia o OTP (`enviado: true`, `expiraEm`); com código ou `TOTP` válido → `{ verificado: true, cpcId, cpf, role }`; token inválido → `401` |
 | `POST` | `/auth/cadastrar-empresa` | 🔓 | Cadastro público: tenant + admin + colaborador + módulos core → já autentica |
 | `POST` | `/auth/refresh` | 🔓 | Renova o access token (limite absoluto: 8h da sessão) |
 | `POST` | `/auth/esqueci-senha` | 🔓 | Solicita recuperação de senha |
@@ -46,7 +55,24 @@ Login — corpo e resposta resumida:
   "acessoEstoque": false,
   "modulos": ["PONTO", "RECURSOS_HUMANOS", "ESTOQUE"]
 }
+
+// Resposta quando o colaborador tem 2FA habilitado (etapa 1 — sem tokens)
+{
+  "requiresTwoFactor": true,
+  "tempToken": "eyJ...",   // 5 min, usado por /auth/2fa/verify e /auth/2fa/email/*
+  "role": "COLABORADOR", "nome": "Colaborador Teste", "cpf": "12345678901",
+  "tenantId": "a0eebc99-..."
+}
 ```
+
+> **2FA do colaborador (sem recovery codes — decisão):** TOTP (Google
+> Authenticator etc.) **ou** OTP por e-mail de 8 dígitos. O `tempToken` é a
+> credencial da etapa 2; ao concluir (`2fa/verify`, `2fa/email/verify` ou
+> `device/verificar`) o backend responde com os tokens finais e registra a
+> auditoria `LOGIN`. A habilitação é feita pelo próprio usuário
+> (`2fa/setup` → `2fa/confirm`). No **modo sem login** a validação é por
+> header `X-Device-Token` (`device/status` + `device/verificar`).
+
 
 ---
 

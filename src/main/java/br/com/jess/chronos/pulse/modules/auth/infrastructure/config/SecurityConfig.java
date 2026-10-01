@@ -47,6 +47,13 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                     .requestMatchers("/admin/**").permitAll()  // Admin routes handled by AdminSecurityConfig
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                    // 2FA do colaborador: validam o tempToken emitido no login
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/verify").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/email/send").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/email/verify").permitAll()
+                    // Modo sem login: validam o header X-Device-Token internamente
+                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/device/status").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/device/verificar").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/cadastrar-empresa").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/esqueci-senha").permitAll()

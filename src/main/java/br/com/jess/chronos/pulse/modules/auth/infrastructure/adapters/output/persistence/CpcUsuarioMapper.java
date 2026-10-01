@@ -32,5 +32,10 @@ public interface CpcUsuarioMapper {
         model.atualizarDadosPessoais(entity.getApelido(), entity.getCelular(), entity.getEmailPessoal());
         model.atualizarControleAcesso(entity.getSenhaAlteradaEm(),
                 entity.getTentativasLoginFalhas(), entity.getBloqueioLoginAte());
+        model.setTwoFactorEnabled(entity.isTwoFactorEnabled());
+        model.setTwoFactorSecret(entity.getTwoFactorSecret());
+        model.setTwoFactorEmailHash(entity.getTwoFactorEmailHash());
+        model.setTwoFactorEmailExpiraEm(entity.getTwoFactorEmailExpiraEm());
+        model.setTwoFactorEmailTentativas(entity.getTwoFactorEmailTentativas());
     }
 }

@@ -113,6 +113,13 @@ public class DeviceTokenService {
     /// resulta em `Optional.empty()` — nunca autentica.
     @Transactional
     public Optional<CpcUsuario> autenticar(String valorBruto) {
+        return autenticarComVinculo(valorBruto).map(VinculoAtivo::usuario);
+    }
+
+    /// Idem a `autenticar`, mas também devolve a expiração do vínculo
+    /// (usado pelo status do modo sem login para o aviso).
+    @Transactional
+    public Optional<VinculoAtivo> autenticarComVinculo(String valorBruto) {
         if (valorBruto == null || valorBruto.isBlank()) {
             return Optional.empty();
         }
@@ -140,8 +147,11 @@ public class DeviceTokenService {
 
         entidade.setUltimoUsoEm(agora);
         deviceTokenRepository.save(entidade);
-        return Optional.of(usuario);
+        return Optional.of(new VinculoAtivo(usuario, entidade.getExpiraEm(), entidade.getDeviceName()));
     }
+
+    /// Dono + metadados do vínculo autenticado.
+    public record VinculoAtivo(CpcUsuario usuario, Instant expiraEm, String deviceName) {}
 
     private String gerarValorToken() {
         byte[] bytes = new byte[32];
