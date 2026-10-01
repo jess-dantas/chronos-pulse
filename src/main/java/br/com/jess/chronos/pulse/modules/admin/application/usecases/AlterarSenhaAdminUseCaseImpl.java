@@ -33,7 +33,8 @@ public class AlterarSenhaAdminUseCaseImpl implements AlterarSenhaAdminUseCase {
             throw new IllegalArgumentException("Admin não encontrado");
         }
 
-        if (!passwordEncoder.matches(comando.senhaAtual(), admin.getSenhaHash())) {
+        if (comando.senhaAtual() != null && !comando.senhaAtual().isBlank()
+                && !passwordEncoder.matches(comando.senhaAtual(), admin.getSenhaHash())) {
             throw new IllegalArgumentException("Senha atual incorreta");
         }
 

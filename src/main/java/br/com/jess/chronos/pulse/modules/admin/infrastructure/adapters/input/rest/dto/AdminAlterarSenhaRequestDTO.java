@@ -11,7 +11,6 @@ import lombok.*;
 @Builder
 public class AdminAlterarSenhaRequestDTO {
 
-    @NotBlank(message = "Senha atual é obrigatória")
     private String senhaAtual;
 
     @NotBlank(message = "Nova senha é obrigatória")

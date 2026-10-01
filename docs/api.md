@@ -29,6 +29,7 @@ Base: `http://localhost:8080/api/v1` · Formato: JSON · Autenticação: `Author
 | `POST` | `/auth/esqueci-senha` | 🔓 | Solicita recuperação de senha |
 | `POST` | `/auth/redefinir-senha` | 🔓 | Redefine a senha |
 | `GET` | `/auth/me` | 👤 | Perfil completo do usuário (inclui `modulos`) |
+| `POST` | `/auth/alterar-senha` | 👤 | `{ senhaAtual?, novaSenha }` (nova ≥6) — `senhaAtual` **opcional**: se enviada, é validada contra a senha atual (`400 "Senha atual incorreta."`) |
 | `GET` | `/auth/ping` | 🔓 | Health-check |
 
 Login — corpo e resposta resumida:
@@ -68,7 +69,7 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 | `POST` | `/admin/auth/2fa/setup` | 🛡️ (`ADMIN_PLATAFORMA`) | Gera segredo TOTP → `{ secret, otpauthUri }` (segredo fica pendente até o confirm) |
 | `POST` | `/admin/auth/2fa/confirm` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — valida TOTP, **ativa** o 2FA e, no fluxo de bootstrap/setup, emite os tokens finais **e 8 códigos de recuperação** (exibidos uma única vez) |
 | `POST` | `/admin/auth/2fa/disable` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA (sempre permitido; com `chronos.admin.two-factor-required=true` o próximo login força o wizard de setup novamente) |
-| `POST` | `/admin/auth/alterar-senha` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ senhaAtual, novaSenha }` (nova 8–100) |
+| `POST` | `/admin/auth/alterar-senha` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ senhaAtual?, novaSenha }` (nova 8–100) — `senhaAtual` **opcional**: se enviada, é validada (`400 "Senha atual incorreta"`) |
 
 Regras de acesso de `/admin/**` ficam em `AdminSecurityConfig` (chain separada com `securityMatcher("/admin/**")`); o token admin tem claim `adminId` e `role=ADMIN_PLATAFORMA` (sem CPF/tenant). O `JwtAuthFilter` autentica tokens com `adminId` direto com `ADMIN_PLATAFORMA`, sem lookup em `cpc_usuario`.
 
