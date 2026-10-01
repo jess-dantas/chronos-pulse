@@ -44,6 +44,21 @@ public class AutenticarAdminPlataformaUseCaseImpl implements AutenticarAdminPlat
             throw new IllegalStateException("Conta desativada");
         }
 
+        // 2FA-first: sem senha, exige 2FA já habilitado e o tempToken
+        // autentica a segunda etapa em /admin/auth/2fa/verify.
+        if (comando.senha() == null) {
+            if (admin.isLoginBloqueado()) {
+                log.warn("Falha de login admin: conta bloqueada por excesso de tentativas (username={})", comando.username());
+                throw new IllegalStateException("Conta temporariamente bloqueada por excesso de tentativas");
+            }
+            if (!admin.isTwoFactorEnabled()) {
+                log.warn("Falha de login admin: login sem senha sem 2FA habilitado (username={})", comando.username());
+                throw new IllegalArgumentException("Senha é obrigatória");
+            }
+            String tempToken = jwtService.gerarTempTokenTwoFactor(admin.getId().toString());
+            return new Resultado(admin, null, null, true, tempToken, false);
+        }
+
         if (!passwordEncoder.matches(comando.senha(), admin.getSenhaHash())) {
             log.warn("Falha de login admin: senha inválida (username={})", comando.username());
             admin.registrarFalhaLogin();

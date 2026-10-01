@@ -26,6 +26,9 @@ public interface AdminPlataformaMapper {
                 .ativo(entity.isAtivo())
                 .twoFactorEnabled(entity.isTwoFactorEnabled())
                 .twoFactorSecret(entity.getTwoFactorSecret())
+                .recuperacaoEmailHash(entity.getRecuperacaoEmailHash())
+                .recuperacaoEmailExpiraEm(entity.getRecuperacaoEmailExpiraEm())
+                .recuperacaoEmailTentativas(entity.getRecuperacaoEmailTentativas())
                 .criadoEm(entity.getCriadoEm())
                 .atualizadoEm(entity.getAtualizadoEm())
                 .build();

@@ -113,4 +113,33 @@ class RecuperarAcessoAdminUseCaseImplTest {
         verify(repositoryPort).salvar(any(AdminPlataforma.class));
         verifyNoInteractions(recoveryCodeRepositoryPort);
     }
+
+    @Test
+    void deveRecuperarSemSenha() {
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+        when(recoveryCodeRepositoryPort.listarPorAdmin(admin.getId())).thenReturn(List.of(codigo));
+        when(jwtService.gerarAccessTokenAdmin("Administrator", admin.getId().toString())).thenReturn("access");
+        when(jwtService.gerarRefreshTokenAdmin("Administrator", admin.getId().toString())).thenReturn("refresh");
+
+        var resultado = useCase.executar(new Comando("Administrator", null, "abcde-fghij"));
+
+        assertThat(resultado.accessToken()).isEqualTo("access");
+        assertThat(resultado.novosRecoveryCodes()).hasSize(AdminRecoveryCodeService.QUANTIDADE);
+        assertThat(codigo.isUsado()).isTrue();
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void deveTrocarSenhaQuandoNovaSenhaInformada() {
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+        when(passwordEncoder.matches("admin1234", "hash")).thenReturn(true);
+        when(passwordEncoder.encode("nova-senha-9")).thenReturn("novo-hash");
+        when(recoveryCodeRepositoryPort.listarPorAdmin(admin.getId())).thenReturn(List.of(codigo));
+        when(jwtService.gerarAccessTokenAdmin("Administrator", admin.getId().toString())).thenReturn("access");
+        when(jwtService.gerarRefreshTokenAdmin("Administrator", admin.getId().toString())).thenReturn("refresh");
+
+        useCase.executar(new Comando("Administrator", "admin1234", "abcde-fghij", "nova-senha-9"));
+
+        assertThat(admin.getSenhaHash()).isEqualTo("novo-hash");
+    }
 }

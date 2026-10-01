@@ -29,7 +29,10 @@ public class AdminSecurityConfig {
                         .requestMatchers(
                                 "/admin/auth/login",
                                 "/admin/auth/logout",
+                                "/admin/auth/refresh",
                                 "/admin/auth/2fa/verify",
+                                "/admin/auth/2fa/email/send",
+                                "/admin/auth/2fa/email/verify",
                                 "/admin/auth/bootstrap",
                                 "/admin/auth/bootstrap/status",
                                 "/admin/auth/2fa/setup",

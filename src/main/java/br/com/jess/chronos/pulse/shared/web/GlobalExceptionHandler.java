@@ -90,6 +90,14 @@ public class GlobalExceptionHandler {
                 .body(new ApiError(403, "Acesso não autorizado.", null));
     }
 
+    // Regra de tenant/segurança violada nos use cases (ex.: ajuste de outro
+    // tenant) — era 500 genérico; agora 403 com a mensagem real.
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ApiError> handleSecurity(SecurityException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ApiError(403, ex.getMessage(), null));
+    }
+
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ApiError> handleDataAccess(DataAccessException ex) {
         String sqlState = extrairSqlState(ex);

@@ -49,6 +49,15 @@ public class AdminPlataformaJpaEntity {
     @Column(name = "two_factor_secret", length = 64)
     private String twoFactorSecret;
 
+    @Column(name = "recuperacao_email_hash")
+    private String recuperacaoEmailHash;
+
+    @Column(name = "recuperacao_email_expira_em")
+    private java.time.Instant recuperacaoEmailExpiraEm;
+
+    @Column(name = "recuperacao_email_tentativas", nullable = false)
+    private int recuperacaoEmailTentativas;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private java.time.Instant criadoEm;
 

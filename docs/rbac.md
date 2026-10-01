@@ -53,11 +53,11 @@ O sistema usa **RBAC** baseado em roles extraídas do token JWT. Cada perfil rec
 > Observação LGPD: as listas abaixo são as anotações dos controllers; para
 > `ADMIN_PLATAFORMA` vale a negação da camada de URL acima.
 
-- **Ponto / ajustes** (`EspelhoPontoController`): leitura do espelho e `POST /pontos/ajustar` aceitam `COLABORADOR`/`ADMIN_EMPRESA`/`GESTOR_RH` (+ `ADMIN_PLATAFORMA` na anotação, negado na URL); **aprovação de ajustes** (`GET /pontos/ajustes/pendentes`, `GET /pontos/ajustes/resumo`, `PUT .../aprovar`, `PUT .../rejeitar`) apenas `ADMIN_EMPRESA`/`GESTOR_RH`.
+- **Ponto / ajustes** (`EspelhoPontoController`): leitura do espelho e `POST /pontos/ajustar` aceitam `COLABORADOR`/`ADMIN_EMPRESA`/`GESTOR_RH` (+ `ADMIN_PLATAFORMA` na anotação, negado na URL); **aprovação de ajustes** (`GET /pontos/ajustes/pendentes`, `GET /pontos/ajustes/resumo`, `PUT .../aprovar`, `PUT .../rejeitar`) apenas `GESTOR_RH`.
 - **Compras** (`@RequiresModulo("COMPRAS")`): leituras (fornecedores, pedidos, NFe, banco de preços), criação de pedido e recebimento por NFe aceitam `ADMIN_EMPRESA`/`GESTOR_RH`/`ROLE_ESTOQUE`. **Cadastro/edição/inativação de fornecedor**: gerência (`ADMIN_EMPRESA`; anotação também `ADMIN_PLATAFORMA`, negado na URL). **Requisições**: leitura/CRUD com o grupo de compras; **cancelamento, cotações (criar/propostas/concluir/cancelar/gerar-pedidos)**: gerência (`ADMIN_EMPRESA`/`GESTOR_RH`).
 - **Licitações** (`@RequiresModulo("LICITACOES")`): leituras (listagem, detalhe, lances, planejamento) aceitam `ADMIN_EMPRESA`/`GESTOR_RH`/`ROLE_ESTOQUE`; **todas as escritas** (criar, publicar, PNCP, propostas, disputa, lances, adjudicar, homologar, cancelar, gerar pedidos, contrato, planejamento ETP/TR/edital) restringem-se à **gerência** (`ADMIN_EMPRESA`/`GESTOR_RH`).
 - **Transparência** (`@RequiresModulo("TRANSPARENCIA")`): leituras (resumo, despesas mensais, publicações) aceitam `ADMIN_EMPRESA`/`GESTOR_RH`/`ROLE_ESTOQUE`/**`COLABORADOR`**; **publicação/remoção** restringem-se à gerência.
-- **Patrimônio/Frota/Protocolo** (módulos verticais): cadastros e alterações de status restringem-se a `ADMIN_EMPRESA` (anotação também `ADMIN_PLATAFORMA`, negado na URL); leituras aceitam também `COLABORADOR`.
+- **Patrimônio/Frota/Protocolo** (módulos verticais): cadastros e alterações de status aceitam `ADMIN_EMPRESA`/`GESTOR_RH` (anotação também `ADMIN_PLATAFORMA`, negado na URL); leituras aceitam também `COLABORADOR`.
 
 ## Enforço por Módulo (empresa × usuário)
 

@@ -119,4 +119,32 @@ public class AdminModuleConfig {
         return new RecuperarAcessoAdminUseCaseImpl(repositoryPort, recoveryCodeRepositoryPort,
                 passwordEncoder, jwtService, recoveryCodeService);
     }
+
+    @Bean
+    @Primary
+    public EnviarCodigoEmailAdminUseCase enviarCodigoEmailAdminUseCase(
+            AdminPlataformaRepositoryPort repositoryPort,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService jwtService,
+            br.com.jess.chronos.pulse.modules.notificacao.service.EmailRecuperacaoSenhaService emailRecuperacaoSenhaService) {
+        return new EnviarCodigoEmailAdminUseCaseImpl(repositoryPort, passwordEncoder,
+                jwtService, emailRecuperacaoSenhaService);
+    }
+
+    @Bean
+    @Primary
+    public VerificarCodigoEmailAdminUseCase verificarCodigoEmailAdminUseCase(
+            AdminPlataformaRepositoryPort repositoryPort,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService jwtService) {
+        return new VerificarCodigoEmailAdminUseCaseImpl(repositoryPort, passwordEncoder, jwtService);
+    }
+
+    @Bean
+    @Primary
+    public RefreshAdminTokenUseCase refreshAdminTokenUseCase(
+            AdminPlataformaRepositoryPort repositoryPort,
+            br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService jwtService) {
+        return new RefreshAdminTokenUseCaseImpl(repositoryPort, jwtService);
+    }
 }

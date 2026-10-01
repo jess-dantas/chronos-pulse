@@ -1,12 +1,12 @@
 package br.com.jess.chronos.pulse.modules.admin.application.usecases;
 
 import br.com.jess.chronos.pulse.modules.admin.domain.model.AdminPlataforma;
-import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarTwoFactorAdminUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarCodigoEmailAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.output.AdminPlataformaRepositoryPort;
-import br.com.jess.chronos.pulse.modules.admin.infrastructure.security.TotpService;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -14,11 +14,11 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class VerificarTwoFactorAdminUseCaseImpl implements VerificarTwoFactorAdminUseCase {
+public class VerificarCodigoEmailAdminUseCaseImpl implements VerificarCodigoEmailAdminUseCase {
 
     private final AdminPlataformaRepositoryPort repositoryPort;
+    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final TotpService totpService;
 
     @Override
     public Resultado executar(Comando comando) {
@@ -43,18 +43,16 @@ public class VerificarTwoFactorAdminUseCaseImpl implements VerificarTwoFactorAdm
         if (!admin.isAtivo()) {
             throw new IllegalArgumentException("Conta desativada");
         }
-        if (!admin.isTwoFactorEnabled()) {
-            throw new IllegalArgumentException("2FA não está habilitado");
+        if (!admin.isCodigoEmailValido()) {
+            throw new IllegalArgumentException("Código expirado ou não solicitado");
         }
-        if (admin.isLoginBloqueado()) {
-            throw new IllegalStateException("Conta temporariamente bloqueada por excesso de tentativas");
-        }
-        if (!totpService.validar(comando.codigo(), admin.getTwoFactorSecret())) {
-            admin.registrarFalhaLogin();
+        if (!passwordEncoder.matches(comando.codigo(), admin.getRecuperacaoEmailHash())) {
+            admin.registrarTentativaCodigoEmail();
             repositoryPort.salvar(admin);
             throw new IllegalArgumentException("Código inválido");
         }
 
+        admin.limparCodigoEmail();
         admin.registrarLoginSucesso();
         admin.setUltimoLogin(Instant.now());
         repositoryPort.salvar(admin);

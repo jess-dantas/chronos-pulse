@@ -55,11 +55,14 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` (8–100) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true` |
+| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` opcional (8–100) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true`. **2FA-first:** sem `senha` exige `twoFactorEnabled` e emite `tempToken` direto (sem senha → `400 "Senha é obrigatória"`); conta bloqueada → `403` |
 | `GET` | `/admin/auth/bootstrap/status` | 🔓 | `{ bootstrapAvailable }` — `true` enquanto `admin_plataforma` estiver vazia (first-run) |
 | `POST` | `/admin/auth/bootstrap` | 🔓 | First-run wizard: `{ username, senha, nomeCompleto, email }` → cria o Administrator e responde `requiresTwoFactor: true`, `setupRequired: true` + `tempToken` |
-| `POST` | `/admin/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos) → troca pelos tokens finais |
-| `POST` | `/admin/auth/2fa/recover` | 🔓 | `{ username, senha, recoveryCode }` (`XXXXX-XXXXX`) → tokens + **8 novos** códigos de recuperação |
+| `POST` | `/admin/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos TOTP) → troca pelos tokens finais; código errado conta no lockout (`registrarFalhaLogin`, 5 falhas / 15 min) |
+| `POST` | `/admin/auth/2fa/email/send` | 🔓 | `{ tempToken }` → gera OTP de 8 dígitos (15 min, 1 pendente por admin, hash bcrypt) e envia por e-mail (`EmailRecuperacaoSenhaService`) |
+| `POST` | `/admin/auth/2fa/email/verify` | 🔓 | `{ tempToken, codigo }` (8 dígitos) → tokens finais; 5 tentativas erradas bloqueiam o código até expirar |
+| `POST` | `/admin/auth/2fa/recover` | 🔓 | `{ username, recoveryCode }` (`XXXXX-XXXXX`) + `senha` opcional + `novaSenha` opcional (8–100) → tokens + **8 novos** códigos de recuperação (troca a senha no mesmo passo se `novaSenha` vier) |
+| `POST` | `/admin/auth/refresh` | 🔓 | `{ refreshToken }` (admin) → rotação: novo `accessToken`/`refreshToken` (8 h); access/temp não valem como refresh |
 | `POST` | `/admin/auth/logout` | 🔓 | Logout (best-effort; invalidação de refresh pendente) |
 | `GET` | `/admin/auth/2fa/status` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ enabled }` |
 | `POST` | `/admin/auth/2fa/setup` | 🛡️ (`ADMIN_PLATAFORMA`) | Gera segredo TOTP → `{ secret, otpauthUri }` (segredo fica pendente até o confirm) |
@@ -141,10 +144,10 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 | `GET` | `/pontos/espelho/relatorio?colaboradorId=...&mes=9&ano=2026` | 🛡️ (mesmos perfis) | Relatório do espelho conforme art. 84 da Portaria MTP 671/2021: empregador (nome/CNPJ), trabalhador (nome, CPF, admissão, cargo/função, matrícula), data de emissão, período apurado, jornada contratual, marcações tratadas e **código de verificação** SHA-256 |
 | `POST` | `/pontos/ajustar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Ajuste manual com justificativa obrigatória |
 | `POST` | `/pontos/ajustar/solicitar` | 🛡️ (`COLABORADOR`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Colaborador solicita ajuste (vai para fila de aprovação). **Bloqueado** quando o dia da data/hora (fuso `America/Sao_Paulo`) já tem ajuste **APROVADO** → `400` "O dia DD/MM/AAAA já possui ajuste aprovado; novas solicitações de ajuste estão bloqueadas para este dia." |
-| `GET` | `/pontos/ajustes/pendentes` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Fila de aprovação de ajustes |
-| `GET` | `/pontos/ajustes/resumo` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Fila **consolidada**: pendentes do tenant + `colaboradorNome` + `marcacoesDoDia` (marcações do dia no fuso `America/Sao_Paulo`, com flag `ajuste`) para aprovar/recusar sem sair da tela |
-| `PUT` | `/pontos/ajustes/{id}/aprovar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Aprova ajuste pendente (comprovante por e-mail para o **colaborador dono do registro**) |
-| `PUT` | `/pontos/ajustes/{id}/rejeitar` | 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`) | Rejeita ajuste pendente (notificação por e-mail para o **colaborador dono do registro**) |
+| `GET` | `/pontos/ajustes/pendentes` | 🛡️ (`GESTOR_RH`) | Fila de aprovação de ajustes |
+| `GET` | `/pontos/ajustes/resumo` | 🛡️ (`GESTOR_RH`) | Fila **consolidada**: pendentes do tenant + `colaboradorNome` + `marcacoesDoDia` (marcações do dia no fuso `America/Sao_Paulo`, com flag `ajuste`) para aprovar/recusar sem sair da tela |
+| `PUT` | `/pontos/ajustes/{id}/aprovar` | 🛡️ (`GESTOR_RH`) | Aprova ajuste pendente (comprovante por e-mail para o **colaborador dono do registro**) |
+| `PUT` | `/pontos/ajustes/{id}/rejeitar` | 🛡️ (`GESTOR_RH`) | Rejeita ajuste pendente (notificação por e-mail para o **colaborador dono do registro**) |
 
 ---
 
@@ -181,8 +184,8 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada |
-| `POST` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra bem |
+| `GET` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `COLABORADOR`) | Lista paginada |
+| `POST` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra bem |
 | `GET` | `/patrimonio/{id}` | 🛡️ (mesmos perfis de leitura) | Busca por id |
 | `GET` | `/patrimonio/ativos` | 🛡️ (leitura) | Lista bens ativos (sem paginação) |
 
@@ -209,11 +212,11 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada de veículos |
-| `POST` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra veículo |
+| `GET` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `COLABORADOR`) | Lista paginada de veículos |
+| `POST` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra veículo |
 | `GET` | `/frota/veiculos/{id}` | 🛡️ (leitura) | Detalhe do veículo |
 | `GET` | `/frota/abastecimentos` | 🛡️ (leitura) | Lista paginada de abastecimentos |
-| `POST` | `/frota/abastecimentos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Registra abastecimento |
+| `POST` | `/frota/abastecimentos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Registra abastecimento |
 
 `POST /frota/veiculos` — corpo:
 
@@ -250,10 +253,10 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada |
-| `POST` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra protocolo |
+| `GET` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `COLABORADOR`) | Lista paginada |
+| `POST` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra protocolo |
 | `GET` | `/protocolo/{id}` | 🛡️ (leitura) | Detalhe |
-| `PATCH` | `/protocolo/{id}/status` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Altera status |
+| `PATCH` | `/protocolo/{id}/status` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Altera status |
 
 `POST /protocolo` — corpo (`numeroProtocolo`, `tipo` e `assunto` obrigatórios):
 
