@@ -70,6 +70,8 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 | `POST` | `/admin/auth/2fa/confirm` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — valida TOTP, **ativa** o 2FA e, no fluxo de bootstrap/setup, emite os tokens finais **e 8 códigos de recuperação** (exibidos uma única vez) |
 | `POST` | `/admin/auth/2fa/disable` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA (sempre permitido; com `chronos.admin.two-factor-required=true` o próximo login força o wizard de setup novamente) |
 | `POST` | `/admin/auth/alterar-senha` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ senhaAtual?, novaSenha }` (nova 8–100) — `senhaAtual` **opcional**: se enviada, é validada (`400 "Senha atual incorreta"`) |
+| `POST` | `/admin/auth/reset-senha/enviar` | 🔓 | `{ username }` → gera OTP de 8 dígitos (15 min, 1 pendente por admin, hash bcrypt nas colunas da V003) e envia por e-mail; usuário inexistente/desativado → `400`, conta bloqueada → `403`, sem e-mail → `400` |
+| `POST` | `/admin/auth/reset-senha/verificar` | 🔓 | `{ username, codigo, novaSenha }` (nova 8–100) → valida o OTP (5 tentativas) e redefine a senha limpando o código; código inválido/expirado → `400` |
 
 Regras de acesso de `/admin/**` ficam em `AdminSecurityConfig` (chain separada com `securityMatcher("/admin/**")`); o token admin tem claim `adminId` e `role=ADMIN_PLATAFORMA` (sem CPF/tenant). O `JwtAuthFilter` autentica tokens com `adminId` direto com `ADMIN_PLATAFORMA`, sem lookup em `cpc_usuario`.
 

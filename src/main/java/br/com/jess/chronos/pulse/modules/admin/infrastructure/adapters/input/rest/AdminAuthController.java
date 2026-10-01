@@ -7,6 +7,8 @@ import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.EnviarCodigoEm
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.GerenciarTwoFactorAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RecuperarAcessoAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RefreshAdminTokenUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RedefinirSenhaAdminUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.SolicitarResetSenhaAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarCodigoEmailAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarTwoFactorAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminAlterarSenhaRequestDTO;
@@ -18,6 +20,8 @@ import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.res
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminLoginResponseDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminRecoverRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminRefreshRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminResetSenhaEnviarRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminResetSenhaVerificarRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorCodigoRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorSetupDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorStatusDTO;
@@ -40,6 +44,8 @@ public class AdminAuthController {
     private final RecuperarAcessoAdminUseCase recuperarAcessoAdminUseCase;
     private final EnviarCodigoEmailAdminUseCase enviarCodigoEmailAdminUseCase;
     private final VerificarCodigoEmailAdminUseCase verificarCodigoEmailAdminUseCase;
+    private final SolicitarResetSenhaAdminUseCase solicitarResetSenhaAdminUseCase;
+    private final RedefinirSenhaAdminUseCase redefinirSenhaAdminUseCase;
     private final RefreshAdminTokenUseCase refreshAdminTokenUseCase;
     private final JwtService jwtService;
 
@@ -52,6 +58,8 @@ public class AdminAuthController {
             RecuperarAcessoAdminUseCase recuperarAcessoAdminUseCase,
             EnviarCodigoEmailAdminUseCase enviarCodigoEmailAdminUseCase,
             VerificarCodigoEmailAdminUseCase verificarCodigoEmailAdminUseCase,
+            SolicitarResetSenhaAdminUseCase solicitarResetSenhaAdminUseCase,
+            RedefinirSenhaAdminUseCase redefinirSenhaAdminUseCase,
             RefreshAdminTokenUseCase refreshAdminTokenUseCase,
             JwtService jwtService) {
         this.autenticarAdminPlataformaUseCase = autenticarAdminPlataformaUseCase;
@@ -62,6 +70,8 @@ public class AdminAuthController {
         this.recuperarAcessoAdminUseCase = recuperarAcessoAdminUseCase;
         this.enviarCodigoEmailAdminUseCase = enviarCodigoEmailAdminUseCase;
         this.verificarCodigoEmailAdminUseCase = verificarCodigoEmailAdminUseCase;
+        this.solicitarResetSenhaAdminUseCase = solicitarResetSenhaAdminUseCase;
+        this.redefinirSenhaAdminUseCase = redefinirSenhaAdminUseCase;
         this.refreshAdminTokenUseCase = refreshAdminTokenUseCase;
         this.jwtService = jwtService;
     }
@@ -220,6 +230,22 @@ public class AdminAuthController {
         alterarSenhaAdminUseCase.executar(new AlterarSenhaAdminUseCase.Comando(
                 adminId, request.getSenhaAtual(), request.getNovaSenha()
         ));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-senha/enviar")
+    public ResponseEntity<Void> resetSenhaEnviar(
+            @RequestBody @Valid AdminResetSenhaEnviarRequestDTO request) {
+        solicitarResetSenhaAdminUseCase.executar(
+                new SolicitarResetSenhaAdminUseCase.Comando(request.getUsername()));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-senha/verificar")
+    public ResponseEntity<Void> resetSenhaVerificar(
+            @RequestBody @Valid AdminResetSenhaVerificarRequestDTO request) {
+        redefinirSenhaAdminUseCase.executar(new RedefinirSenhaAdminUseCase.Comando(
+                request.getUsername(), request.getCodigo(), request.getNovaSenha()));
         return ResponseEntity.ok().build();
     }
 

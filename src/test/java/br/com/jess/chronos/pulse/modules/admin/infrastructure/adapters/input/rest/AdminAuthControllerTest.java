@@ -7,10 +7,14 @@ import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.EnviarCodigoEm
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.GerenciarTwoFactorAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RecuperarAcessoAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RefreshAdminTokenUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RedefinirSenhaAdminUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.SolicitarResetSenhaAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarCodigoEmailAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarTwoFactorAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.model.AdminPlataforma;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminRefreshRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminResetSenhaEnviarRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminResetSenhaVerificarRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorCodigoRequestDTO;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
 import io.jsonwebtoken.Claims;
@@ -57,6 +61,12 @@ class AdminAuthControllerTest {
 
     @Mock
     private VerificarCodigoEmailAdminUseCase verificarCodigoEmailAdminUseCase;
+
+    @Mock
+    private SolicitarResetSenhaAdminUseCase solicitarResetSenhaAdminUseCase;
+
+    @Mock
+    private RedefinirSenhaAdminUseCase redefinirSenhaAdminUseCase;
 
     @Mock
     private RefreshAdminTokenUseCase refreshAdminTokenUseCase;
@@ -111,5 +121,25 @@ class AdminAuthControllerTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         verify(enviarCodigoEmailAdminUseCase)
                 .executar(new EnviarCodigoEmailAdminUseCase.Comando("temp"));
+    }
+
+    @Test
+    void deveDelegarSolicitacaoDeResetDeSenha() {
+        var response = controller.resetSenhaEnviar(
+                new AdminResetSenhaEnviarRequestDTO("Administrator"));
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        verify(solicitarResetSenhaAdminUseCase)
+                .executar(new SolicitarResetSenhaAdminUseCase.Comando("Administrator"));
+    }
+
+    @Test
+    void deveDelegarVerificacaoDeResetDeSenha() {
+        var response = controller.resetSenhaVerificar(
+                new AdminResetSenhaVerificarRequestDTO("Administrator", "12345678", "Nova@1234"));
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        verify(redefinirSenhaAdminUseCase).executar(
+                new RedefinirSenhaAdminUseCase.Comando("Administrator", "12345678", "Nova@1234"));
     }
 }
