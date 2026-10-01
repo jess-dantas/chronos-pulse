@@ -18,6 +18,7 @@ public class AdminPlataforma {
 
     public static final int MAX_TENTATIVAS_LOGIN = 5;
     public static final int LOCKOUT_MINUTOS = 15;
+    public static final int MAX_TENTATIVAS_CODIGO_EMAIL = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -52,6 +53,15 @@ public class AdminPlataforma {
     @Column(name = "two_factor_secret", length = 64)
     private String twoFactorSecret;
 
+    @Column(name = "recuperacao_email_hash")
+    private String recuperacaoEmailHash;
+
+    @Column(name = "recuperacao_email_expira_em")
+    private Instant recuperacaoEmailExpiraEm;
+
+    @Column(name = "recuperacao_email_tentativas", nullable = false)
+    private int recuperacaoEmailTentativas;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm;
 
@@ -85,5 +95,28 @@ public class AdminPlataforma {
 
     public boolean isLoginBloqueado() {
         return this.bloqueioLoginAte != null && this.bloqueioLoginAte.isAfter(Instant.now());
+    }
+
+    public void definirCodigoEmail(String hash, Instant expiraEm) {
+        this.recuperacaoEmailHash = hash;
+        this.recuperacaoEmailExpiraEm = expiraEm;
+        this.recuperacaoEmailTentativas = 0;
+    }
+
+    public boolean isCodigoEmailValido() {
+        return this.recuperacaoEmailHash != null
+                && this.recuperacaoEmailExpiraEm != null
+                && this.recuperacaoEmailExpiraEm.isAfter(Instant.now())
+                && this.recuperacaoEmailTentativas < MAX_TENTATIVAS_CODIGO_EMAIL;
+    }
+
+    public void registrarTentativaCodigoEmail() {
+        this.recuperacaoEmailTentativas++;
+    }
+
+    public void limparCodigoEmail() {
+        this.recuperacaoEmailHash = null;
+        this.recuperacaoEmailExpiraEm = null;
+        this.recuperacaoEmailTentativas = 0;
     }
 }

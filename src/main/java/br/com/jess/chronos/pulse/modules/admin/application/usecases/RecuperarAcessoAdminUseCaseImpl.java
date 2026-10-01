@@ -33,13 +33,17 @@ public class RecuperarAcessoAdminUseCaseImpl implements RecuperarAcessoAdminUseC
         if (!admin.isAtivo()) {
             throw new IllegalArgumentException("Credenciais inválidas");
         }
-        if (!passwordEncoder.matches(comando.senha(), admin.getSenhaHash())) {
+        if (comando.senha() != null && !passwordEncoder.matches(comando.senha(), admin.getSenhaHash())) {
             admin.registrarFalhaLogin();
             repositoryPort.salvar(admin);
             throw new IllegalArgumentException("Credenciais inválidas");
         }
         if (admin.isLoginBloqueado()) {
             throw new IllegalStateException("Conta temporariamente bloqueada por excesso de tentativas");
+        }
+
+        if (comando.novaSenha() != null && !comando.novaSenha().isBlank()) {
+            admin.setSenhaHash(passwordEncoder.encode(comando.novaSenha()));
         }
 
         List<AdminRecoveryCode> codigos = recoveryCodeRepositoryPort.listarPorAdmin(admin.getId());

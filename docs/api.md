@@ -55,11 +55,14 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` (8–100) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true` |
+| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` opcional (8–100) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true`. **2FA-first:** sem `senha` exige `twoFactorEnabled` e emite `tempToken` direto (sem senha → `400 "Senha é obrigatória"`); conta bloqueada → `403` |
 | `GET` | `/admin/auth/bootstrap/status` | 🔓 | `{ bootstrapAvailable }` — `true` enquanto `admin_plataforma` estiver vazia (first-run) |
 | `POST` | `/admin/auth/bootstrap` | 🔓 | First-run wizard: `{ username, senha, nomeCompleto, email }` → cria o Administrator e responde `requiresTwoFactor: true`, `setupRequired: true` + `tempToken` |
-| `POST` | `/admin/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos) → troca pelos tokens finais |
-| `POST` | `/admin/auth/2fa/recover` | 🔓 | `{ username, senha, recoveryCode }` (`XXXXX-XXXXX`) → tokens + **8 novos** códigos de recuperação |
+| `POST` | `/admin/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos TOTP) → troca pelos tokens finais; código errado conta no lockout (`registrarFalhaLogin`, 5 falhas / 15 min) |
+| `POST` | `/admin/auth/2fa/email/send` | 🔓 | `{ tempToken }` → gera OTP de 8 dígitos (15 min, 1 pendente por admin, hash bcrypt) e envia por e-mail (`EmailRecuperacaoSenhaService`) |
+| `POST` | `/admin/auth/2fa/email/verify` | 🔓 | `{ tempToken, codigo }` (8 dígitos) → tokens finais; 5 tentativas erradas bloqueiam o código até expirar |
+| `POST` | `/admin/auth/2fa/recover` | 🔓 | `{ username, recoveryCode }` (`XXXXX-XXXXX`) + `senha` opcional + `novaSenha` opcional (8–100) → tokens + **8 novos** códigos de recuperação (troca a senha no mesmo passo se `novaSenha` vier) |
+| `POST` | `/admin/auth/refresh` | 🔓 | `{ refreshToken }` (admin) → rotação: novo `accessToken`/`refreshToken` (8 h); access/temp não valem como refresh |
 | `POST` | `/admin/auth/logout` | 🔓 | Logout (best-effort; invalidação de refresh pendente) |
 | `GET` | `/admin/auth/2fa/status` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ enabled }` |
 | `POST` | `/admin/auth/2fa/setup` | 🛡️ (`ADMIN_PLATAFORMA`) | Gera segredo TOTP → `{ secret, otpauthUri }` (segredo fica pendente até o confirm) |

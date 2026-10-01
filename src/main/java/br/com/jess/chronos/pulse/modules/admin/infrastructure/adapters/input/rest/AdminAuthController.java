@@ -3,15 +3,21 @@ package br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.re
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.BootstrapAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AutenticarAdminPlataformaUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AlterarSenhaAdminUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.EnviarCodigoEmailAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.GerenciarTwoFactorAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RecuperarAcessoAdminUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.RefreshAdminTokenUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarCodigoEmailAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarTwoFactorAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminAlterarSenhaRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminBootstrapRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminBootstrapStatusDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminEmailCodigoRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminEmailVerifyRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminLoginRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminLoginResponseDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminRecoverRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminRefreshRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorCodigoRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorSetupDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminTwoFactorStatusDTO;
@@ -32,6 +38,9 @@ public class AdminAuthController {
     private final AlterarSenhaAdminUseCase alterarSenhaAdminUseCase;
     private final BootstrapAdminUseCase bootstrapAdminUseCase;
     private final RecuperarAcessoAdminUseCase recuperarAcessoAdminUseCase;
+    private final EnviarCodigoEmailAdminUseCase enviarCodigoEmailAdminUseCase;
+    private final VerificarCodigoEmailAdminUseCase verificarCodigoEmailAdminUseCase;
+    private final RefreshAdminTokenUseCase refreshAdminTokenUseCase;
     private final JwtService jwtService;
 
     public AdminAuthController(
@@ -41,6 +50,9 @@ public class AdminAuthController {
             AlterarSenhaAdminUseCase alterarSenhaAdminUseCase,
             BootstrapAdminUseCase bootstrapAdminUseCase,
             RecuperarAcessoAdminUseCase recuperarAcessoAdminUseCase,
+            EnviarCodigoEmailAdminUseCase enviarCodigoEmailAdminUseCase,
+            VerificarCodigoEmailAdminUseCase verificarCodigoEmailAdminUseCase,
+            RefreshAdminTokenUseCase refreshAdminTokenUseCase,
             JwtService jwtService) {
         this.autenticarAdminPlataformaUseCase = autenticarAdminPlataformaUseCase;
         this.verificarTwoFactorAdminUseCase = verificarTwoFactorAdminUseCase;
@@ -48,6 +60,9 @@ public class AdminAuthController {
         this.alterarSenhaAdminUseCase = alterarSenhaAdminUseCase;
         this.bootstrapAdminUseCase = bootstrapAdminUseCase;
         this.recuperarAcessoAdminUseCase = recuperarAcessoAdminUseCase;
+        this.enviarCodigoEmailAdminUseCase = enviarCodigoEmailAdminUseCase;
+        this.verificarCodigoEmailAdminUseCase = verificarCodigoEmailAdminUseCase;
+        this.refreshAdminTokenUseCase = refreshAdminTokenUseCase;
         this.jwtService = jwtService;
     }
 
@@ -87,7 +102,7 @@ public class AdminAuthController {
     public ResponseEntity<AdminLoginResponseDTO> recover(
             @RequestBody @Valid AdminRecoverRequestDTO request) {
         var resultado = recuperarAcessoAdminUseCase.executar(new RecuperarAcessoAdminUseCase.Comando(
-                request.getUsername(), request.getSenha(), request.getRecoveryCode()
+                request.getUsername(), request.getSenha(), request.getRecoveryCode(), request.getNovaSenha()
         ));
         var response = AdminLoginResponseDTO.fromDomain(
                 resultado.admin(), resultado.accessToken(), resultado.refreshToken());
@@ -99,6 +114,34 @@ public class AdminAuthController {
     public ResponseEntity<Void> logout() {
         // Em uma implementação completa, invalidar refresh token aqui
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AdminLoginResponseDTO> refresh(
+            @RequestBody @Valid AdminRefreshRequestDTO request) {
+        var resultado = refreshAdminTokenUseCase.executar(
+                new RefreshAdminTokenUseCase.Comando(request.refreshToken()));
+        return ResponseEntity.ok(AdminLoginResponseDTO.fromDomain(
+                resultado.admin(), resultado.accessToken(), resultado.refreshToken()
+        ));
+    }
+
+    @PostMapping("/2fa/email/send")
+    public ResponseEntity<Void> sendEmailCode(
+            @RequestBody @Valid AdminEmailCodigoRequestDTO request) {
+        enviarCodigoEmailAdminUseCase.executar(
+                new EnviarCodigoEmailAdminUseCase.Comando(request.getTempToken()));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/2fa/email/verify")
+    public ResponseEntity<AdminLoginResponseDTO> verifyEmailCode(
+            @RequestBody @Valid AdminEmailVerifyRequestDTO request) {
+        var resultado = verificarCodigoEmailAdminUseCase.executar(
+                new VerificarCodigoEmailAdminUseCase.Comando(request.getTempToken(), request.getCodigo()));
+        return ResponseEntity.ok(AdminLoginResponseDTO.fromDomain(
+                resultado.admin(), resultado.accessToken(), resultado.refreshToken()
+        ));
     }
 
     @PostMapping("/2fa/verify")

@@ -1,27 +1,34 @@
 package br.com.jess.chronos.pulse.modules.admin.application.usecases;
 
 import br.com.jess.chronos.pulse.modules.admin.domain.model.AdminPlataforma;
-import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarTwoFactorAdminUseCase;
+import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.EnviarCodigoEmailAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.output.AdminPlataformaRepositoryPort;
-import br.com.jess.chronos.pulse.modules.admin.infrastructure.security.TotpService;
 import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
+import br.com.jess.chronos.pulse.modules.notificacao.service.EmailRecuperacaoSenhaService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
+import java.security.SecureRandom;
 
 @Service
 @RequiredArgsConstructor
-public class VerificarTwoFactorAdminUseCaseImpl implements VerificarTwoFactorAdminUseCase {
+public class EnviarCodigoEmailAdminUseCaseImpl implements EnviarCodigoEmailAdminUseCase {
+
+    private static final long VALIDADE_MINUTOS = 15;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final AdminPlataformaRepositoryPort repositoryPort;
+    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final TotpService totpService;
+    private final EmailRecuperacaoSenhaService emailRecuperacaoSenhaService;
 
     @Override
-    public Resultado executar(Comando comando) {
+    public void executar(Comando comando) {
         Claims claims;
         try {
             claims = jwtService.extrairClaims(comando.tempToken());
@@ -37,31 +44,25 @@ public class VerificarTwoFactorAdminUseCaseImpl implements VerificarTwoFactorAdm
             throw new IllegalArgumentException("Token inválido");
         }
 
-        AdminPlataforma admin = repositoryPort.buscarPorId(UUID.fromString(adminId))
+        AdminPlataforma admin = repositoryPort.buscarPorId(java.util.UUID.fromString(adminId))
                 .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas"));
 
         if (!admin.isAtivo()) {
             throw new IllegalArgumentException("Conta desativada");
         }
-        if (!admin.isTwoFactorEnabled()) {
-            throw new IllegalArgumentException("2FA não está habilitado");
-        }
         if (admin.isLoginBloqueado()) {
             throw new IllegalStateException("Conta temporariamente bloqueada por excesso de tentativas");
         }
-        if (!totpService.validar(comando.codigo(), admin.getTwoFactorSecret())) {
-            admin.registrarFalhaLogin();
-            repositoryPort.salvar(admin);
-            throw new IllegalArgumentException("Código inválido");
+        if (admin.getEmail() == null || admin.getEmail().isBlank()) {
+            throw new IllegalArgumentException("E-mail de recuperação não cadastrado");
         }
 
-        admin.registrarLoginSucesso();
-        admin.setUltimoLogin(Instant.now());
+        String codigo = String.format("%08d", SECURE_RANDOM.nextInt(90_000_000) + 10_000_000);
+        admin.definirCodigoEmail(
+                passwordEncoder.encode(codigo),
+                Instant.now().plus(Duration.ofMinutes(VALIDADE_MINUTOS)));
         repositoryPort.salvar(admin);
 
-        String accessToken = jwtService.gerarAccessTokenAdmin(admin.getUsername(), admin.getId().toString());
-        String refreshToken = jwtService.gerarRefreshTokenAdmin(admin.getUsername(), admin.getId().toString());
-
-        return new Resultado(admin, accessToken, refreshToken);
+        emailRecuperacaoSenhaService.enviarCodigoRecuperacaoAsync(admin.getEmail(), codigo);
     }
 }

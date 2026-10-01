@@ -15,7 +15,8 @@ public class AdminLoginRequestDTO {
     @Size(max = 20, message = "Username deve ter no máximo 20 caracteres")
     private String username;
 
-    @NotBlank(message = "Senha é obrigatória")
+    // Opcional (2FA-first): sem senha o login exige 2FA habilitado e emite
+    // tempToken direto; com senha o fluxo é o tradicional.
     @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres")
     private String senha;
 }

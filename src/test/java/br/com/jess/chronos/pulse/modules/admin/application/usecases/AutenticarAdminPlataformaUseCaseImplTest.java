@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -93,5 +94,40 @@ class AutenticarAdminPlataformaUseCaseImplTest {
         assertThat(resultado.requiresTwoFactor()).isTrue();
         assertThat(resultado.setupRequired()).isFalse();
         assertThat(resultado.tempToken()).isEqualTo("temp-token");
+    }
+
+    @Test
+    void deveEmitirTempTokenSemSenhaQuando2FAHabilitado() {
+        admin.setTwoFactorEnabled(true);
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+        when(jwtService.gerarTempTokenTwoFactor(admin.getId().toString())).thenReturn("temp-token");
+
+        var resultado = useCase(true).executar(new Comando("Administrator", null));
+
+        assertThat(resultado.requiresTwoFactor()).isTrue();
+        assertThat(resultado.setupRequired()).isFalse();
+        assertThat(resultado.tempToken()).isEqualTo("temp-token");
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void deveRecusarLoginSemSenhaQuando2FADesabilitado() {
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> useCase(true).executar(new Comando("Administrator", null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Senha é obrigatória");
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void deveBloquearLoginSemSenhaQuandoContaBloqueada() {
+        admin.setBloqueioLoginAte(java.time.Instant.now().plusSeconds(600));
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> useCase(true).executar(new Comando("Administrator", null)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("bloqueada");
+        verifyNoInteractions(passwordEncoder);
     }
 }
