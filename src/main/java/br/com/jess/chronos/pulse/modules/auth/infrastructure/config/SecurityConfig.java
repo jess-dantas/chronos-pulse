@@ -46,6 +46,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers("/admin/**").permitAll()  // Admin routes handled by AdminSecurityConfig
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/").permitAll()
+                    .requestMatchers(HttpMethod.HEAD, "/").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                     // 2FA do colaborador: validam o tempToken emitido no login
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/verify").permitAll()
@@ -60,6 +62,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/redefinir-senha").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/leads/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/auth/ping").permitAll()
+                    .requestMatchers(HttpMethod.HEAD, "/api/v1/auth/ping").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/privacidade/politica").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/publico/**").permitAll()
