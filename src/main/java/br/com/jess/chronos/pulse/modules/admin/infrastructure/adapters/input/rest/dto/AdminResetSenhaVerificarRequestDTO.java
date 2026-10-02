@@ -9,9 +9,13 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AdminAlterarSenhaRequestDTO {
+public class AdminResetSenhaVerificarRequestDTO {
 
-    private String senhaAtual;
+    @NotBlank(message = "Username é obrigatório")
+    private String username;
+
+    @NotBlank(message = "Código é obrigatório")
+    private String codigo;
 
     @NotBlank(message = "Nova senha é obrigatória")
     @Size(min = 8, max = 100, message = "Nova senha deve ter entre 8 e 100 caracteres")

@@ -1,40 +1,27 @@
 package br.com.jess.chronos.pulse.modules.auth.application.usecases;
 
+import br.com.jess.chronos.pulse.modules.auth.application.service.LoginSessionFactory;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
-import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuarioUseCase;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
-import br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService;
-import br.com.jess.chronos.pulse.modules.empresa.domain.model.Empresa;
-import br.com.jess.chronos.pulse.modules.empresa.domain.ports.output.EmpresaRepositoryPort;
-import br.com.jess.chronos.pulse.modules.modulo.domain.ports.output.ModulosPort;
 import br.com.jess.chronos.pulse.modules.telemetria.application.LoginMetricsRecorder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.util.Collections;
-import java.util.List;
 
 public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
 
     private final CpcUsuarioRepositoryPort repositoryPort;
-    private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final ModulosPort modulosPort;
     private final LoginMetricsRecorder loginMetricsRecorder;
-    private final EmpresaRepositoryPort empresaRepository;
+    private final LoginSessionFactory loginSessionFactory;
 
     public AutenticarUsuarioUseCaseImpl(CpcUsuarioRepositoryPort repositoryPort,
-                                        JwtService jwtService,
                                         PasswordEncoder passwordEncoder,
-                                        ModulosPort modulosPort,
                                         LoginMetricsRecorder loginMetricsRecorder,
-                                        EmpresaRepositoryPort empresaRepository) {
+                                        LoginSessionFactory loginSessionFactory) {
         this.repositoryPort = repositoryPort;
-        this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
-        this.modulosPort = modulosPort;
         this.loginMetricsRecorder = loginMetricsRecorder;
-        this.empresaRepository = empresaRepository;
+        this.loginSessionFactory = loginSessionFactory;
     }
 
     @Override
@@ -62,6 +49,17 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
             throw new IllegalArgumentException("Credenciais inválidas");
         }
 
+        // 2FA-first: sem senha, exige 2FA já habilitado e o tempToken
+        // autentica a segunda etapa em /auth/2fa/verify.
+        if (comando.senha() == null) {
+            if (!usuario.isTwoFactorEnabled()) {
+                loginMetricsRecorder.registrarFalha(comando.cpf(), "SENHA_INVALIDA", true,
+                        usuario.getTenantId(), usuario.getCpcId());
+                throw new IllegalArgumentException("Senha é obrigatória");
+            }
+            return loginSessionFactory.pendente(usuario, loginSessionFactory.tempTokenDe(usuario));
+        }
+
         if (!passwordEncoder.matches(comando.senha(), usuario.getSenhaHash())) {
             usuario.registrarFalhaLogin();
             repositoryPort.atualizar(usuario);
@@ -70,44 +68,13 @@ public class AutenticarUsuarioUseCaseImpl implements AutenticarUsuarioUseCase {
             throw new IllegalArgumentException("Credenciais inválidas");
         }
 
+        if (usuario.isTwoFactorEnabled()) {
+            return loginSessionFactory.pendente(usuario, loginSessionFactory.tempTokenDe(usuario));
+        }
+
         usuario.registrarLoginSucesso();
         repositoryPort.atualizar(usuario);
 
-        String tenantId = usuario.getTenantId() != null ? usuario.getTenantId().toString() : null;
-        String tenantSlug = usuario.getTenantId() != null
-                ? empresaRepository.buscarPorId(usuario.getTenantId()).map(Empresa::getSlug).orElse(null)
-                : null;
-        String accessToken = jwtService.gerarAccessToken(
-                usuario.getCpf(), usuario.getRole().name(),
-                usuario.getCpcId().toString(), tenantId,
-                usuario.isAcessoEstoque(), usuario.isAcessoPatrimonio(),
-                usuario.isAcessoFrota(), usuario.isAcessoProtocolo());
-        String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
-        List<String> modulos = usuario.getTenantId() != null
-                ? (usuario.getRole() == Role.ADMIN_EMPRESA
-                    ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
-                    : modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId()))
-                : Collections.emptyList();
-
-        loginMetricsRecorder.registrarSucesso(usuario.getTenantId(), usuario.getCpcId(),
-                usuario.getRole().name());
-
-        return new Resultado(
-                accessToken,
-                refreshToken,
-                usuario.getRole().name(),
-                usuario.getCpf(),
-                usuario.getCpcId().toString(),
-                usuario.getNome(),
-                usuario.getEmailCorporativo() != null ? usuario.getEmailCorporativo() : usuario.getEmailPessoal(),
-tenantId,
-                tenantSlug,
-                usuario.isAcessoEstoque(),
-                usuario.isAcessoPatrimonio(),
-                usuario.isAcessoFrota(),
-                usuario.isAcessoProtocolo(),
-                usuario.getFoto(),
-                modulos
-        );
+        return loginSessionFactory.montar(usuario);
     }
 }

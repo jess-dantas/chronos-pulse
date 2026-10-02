@@ -37,7 +37,9 @@ public class AdminSecurityConfig {
                                 "/admin/auth/bootstrap/status",
                                 "/admin/auth/2fa/setup",
                                 "/admin/auth/2fa/confirm",
-                                "/admin/auth/2fa/recover"
+                                "/admin/auth/2fa/recover",
+                                "/admin/auth/reset-senha/enviar",
+                                "/admin/auth/reset-senha/verificar"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN_PLATAFORMA")
                         .anyRequest().authenticated()

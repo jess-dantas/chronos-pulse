@@ -23,7 +23,7 @@ O sistema usa **RBAC** baseado em roles extraídas do token JWT. Cada perfil rec
 
 | Rota | Perfis permitidos (URL) |
 |---|---|
-| `/admin/**` (auth Admin Plataforma) | Ver [`api.md` §2](api.md): `login`, `logout`, `2fa/verify`, `bootstrap`, `bootstrap/status`, `2fa/recover` anônimos; demais exigem `ADMIN_PLATAFORMA` (`AdminSecurityConfig`) |
+| `/admin/**` (auth Admin Plataforma) | Ver [`api.md` §2](api.md): `login`, `logout`, `2fa/verify`, `bootstrap`, `bootstrap/status`, `2fa/recover`, `reset-senha/enviar`, `reset-senha/verificar` anônimos; demais exigem `ADMIN_PLATAFORMA` (`AdminSecurityConfig`) |
 | `/api/v1/admin/**` | `ADMIN_PLATAFORMA`, `SUPORTE_N1`, `SUPORTE_N2` |
 | `/api/v1/suporte/**` | `SUPORTE_N1`, `SUPORTE_N2` |
 | `POST /api/v1/empresas/**` | `ADMIN_PLATAFORMA` (única rota de empresa permitida ao admin) |

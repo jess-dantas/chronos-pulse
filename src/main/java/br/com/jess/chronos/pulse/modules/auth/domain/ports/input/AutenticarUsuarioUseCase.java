@@ -19,7 +19,9 @@ public interface AutenticarUsuarioUseCase {
             boolean acessoFrota,
             boolean acessoProtocolo,
             String foto,
-            List<String> modulos
+            List<String> modulos,
+            boolean requiresTwoFactor,
+            String tempToken
     ) {}
     Resultado executar(Comando comando);
 }

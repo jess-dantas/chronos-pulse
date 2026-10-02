@@ -103,6 +103,20 @@ public class JwtService {
                 .compact();
     }
 
+    // Token temporário do 2FA do colaborador (5 minutos): sub e claim
+    // "usuarioId" apontam para o id em cpc_usuario.
+    public String gerarTempTokenTwoFactorUsuario(String usuarioId) {
+        return Jwts.builder()
+                .subject(usuarioId)
+                .claim("typ", "two_factor")
+                .claim("usuarioId", usuarioId)
+                .id(UUID.randomUUID().toString())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 300_000L))
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Claims extrairClaims(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
     }

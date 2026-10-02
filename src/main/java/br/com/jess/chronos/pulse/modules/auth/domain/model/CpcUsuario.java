@@ -8,6 +8,7 @@ public class CpcUsuario {
 
     public static final int MAX_TENTATIVAS_LOGIN = 5;
     public static final int LOCKOUT_MINUTOS = 15;
+    public static final int MAX_TENTATIVAS_CODIGO_EMAIL = 5;
 
     private final UUID id;
     private final UUID cpcId;
@@ -30,6 +31,11 @@ public class CpcUsuario {
     private Instant senhaAlteradaEm;
     private int tentativasLoginFalhas;
     private Instant bloqueioLoginAte;
+    private boolean twoFactorEnabled;
+    private String twoFactorSecret;
+    private String twoFactorEmailHash;
+    private Instant twoFactorEmailExpiraEm;
+    private int twoFactorEmailTentativas;
 
     public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
                       String senhaHash, Role role, UUID tenantId) {
@@ -128,6 +134,11 @@ public class CpcUsuario {
         copia.senhaAlteradaEm = this.senhaAlteradaEm;
         copia.tentativasLoginFalhas = this.tentativasLoginFalhas;
         copia.bloqueioLoginAte = this.bloqueioLoginAte;
+        copia.twoFactorEnabled = this.twoFactorEnabled;
+        copia.twoFactorSecret = this.twoFactorSecret;
+        copia.twoFactorEmailHash = this.twoFactorEmailHash;
+        copia.twoFactorEmailExpiraEm = this.twoFactorEmailExpiraEm;
+        copia.twoFactorEmailTentativas = this.twoFactorEmailTentativas;
         return copia;
     }
 
@@ -145,6 +156,11 @@ public class CpcUsuario {
         copia.senhaAlteradaEm = Instant.now();
         copia.tentativasLoginFalhas = 0;
         copia.bloqueioLoginAte = null;
+        copia.twoFactorEnabled = this.twoFactorEnabled;
+        copia.twoFactorSecret = this.twoFactorSecret;
+        copia.twoFactorEmailHash = this.twoFactorEmailHash;
+        copia.twoFactorEmailExpiraEm = this.twoFactorEmailExpiraEm;
+        copia.twoFactorEmailTentativas = this.twoFactorEmailTentativas;
         return copia;
     }
 
@@ -158,6 +174,11 @@ public class CpcUsuario {
         copia.senhaAlteradaEm = this.senhaAlteradaEm;
         copia.tentativasLoginFalhas = this.tentativasLoginFalhas;
         copia.bloqueioLoginAte = this.bloqueioLoginAte;
+        copia.twoFactorEnabled = this.twoFactorEnabled;
+        copia.twoFactorSecret = this.twoFactorSecret;
+        copia.twoFactorEmailHash = this.twoFactorEmailHash;
+        copia.twoFactorEmailExpiraEm = this.twoFactorEmailExpiraEm;
+        copia.twoFactorEmailTentativas = this.twoFactorEmailTentativas;
         return copia;
     }
 
@@ -183,6 +204,37 @@ public class CpcUsuario {
         this.bloqueioLoginAte = bloqueioLoginAte;
     }
 
+    // ---- 2FA (TOTP + OTP e-mail) ----
+
+    public void definirCodigoEmail2FA(String hash, Instant expiraEm) {
+        this.twoFactorEmailHash = hash;
+        this.twoFactorEmailExpiraEm = expiraEm;
+        this.twoFactorEmailTentativas = 0;
+    }
+
+    public boolean isCodigoEmail2FAValido() {
+        return this.twoFactorEmailHash != null
+                && this.twoFactorEmailExpiraEm != null
+                && this.twoFactorEmailExpiraEm.isAfter(Instant.now())
+                && this.twoFactorEmailTentativas < MAX_TENTATIVAS_CODIGO_EMAIL;
+    }
+
+    public void registrarTentativaCodigoEmail2FA() {
+        this.twoFactorEmailTentativas++;
+    }
+
+    public void limparCodigoEmail2FA() {
+        this.twoFactorEmailHash = null;
+        this.twoFactorEmailExpiraEm = null;
+        this.twoFactorEmailTentativas = 0;
+    }
+
+    /// E-mail usado nos envios de OTP (preferindo o corporativo).
+    public String getEmailPreferencial() {
+        return emailCorporativo != null && !emailCorporativo.isBlank()
+                ? emailCorporativo : emailPessoal;
+    }
+
     public UUID getId() { return id; }
     public UUID getCpcId() { return cpcId; }
     public String getCpf() { return cpf; }
@@ -204,4 +256,14 @@ public class CpcUsuario {
     public Instant getSenhaAlteradaEm() { return senhaAlteradaEm; }
     public int getTentativasLoginFalhas() { return tentativasLoginFalhas; }
     public Instant getBloqueioLoginAte() { return bloqueioLoginAte; }
+    public boolean isTwoFactorEnabled() { return twoFactorEnabled; }
+    public void setTwoFactorEnabled(boolean twoFactorEnabled) { this.twoFactorEnabled = twoFactorEnabled; }
+    public String getTwoFactorSecret() { return twoFactorSecret; }
+    public void setTwoFactorSecret(String twoFactorSecret) { this.twoFactorSecret = twoFactorSecret; }
+    public String getTwoFactorEmailHash() { return twoFactorEmailHash; }
+    public void setTwoFactorEmailHash(String twoFactorEmailHash) { this.twoFactorEmailHash = twoFactorEmailHash; }
+    public Instant getTwoFactorEmailExpiraEm() { return twoFactorEmailExpiraEm; }
+    public void setTwoFactorEmailExpiraEm(Instant twoFactorEmailExpiraEm) { this.twoFactorEmailExpiraEm = twoFactorEmailExpiraEm; }
+    public int getTwoFactorEmailTentativas() { return twoFactorEmailTentativas; }
+    public void setTwoFactorEmailTentativas(int twoFactorEmailTentativas) { this.twoFactorEmailTentativas = twoFactorEmailTentativas; }
 }

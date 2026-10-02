@@ -20,7 +20,8 @@ public class AlterarSenhaUseCaseImpl implements AlterarSenhaUseCase {
         var usuario = usuarioRepository.buscarPorCpf(comando.cpf())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
 
-        if (!passwordEncoder.matches(comando.senhaAtual(), usuario.getSenhaHash())) {
+        if (comando.senhaAtual() != null && !comando.senhaAtual().isBlank()
+                && !passwordEncoder.matches(comando.senhaAtual(), usuario.getSenhaHash())) {
             throw new IllegalArgumentException("Senha atual incorreta.");
         }
 

@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.auth.application.usecases;
 
+import br.com.jess.chronos.pulse.modules.auth.application.service.LoginSessionFactory;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.input.AutenticarUsuarioUseCase.Comando;
@@ -50,7 +51,10 @@ class AutenticarUsuarioUseCaseImplTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, jwtService, passwordEncoder, modulosPort, loginMetricsRecorder, empresaRepository);
+        LoginSessionFactory loginSessionFactory = new LoginSessionFactory(
+                jwtService, modulosPort, empresaRepository, loginMetricsRecorder);
+        useCase = new AutenticarUsuarioUseCaseImpl(repositoryPort, passwordEncoder,
+                loginMetricsRecorder, loginSessionFactory);
     }
 
     @Test
@@ -66,6 +70,7 @@ class AutenticarUsuarioUseCaseImplTest {
                 false, false, false, false))
                 .thenReturn("access-token");
         when(jwtService.gerarRefreshToken("12345678901")).thenReturn("refresh-token");
+        when(empresaRepository.buscarPorId(tenantId)).thenReturn(Optional.empty());
         when(modulosPort.listarCodigosDoUsuario(usuario.getId(), tenantId)).thenReturn(java.util.List.of("PONTO"));
 
         Resultado resultado = useCase.executar(new Comando("12345678901", "senha123"));
@@ -76,6 +81,8 @@ class AutenticarUsuarioUseCaseImplTest {
         assertThat(resultado.cpf()).isEqualTo("12345678901");
         assertThat(resultado.cpcId()).isEqualTo(cpcId.toString());
         assertThat(resultado.modulos()).containsExactly("PONTO");
+        assertThat(resultado.requiresTwoFactor()).isFalse();
+        assertThat(resultado.tempToken()).isNull();
         verify(loginMetricsRecorder).registrarSucesso(tenantId, cpcId, "COLABORADOR");
     }
 
@@ -153,6 +160,7 @@ class AutenticarUsuarioUseCaseImplTest {
         when(jwtService.gerarAccessToken("12345678901", "COLABORADOR", usuario.getCpcId().toString(),
                 usuario.getTenantId().toString(), false, false, false, false))
                 .thenReturn("access-token");
+        when(empresaRepository.buscarPorId(usuario.getTenantId())).thenReturn(Optional.empty());
         when(modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId())).thenReturn(java.util.List.of());
 
         useCase.executar(new Comando("12345678901", "senha123"));
@@ -161,5 +169,57 @@ class AutenticarUsuarioUseCaseImplTest {
         verify(repositoryPort).atualizar(captor.capture());
         assertThat(captor.getValue().getTentativasLoginFalhas()).isZero();
         assertThat(captor.getValue().getBloqueioLoginAte()).isNull();
+    }
+
+    @Test
+    void deveRetornarPendenteQuandoDoisFatorHabilitadoComSenhaCorreta() {
+        CpcUsuario usuario = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "12345678901", "Usuario Teste",
+                "teste@empresa.com", "hashSenha", Role.COLABORADOR, UUID.randomUUID());
+        usuario.setTwoFactorEnabled(true);
+
+        when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches("senha123", "hashSenha")).thenReturn(true);
+        when(jwtService.gerarTempTokenTwoFactorUsuario(usuario.getId().toString())).thenReturn("temp-token");
+
+        Resultado resultado = useCase.executar(new Comando("12345678901", "senha123"));
+
+        assertThat(resultado.requiresTwoFactor()).isTrue();
+        assertThat(resultado.tempToken()).isEqualTo("temp-token");
+        assertThat(resultado.accessToken()).isNull();
+        assertThat(resultado.refreshToken()).isNull();
+        assertThat(resultado.cpf()).isEqualTo("12345678901");
+        verify(loginMetricsRecorder, never()).registrarSucesso(any(), any(), any());
+        verify(repositoryPort, never()).atualizar(any());
+    }
+
+    @Test
+    void deveRetornarPendenteQuandoSenhaAusenteE2FAHabilitado() {
+        CpcUsuario usuario = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "12345678901", "Usuario Teste",
+                "teste@empresa.com", "hashSenha", Role.COLABORADOR, UUID.randomUUID());
+        usuario.setTwoFactorEnabled(true);
+
+        when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
+        when(jwtService.gerarTempTokenTwoFactorUsuario(usuario.getId().toString())).thenReturn("temp-token");
+
+        Resultado resultado = useCase.executar(new Comando("12345678901", null));
+
+        assertThat(resultado.requiresTwoFactor()).isTrue();
+        assertThat(resultado.tempToken()).isEqualTo("temp-token");
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(repositoryPort, never()).atualizar(any());
+    }
+
+    @Test
+    void deveExigirSenhaQuandoSenhaAusenteE2FADesabilitado() {
+        CpcUsuario usuario = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "12345678901", "Usuario Teste",
+                "teste@empresa.com", "hashSenha", Role.COLABORADOR, UUID.randomUUID());
+
+        when(repositoryPort.buscarPorCpf("12345678901")).thenReturn(Optional.of(usuario));
+
+        assertThatThrownBy(() -> useCase.executar(new Comando("12345678901", null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Senha é obrigatória");
+
+        verify(loginMetricsRecorder).registrarFalha(eq("12345678901"), eq("SENHA_INVALIDA"), eq(true), any(), any());
     }
 }

@@ -30,6 +30,11 @@ public class CpcUsuarioJpaEntity {
     @Column(name = "senha_alterada_em") private Instant senhaAlteradaEm;
     @Column(name = "tentativas_login_falhas") private int tentativasLoginFalhas;
     @Column(name = "bloqueio_login_ate") private Instant bloqueioLoginAte;
+    @Column(name = "two_factor_enabled", nullable = false) private boolean twoFactorEnabled;
+    @Column(name = "two_factor_secret", length = 64) private String twoFactorSecret;
+    @Column(name = "two_factor_email_hash") private String twoFactorEmailHash;
+    @Column(name = "two_factor_email_expira_em") private Instant twoFactorEmailExpiraEm;
+    @Column(name = "two_factor_email_tentativas", nullable = false) private int twoFactorEmailTentativas;
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -73,4 +78,14 @@ public class CpcUsuarioJpaEntity {
     public void setTentativasLoginFalhas(int tentativasLoginFalhas) { this.tentativasLoginFalhas = tentativasLoginFalhas; }
     public Instant getBloqueioLoginAte() { return bloqueioLoginAte; }
     public void setBloqueioLoginAte(Instant bloqueioLoginAte) { this.bloqueioLoginAte = bloqueioLoginAte; }
+    public boolean isTwoFactorEnabled() { return twoFactorEnabled; }
+    public void setTwoFactorEnabled(boolean twoFactorEnabled) { this.twoFactorEnabled = twoFactorEnabled; }
+    public String getTwoFactorSecret() { return twoFactorSecret; }
+    public void setTwoFactorSecret(String twoFactorSecret) { this.twoFactorSecret = twoFactorSecret; }
+    public String getTwoFactorEmailHash() { return twoFactorEmailHash; }
+    public void setTwoFactorEmailHash(String twoFactorEmailHash) { this.twoFactorEmailHash = twoFactorEmailHash; }
+    public Instant getTwoFactorEmailExpiraEm() { return twoFactorEmailExpiraEm; }
+    public void setTwoFactorEmailExpiraEm(Instant twoFactorEmailExpiraEm) { this.twoFactorEmailExpiraEm = twoFactorEmailExpiraEm; }
+    public int getTwoFactorEmailTentativas() { return twoFactorEmailTentativas; }
+    public void setTwoFactorEmailTentativas(int twoFactorEmailTentativas) { this.twoFactorEmailTentativas = twoFactorEmailTentativas; }
 }
