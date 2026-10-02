@@ -19,12 +19,17 @@ public interface CpcUsuarioMapper {
     @Mapping(target = "comFoto", ignore = true)
     CpcUsuario toModel(CpcUsuarioJpaEntity entity);
 
+    // Fábrica usa o construtor completo (18 args): os campos finais `ativo` e
+    // `criadoEm` não têm setter e eram descartados no toModel — um usuário
+    // suspenso/anonimizado voltava como ativo=true (login/refresh/filtro
+    // continuavam aceitando a conta).
     @ObjectFactory
     default CpcUsuario criarCpcUsuario(CpcUsuarioJpaEntity e) {
         return new CpcUsuario(e.getId(), e.getCpcId(), e.getCpf(), e.getNome(),
-                e.getEmailCorporativo(), e.getSenhaHash(), e.getRole(), e.getTenantId(),
+                e.getEmailCorporativo(), e.getEmailPessoal(), e.getApelido(), e.getCelular(),
+                e.getFoto(), e.getSenhaHash(), e.getRole(), e.getTenantId(),
                 e.isAcessoEstoque(), e.isAcessoPatrimonio(), e.isAcessoFrota(),
-                e.isAcessoProtocolo(), e.getFoto());
+                e.isAcessoProtocolo(), e.isAtivo(), e.getCriadoEm());
     }
 
     @AfterMapping

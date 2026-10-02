@@ -166,6 +166,27 @@ public class CpcUsuario {
         return copia;
     }
 
+    /**
+     * Devolve uma cópia com o status ativo alterado (suspensão/reativação de
+     * conta pela administração da empresa). `ativo` é final, então a troca é
+     * imutável — persistir o retorno via repositório.
+     */
+    public CpcUsuario comAtivo(boolean novoAtivo) {
+        CpcUsuario copia = new CpcUsuario(id, cpcId, cpf, nome, emailCorporativo, emailPessoal,
+                apelido, celular, foto, senhaHash, role, tenantId,
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo,
+                novoAtivo, criadoEm);
+        copia.senhaAlteradaEm = this.senhaAlteradaEm;
+        copia.tentativasLoginFalhas = this.tentativasLoginFalhas;
+        copia.bloqueioLoginAte = this.bloqueioLoginAte;
+        copia.twoFactorEnabled = this.twoFactorEnabled;
+        copia.twoFactorSecret = this.twoFactorSecret;
+        copia.twoFactorEmailHash = this.twoFactorEmailHash;
+        copia.twoFactorEmailExpiraEm = this.twoFactorEmailExpiraEm;
+        copia.twoFactorEmailTentativas = this.twoFactorEmailTentativas;
+        return copia;
+    }
+
     public CpcUsuario comFoto(String novaFoto) {
         CpcUsuario copia = new CpcUsuario(id, cpcId, cpf, nome, emailCorporativo,
                 senhaHash, role, tenantId,

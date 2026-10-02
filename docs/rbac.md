@@ -7,7 +7,7 @@ O sistema usa **RBAC** baseado em roles extraídas do token JWT. Cada perfil rec
 | `ADMIN_PLATAFORMA` | Global / SaaS (LGPD: **sem dados de tenant**) | Catálogo de módulos, ativação por empresa, gestão de empresas (`POST /empresas`), telemetria e actuator — **não** acessa rotas de dados de tenant (ponto, colaboradores, fiscal, estoque, compras, licitações, patrimônio, frota, protocolo, transparência, contratos) |
 | `SUPORTE_N1` | Global / SaaS | Suporte nível 1 (`/api/v1/suporte`, módulos, acesso de leitura) |
 | `SUPORTE_N2` | Global / SaaS | Suporte nível 2 |
-| `ADMIN_EMPRESA` | Tenant | Gestão completa (colaboradores, ponto, estoque, patrimônio, frota, protocolo, compras, licitações, transparência, contratos); **herda todos os módulos contratados** no primeiro consentimento LGPD; aprova/rejeita ajustes de ponto |
+| `ADMIN_EMPRESA` | Tenant | Gestão completa (colaboradores, ponto, estoque, patrimônio, frota, protocolo, compras, licitações, transparência, contratos); **herda todos os módulos contratados** no primeiro consentimento LGPD; aprova/rejeita ajustes de ponto; **gestão de contas administrativas** da empresa (`GET/POST /usuarios`, `PATCH /usuarios/{id}/suspender`) |
 | `GESTOR_RH` | Tenant | **Escopo fixo `PONTO` + `RECURSOS_HUMANOS`** (papel decide, sem authorities extras de módulo): colaboradores, ponto (incl. aprovação de ajustes), exportação fiscal; associação de módulos por usuário |
 | `COLABORADOR` | Individual | Ponto eletrônico e leitura (estoque/frota/patrimônio/protocolo/transparência quando o módulo estiver ativo); estoque e compras com `acessoEstoque` |
 
@@ -48,6 +48,15 @@ O sistema usa **RBAC** baseado em roles extraídas do token JWT. Cada perfil rec
 `ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA` (URL: `anyRequest().authenticated()`).
 `PUT` sincroniza também os 4 flags legados (`acessoEstoque/Patrimonio/Frota/Protocolo`) em `cpc_usuario`.
 
+### Contas administrativas da empresa (`/api/v1/usuarios`)
+
+`GET /api/v1/usuarios`, `POST /api/v1/usuarios`, `PATCH /api/v1/usuarios/{id}/suspender`
+(`UsuarioController`): **`ADMIN_EMPRESA`** (`@PreAuthorize` na classe; URL: `anyRequest().authenticated()`).
+
+- **Listagem**: contas `GESTOR_RH`/`ADMIN_EMPRESA` do tenant (contas `COLABORADOR` ficam na gestão de colaboradores).
+- **Criação**: aceita apenas papel `GESTOR_RH` ou `ADMIN_EMPRESA` (senha pela política do papel; CPF duplicado → `400`); `GESTOR_RH` nasce com os vínculos fixos `PONTO` + `RECURSOS_HUMANOS`.
+- **Suspensão**: grava `ativo=false` — `JwtAuthFilter`, refresh e login negam a conta na próxima requisição; não suspende a própria conta nem `COLABORADOR`/`ADMIN_PLATAFORMA` (auditoria `SUSPENSAO`). Reativação não existe (manual/BD) — manter apenas suspensão conforme escopo aprovado.
+
 ### `@PreAuthorize` por operação (módulos verticais e de compras/licitações)
 
 > Observação LGPD: as listas abaixo são as anotações dos controllers; para
@@ -61,6 +70,7 @@ O sistema usa **RBAC** baseado em roles extraídas do token JWT. Cada perfil rec
 - **Licitações** (`@RequiresModulo("LICITACOES")`): leituras (listagem, detalhe, lances, planejamento) aceitam `ADMIN_EMPRESA`/`ROLE_ESTOQUE`; **todas as escritas** (criar, publicar, PNCP, propostas, disputa, lances, adjudicar, homologar, cancelar, gerar pedidos, contrato, planejamento ETP/TR/edital) restringem-se à **gerência** (`ADMIN_EMPRESA`).
 - **Transparência** (`@RequiresModulo("TRANSPARENCIA")`): leituras (resumo, despesas mensais, publicações) aceitam `ADMIN_EMPRESA`/`ROLE_ESTOQUE`/**`COLABORADOR`**; **publicação/remoção** restringem-se à gerência.
 - **Patrimônio/Frota/Protocolo** (módulos verticais): cadastros e alterações de status aceitam `ADMIN_EMPRESA` (anotação também `ADMIN_PLATAFORMA`, negado na URL); leituras aceitam também `COLABORADOR`.
+- **Usuários** (`UsuarioController`): `GET/POST /api/v1/usuarios` e `PATCH /api/v1/usuarios/{id}/suspender` apenas `ADMIN_EMPRESA` (contas `GESTOR_RH`/`ADMIN_EMPRESA` do tenant; criação/suspensão de `COLABORADOR` fora do escopo).
 
 ## Enforço por Módulo (empresa × usuário)
 

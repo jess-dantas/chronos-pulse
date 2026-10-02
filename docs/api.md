@@ -162,6 +162,16 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 | `GET` | `/usuarios/{usuarioId}/modulos?tenantId=` | 🛡️ (acima) | `{ modulos: [...] }` — códigos associados ao usuário |
 | `PUT` | `/usuarios/{usuarioId}/modulos` | 🛡️ (acima) | Corpo `{ tenantId, codigos: [...] }` — substitui a associação **e** sincroniza os flags legados (`acessoEstoque`, `acessoPatrimonio`, `acessoFrota`, `acessoProtocolo`) |
 
+### Contas administrativas da empresa (`/api/v1/usuarios`)
+
+🛡️ (`ADMIN_EMPRESA`) — gestão das contas `GESTOR_RH`/`ADMIN_EMPRESA` do tenant; colaboradores ficam na §5.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/usuarios` | 🛡️ (`ADMIN_EMPRESA`) | Lista contas administrativas do tenant (`id`, `cpf`, `nome`, `email`, `role`, `ativo`, `criadoEm`), ordenadas por nome |
+| `POST` | `/usuarios` | 🛡️ (mesmo perfil) | Cria conta: corpo `{ cpf, nome, emailCorporativo?, senha, papel }` — `papel` só `GESTOR_RH` ou `ADMIN_EMPRESA`; senha passa pela política do papel (gestor: 8+ com maiúscula/minúscula/número/símbolo); CPF duplicado/validações → `400` com a mensagem; `GESTOR_RH` nasce com os vínculos fixos `PONTO` + `RECURSOS_HUMANOS` (auditoria `CRIACAO`) |
+| `PATCH` | `/usuarios/{id}/suspender` | 🛡️ (mesmo perfil) | Marca `ativo=false` (auditoria `SUSPENSAO`): JWT/refresh/login passam a negar; `400` para a própria conta, conta `COLABORADOR` (use a exclusão de colaboradores), `ADMIN_PLATAFORMA` ou já suspensa |
+
 ---
 
 ## 6. Ponto Eletrônico
