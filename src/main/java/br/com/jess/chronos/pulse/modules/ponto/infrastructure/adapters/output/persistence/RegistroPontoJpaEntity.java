@@ -86,4 +86,6 @@ public class RegistroPontoJpaEntity {
     public void setAprovadoPor(UUID v) { this.aprovadoPor = v; }
     public Instant getAprovadoEm() { return aprovadoEm; }
     public void setAprovadoEm(Instant v) { this.aprovadoEm = v; }
+    public Long getVersion() { return version; }
+    public void setVersion(Long v) { this.version = v; }
 }

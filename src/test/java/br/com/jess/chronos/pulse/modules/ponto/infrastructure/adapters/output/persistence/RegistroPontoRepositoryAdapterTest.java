@@ -44,6 +44,39 @@ class RegistroPontoRepositoryAdapterTest {
     }
 
     @Test
+    void deveCopiarVersionDeRegistroExistenteAoSalvar() {
+        RegistroPonto modelo = modelo();
+        RegistroPontoJpaEntity atual = entidade();
+        RegistroPontoJpaEntity paraSalvar = entidade();
+        paraSalvar.setId(atual.getId());
+        atual.setVersion(7L);
+        when(mapper.toEntity(modelo)).thenReturn(paraSalvar);
+        when(jpaRepository.findById(atual.getId())).thenReturn(Optional.of(atual));
+        when(jpaRepository.save(paraSalvar)).thenReturn(paraSalvar);
+        when(mapper.toModel(paraSalvar)).thenReturn(modelo);
+
+        adapter.salvar(modelo);
+
+        assertThat(paraSalvar.getVersion()).isEqualTo(7L);
+        verify(jpaRepository).save(paraSalvar);
+    }
+
+    @Test
+    void deveManterVersionNulaQuandoRegistroNaoExiste() {
+        RegistroPonto modelo = modelo();
+        RegistroPontoJpaEntity entidade = entidade();
+        when(mapper.toEntity(modelo)).thenReturn(entidade);
+        when(jpaRepository.findById(entidade.getId())).thenReturn(Optional.empty());
+        when(jpaRepository.save(entidade)).thenReturn(entidade);
+        when(mapper.toModel(entidade)).thenReturn(modelo);
+
+        adapter.salvar(modelo);
+
+        assertThat(entidade.getVersion()).isNull();
+        verify(jpaRepository).save(entidade);
+    }
+
+    @Test
     void deveBuscarPorIdExistente() {
         UUID id = UUID.randomUUID();
         RegistroPontoJpaEntity entidade = entidade();

@@ -23,7 +23,10 @@ public class RegistroPontoRepositoryAdapter implements RegistroPontoRepositoryPo
 
     @Override
     public RegistroPonto salvar(RegistroPonto registro) {
-        return mapper.toModel(jpaRepository.save(mapper.toEntity(registro)));
+        RegistroPontoJpaEntity entity = mapper.toEntity(registro);
+        jpaRepository.findById(entity.getId())
+                .ifPresent(atual -> entity.setVersion(atual.getVersion()));
+        return mapper.toModel(jpaRepository.save(entity));
     }
 
     @Override
