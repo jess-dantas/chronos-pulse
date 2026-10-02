@@ -31,7 +31,7 @@ public class DesfazimentoController {
     private final AuditoriaService auditoriaService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<DesfazimentoResponseDTO> cadastrar(
             @Valid @RequestBody CadastrarDesfazimentoDTO dto,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -45,7 +45,7 @@ public class DesfazimentoController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<Page<DesfazimentoResponseDTO>> listar(
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal CpcUsuario usuario) {
@@ -53,7 +53,7 @@ public class DesfazimentoController {
     }
 
     @PatchMapping("/{id}/aprovar")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<DesfazimentoResponseDTO> aprovar(
             @PathVariable UUID id,
             @RequestBody(required = false) AprovarDesfazimentoDTO body,
@@ -69,7 +69,7 @@ public class DesfazimentoController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<Void> cancelar(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario,

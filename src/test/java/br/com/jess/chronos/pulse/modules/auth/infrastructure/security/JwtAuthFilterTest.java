@@ -4,6 +4,7 @@ import br.com.jess.chronos.pulse.modules.auth.application.service.DeviceTokenSer
 import br.com.jess.chronos.pulse.modules.auth.domain.model.CpcUsuario;
 import br.com.jess.chronos.pulse.modules.auth.domain.model.Role;
 import br.com.jess.chronos.pulse.modules.auth.domain.ports.output.CpcUsuarioRepositoryPort;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,6 +42,7 @@ class JwtAuthFilterTest {
     @Mock private HttpServletRequest request;
     @Mock private HttpServletResponse response;
     @Mock private FilterChain filterChain;
+    @Mock private Claims claims;
 
     private JwtAuthFilter filter;
 
@@ -180,5 +182,36 @@ class JwtAuthFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(filterChain).doFilter(request, response);
         verifyNoInteractions(deviceTokenService, jwtService, usuarioRepository);
+    }
+
+    /// Gestor RH: escopo fixo do papel (PONTO + RECURSOS_HUMANOS) — sem
+    /// authorities extras de estoque/patrimônio/frota/protocolo e sem os
+    /// flags legados implícitos no domínio (V005 zera os dados).
+    @Test
+    void gestorRhRecebeApenasOPapelSemAuthoritiesDeModulo() throws Exception {
+        var gestor = new CpcUsuario(UUID.randomUUID(), UUID.randomUUID(), "22222222222",
+                "Gestor RH", "gestor@empresa.com", "hash", Role.GESTOR_RH, UUID.randomUUID());
+        assertThat(gestor.isAcessoEstoque()).isFalse();
+        assertThat(gestor.isAcessoPatrimonio()).isFalse();
+        assertThat(gestor.isAcessoFrota()).isFalse();
+        assertThat(gestor.isAcessoProtocolo()).isFalse();
+
+        when(request.getHeader(JwtAuthFilter.HEADER_DEVICE_TOKEN)).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn("Bearer token-x");
+        when(request.getRequestURI()).thenReturn("/api/v1/colaboradores");
+        when(jwtService.isTokenValido("token-x")).thenReturn(true);
+        when(jwtService.extrairClaims("token-x")).thenReturn(claims);
+        when(claims.getSubject()).thenReturn("22222222222");
+        when(jwtService.isAccessToken(claims)).thenReturn(true);
+        when(usuarioRepository.buscarPorCpf("22222222222")).thenReturn(Optional.of(gestor));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getAuthorities())
+                .extracting("authority")
+                .containsExactly("ROLE_GESTOR_RH");
+        verify(filterChain).doFilter(request, response);
     }
 }

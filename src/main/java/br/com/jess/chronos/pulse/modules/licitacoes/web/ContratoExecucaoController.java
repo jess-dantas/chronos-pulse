@@ -22,10 +22,10 @@ import java.util.UUID;
 public class ContratoExecucaoController {
 
     private static final String ROLES_LICITACOES =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'ESTOQUE')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'ESTOQUE')";
 
     private static final String ROLES_GERENCIA =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')";
 
     private final ContratoExecucaoService execucaoService;
     private final AuditoriaService auditoriaService;

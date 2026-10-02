@@ -162,6 +162,16 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 | `GET` | `/usuarios/{usuarioId}/modulos?tenantId=` | 🛡️ (acima) | `{ modulos: [...] }` — códigos associados ao usuário |
 | `PUT` | `/usuarios/{usuarioId}/modulos` | 🛡️ (acima) | Corpo `{ tenantId, codigos: [...] }` — substitui a associação **e** sincroniza os flags legados (`acessoEstoque`, `acessoPatrimonio`, `acessoFrota`, `acessoProtocolo`) |
 
+### Contas administrativas da empresa (`/api/v1/usuarios`)
+
+🛡️ (`ADMIN_EMPRESA`) — gestão das contas `GESTOR_RH`/`ADMIN_EMPRESA` do tenant; colaboradores ficam na §5.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| `GET` | `/usuarios` | 🛡️ (`ADMIN_EMPRESA`) | Lista contas administrativas do tenant (`id`, `cpf`, `nome`, `email`, `role`, `ativo`, `criadoEm`), ordenadas por nome |
+| `POST` | `/usuarios` | 🛡️ (mesmo perfil) | Cria conta: corpo `{ cpf, nome, emailCorporativo?, senha, papel }` — `papel` só `GESTOR_RH` ou `ADMIN_EMPRESA`; senha passa pela política do papel (gestor: 8+ com maiúscula/minúscula/número/símbolo); CPF duplicado/validações → `400` com a mensagem; `GESTOR_RH` nasce com os vínculos fixos `PONTO` + `RECURSOS_HUMANOS` (auditoria `CRIACAO`) |
+| `PATCH` | `/usuarios/{id}/suspender` | 🛡️ (mesmo perfil) | Marca `ativo=false` (auditoria `SUSPENSAO`): JWT/refresh/login passam a negar; `400` para a própria conta, conta `COLABORADOR` (use a exclusão de colaboradores), `ADMIN_PLATAFORMA` ou já suspensa |
+
 ---
 
 ## 6. Ponto Eletrônico
@@ -197,15 +207,15 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/estoque/saldos` | 👤 com `ROLE_ESTOQUE` ou gestor | Saldos físicos/patrimoniais (PMP) |
-| `POST` | `/estoque/movimentacoes/entrada` | 👤 com `ROLE_ESTOQUE` ou gestor | Entrada por NF-e/Empenho (recalcula PMP) |
-| `POST` | `/estoque/movimentacoes/saida` | 👤 com `ROLE_ESTOQUE` ou gestor | Saída/baixa com validação de saldo |
-| `GET` | `/estoque/requisicoes` | 👤 com `ROLE_ESTOQUE` ou gestor | Requisições (paginada, filtrável) |
-| `POST` | `/estoque/requisicoes` | 👤 com `ROLE_ESTOQUE` ou gestor | Cria requisição |
-| `POST` | `/estoque/requisicoes/{id}/aprovar` | 👤 com `ROLE_ESTOQUE` ou gestor | Aprova requisição |
-| `POST` | `/estoque/requisicoes/{id}/atender` | 👤 com `ROLE_ESTOQUE` ou gestor | Atende (baixa em estoque) |
+| `GET` | `/estoque/saldos` | 👤 com `ROLE_ESTOQUE` | Saldos físicos/patrimoniais (PMP) |
+| `POST` | `/estoque/movimentacoes/entrada` | 👤 com `ROLE_ESTOQUE` | Entrada por NF-e/Empenho (recalcula PMP) |
+| `POST` | `/estoque/movimentacoes/saida` | 👤 com `ROLE_ESTOQUE` | Saída/baixa com validação de saldo |
+| `GET` | `/estoque/requisicoes` | 👤 com `ROLE_ESTOQUE` | Requisições (paginada, filtrável) |
+| `POST` | `/estoque/requisicoes` | 👤 com `ROLE_ESTOQUE` | Cria requisição |
+| `POST` | `/estoque/requisicoes/{id}/aprovar` | 👤 com `ROLE_ESTOQUE` | Aprova requisição |
+| `POST` | `/estoque/requisicoes/{id}/atender` | 👤 com `ROLE_ESTOQUE` | Atende (baixa em estoque) |
 
-> **Acesso ao estoque:** colaboradores com `acessoEstoque=true` recebem a authority `ROLE_ESTOQUE` no token (`JwtAuthFilter`). Gestores (`ADMIN_EMPRESA`, `GESTOR_RH`, `ADMIN_PLATAFORMA`) acessam diretamente.
+> **Acesso ao estoque:** colaboradores com `acessoEstoque=true` recebem a authority `ROLE_ESTOQUE` no token (`JwtAuthFilter`). Gestores (`ADMIN_EMPRESA`, `ADMIN_PLATAFORMA`) acessam diretamente.
 
 ---
 
@@ -213,8 +223,8 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `COLABORADOR`) | Lista paginada |
-| `POST` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra bem |
+| `GET` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada |
+| `POST` | `/patrimonio` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra bem |
 | `GET` | `/patrimonio/{id}` | 🛡️ (mesmos perfis de leitura) | Busca por id |
 | `GET` | `/patrimonio/ativos` | 🛡️ (leitura) | Lista bens ativos (sem paginação) |
 
@@ -241,11 +251,11 @@ Base: `/usuarios/{usuarioId}/modulos` — 🛡️ (`ADMIN_EMPRESA`, `GESTOR_RH`,
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `COLABORADOR`) | Lista paginada de veículos |
-| `POST` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra veículo |
+| `GET` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada de veículos |
+| `POST` | `/frota/veiculos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra veículo |
 | `GET` | `/frota/veiculos/{id}` | 🛡️ (leitura) | Detalhe do veículo |
 | `GET` | `/frota/abastecimentos` | 🛡️ (leitura) | Lista paginada de abastecimentos |
-| `POST` | `/frota/abastecimentos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Registra abastecimento |
+| `POST` | `/frota/abastecimentos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Registra abastecimento |
 
 `POST /frota/veiculos` — corpo:
 
@@ -282,10 +292,10 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `COLABORADOR`) | Lista paginada |
-| `POST` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Cadastra protocolo |
+| `GET` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `COLABORADOR`) | Lista paginada |
+| `POST` | `/protocolo` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra protocolo |
 | `GET` | `/protocolo/{id}` | 🛡️ (leitura) | Detalhe |
-| `PATCH` | `/protocolo/{id}/status` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`) | Altera status |
+| `PATCH` | `/protocolo/{id}/status` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Altera status |
 
 `POST /protocolo` — corpo (`numeroProtocolo`, `tipo` e `assunto` obrigatórios):
 
@@ -319,12 +329,12 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/compras/fornecedores` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Lista fornecedores |
+| `GET` | `/compras/fornecedores` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Lista fornecedores |
 | `GET` | `/compras/fornecedores/{id}` | 🛡️ (mesmos perfis) | Busca fornecedor |
 | `POST` | `/compras/fornecedores` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Cadastra fornecedor |
 | `PUT` | `/compras/fornecedores/{id}` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Atualiza fornecedor |
 | `DELETE` | `/compras/fornecedores/{id}` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`) | Inativa fornecedor |
-| `GET` | `/compras/pedidos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Lista pedidos de compra |
+| `GET` | `/compras/pedidos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Lista pedidos de compra |
 | `GET` | `/compras/pedidos/{id}` | 🛡️ (mesmos perfis) | Busca pedido |
 | `POST` | `/compras/pedidos` | 🛡️ (mesmos perfis) | Cria pedido de compra |
 | `POST` | `/compras/pedidos/{id}/cancelar` | 🛡️ (mesmos perfis) | Cancela pedido |
@@ -334,7 +344,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
 | `POST` | `/compras/nfe/receber` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Recebe NFe vinculada ao pedido (gera entrada) |
-| `GET` | `/compras/nfe` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Lista entradas por NFe |
+| `GET` | `/compras/nfe` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Lista entradas por NFe |
 | `POST` | `/compras/nfe/importar-xml` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Importa XML da NFe (≤ 5 MB, `multipart/form-data` — campo `arquivo`) |
 | `POST` | `/compras/nfe/consultar-sefaz` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Consulta NFe pela chave na SEFAZ (depende de `app.compras.sefaz.consulta-enabled`) |
 
@@ -342,7 +352,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `GET` | `/compras/precos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`) | Banco de preços para consulta |
+| `GET` | `/compras/precos` | 🛡️ (`ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`) | Banco de preços para consulta |
 
 ### Requisições e cotações
 
@@ -360,7 +370,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 | `POST` | `/compras/cotacoes/{id}/cancelar` | 🛡️ (gerência) | Cancela cotação |
 | `POST` | `/compras/cotacoes/{id}/gerar-pedidos` | 🛡️ (gerência) | Gera pedidos a partir da cotação |
 
-**Grupo compras:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+**Grupo compras:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`.
 
 `POST /compras/cotacoes` — corpo:
 
@@ -406,7 +416,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 | `PUT` | `/licitacoes/{licitacaoId}/planejamento/edital` | 🛡️ (gerência) | Salva edital |
 | `POST` | `/licitacoes/{licitacaoId}/planejamento/edital/publicar` | 🛡️ (gerência) | Publica edital |
 
-**Grupo licitações:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+**Grupo licitações:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`.
 
 `POST /licitacoes/{id}/contrato` — corpo:
 
@@ -435,7 +445,7 @@ O backend calcula `valorTotal` automaticamente (`litros × valorLitro`).
 
 Situação computada: `RESCINDIDO` > `VENCIDO` (vigência expirada sem aditivo) > `EXPIRANDO` (dentro da janela de aviso de vencimento) > `VIGENTE`.
 
-**Grupo licitações:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+**Grupo licitações:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`.
 
 ---
 
@@ -450,7 +460,7 @@ Situação computada: `RESCINDIDO` > `VENCIDO` (vigência expirada sem aditivo) 
 | `POST` | `/transparencia/publicacoes/{id}/publicar` | 🛡️ (gerência) | Divulga no portal |
 | `DELETE` | `/transparencia/publicacoes/{id}` | 🛡️ (gerência) | Remove publicação em elaboração |
 
-**Leitura:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`, `ESTOQUE`, `COLABORADOR`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `GESTOR_RH`.
+**Leitura:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`, `ESTOQUE`, `COLABORADOR`. **Gerência:** `ADMIN_PLATAFORMA`, `ADMIN_EMPRESA`.
 
 `POST /transparencia/publicacoes` — corpo (resumo):
 

@@ -16,7 +16,7 @@ Aplicados integralmente pela **migration única** `V001__baseline_chronos_pulse.
 | Usuário | Nome | Perfil | CPF | Acesso Estoque | Módulos (`usuario_modulo`) |
 |---|---|---|---|---|---|
 | Admin Empresa | Admin Empresa | `ADMIN_EMPRESA` | `11111111111` | Sim (irrestrito) | Herda todos os módulos contratados no 1º consentimento LGPD |
-| Gestor de RH | Gestor de RH | `GESTOR_RH` | `22222222222` | Sim (irrestrito) | `PONTO` + `RECURSOS_HUMANOS` + `ESTOQUE` |
+| Gestor de RH | Gestor de RH | `GESTOR_RH` | `22222222222` | Não | `PONTO` + `RECURSOS_HUMANOS` (escopo fixo do papel; V005) |
 | Colaborador 1 | Colaborador 1 | `COLABORADOR` | `12345678901` | Não | `PONTO` |
 | Colaborador 2 | Colaborador 2 | `COLABORADOR` | `98765432100` | Sim | `PONTO` + `ESTOQUE` |
 

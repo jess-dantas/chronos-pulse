@@ -39,6 +39,18 @@ public class ModuloInterceptor implements HandlerInterceptor {
         if (isPerfilPlataforma(usuario) || usuario.getRole() == Role.ADMIN_EMPRESA || usuario.getTenantId() == null) {
             return true;
         }
+        // Gestor RH: escopo fixo em PONTO + RECURSOS_HUMANOS — decide pelo
+        // papel, ignorando os vínculos de usuario_modulo (a V005 normaliza os
+        // vínculos legados; vínculos extras futuros não ampliam o acesso).
+        if (usuario.getRole() == Role.GESTOR_RH) {
+            boolean liberado = ("PONTO".equals(codigo) || "RECURSOS_HUMANOS".equals(codigo))
+                    && modulosPort.isAtivo(usuario.getTenantId(), codigo);
+            if (!liberado) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "O módulo " + codigo + " não está liberado para este usuário.");
+            }
+            return true;
+        }
         if (!modulosPort.usuarioModuloAtivo(usuario.getId(), usuario.getTenantId(), codigo)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "O módulo " + codigo + " não está liberado para este usuário.");

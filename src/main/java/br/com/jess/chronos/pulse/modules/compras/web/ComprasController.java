@@ -36,7 +36,7 @@ import java.util.UUID;
 public class ComprasController {
 
     private static final String ROLES_COMPRAS =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'ESTOQUE')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'ESTOQUE')";
 
     private final ComprasService comprasService;
     private final NfeImportacaoService nfeImportacaoService;

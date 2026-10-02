@@ -40,7 +40,7 @@ public class CpcUsuario {
     public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
                       String senhaHash, Role role, UUID tenantId) {
         this(id, cpcId, cpf, nome, emailCorporativo, senhaHash, role, tenantId,
-                role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA || role == Role.GESTOR_RH);
+                role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA);
     }
 
     public CpcUsuario(UUID id, UUID cpcId, String cpf, String nome, String emailCorporativo,
@@ -58,7 +58,9 @@ public class CpcUsuario {
                       String senhaHash, Role role, UUID tenantId,
                       boolean acessoEstoque, boolean acessoPatrimonio,
                       boolean acessoFrota, boolean acessoProtocolo, String foto) {
-        boolean admin = role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA || role == Role.GESTOR_RH;
+        // Gestor RH não é admin de módulos: seu acesso é fixo em
+        // PONTO + RECURSOS_HUMANOS (papel), sem os flags legados implícitos.
+        boolean admin = role == Role.ADMIN_PLATAFORMA || role == Role.ADMIN_EMPRESA;
         this.id = id != null ? id : UUID.randomUUID();
         this.cpcId = cpcId != null ? cpcId : UUID.randomUUID();
         this.cpf = cpf;
@@ -156,6 +158,27 @@ public class CpcUsuario {
         copia.senhaAlteradaEm = Instant.now();
         copia.tentativasLoginFalhas = 0;
         copia.bloqueioLoginAte = null;
+        copia.twoFactorEnabled = this.twoFactorEnabled;
+        copia.twoFactorSecret = this.twoFactorSecret;
+        copia.twoFactorEmailHash = this.twoFactorEmailHash;
+        copia.twoFactorEmailExpiraEm = this.twoFactorEmailExpiraEm;
+        copia.twoFactorEmailTentativas = this.twoFactorEmailTentativas;
+        return copia;
+    }
+
+    /**
+     * Devolve uma cópia com o status ativo alterado (suspensão/reativação de
+     * conta pela administração da empresa). `ativo` é final, então a troca é
+     * imutável — persistir o retorno via repositório.
+     */
+    public CpcUsuario comAtivo(boolean novoAtivo) {
+        CpcUsuario copia = new CpcUsuario(id, cpcId, cpf, nome, emailCorporativo, emailPessoal,
+                apelido, celular, foto, senhaHash, role, tenantId,
+                acessoEstoque, acessoPatrimonio, acessoFrota, acessoProtocolo,
+                novoAtivo, criadoEm);
+        copia.senhaAlteradaEm = this.senhaAlteradaEm;
+        copia.tentativasLoginFalhas = this.tentativasLoginFalhas;
+        copia.bloqueioLoginAte = this.bloqueioLoginAte;
         copia.twoFactorEnabled = this.twoFactorEnabled;
         copia.twoFactorSecret = this.twoFactorSecret;
         copia.twoFactorEmailHash = this.twoFactorEmailHash;

@@ -28,7 +28,7 @@ public class TransferenciaController {
     private final AuditoriaService auditoriaService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<TransferenciaResponseDTO> solicitar(
             @Valid @RequestBody SolicitarTransferenciaDTO dto,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -42,7 +42,7 @@ public class TransferenciaController {
     }
 
     @PostMapping("/{id}/confirmar")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<TransferenciaResponseDTO> confirmar(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -56,7 +56,7 @@ public class TransferenciaController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<Void> cancelar(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -70,7 +70,7 @@ public class TransferenciaController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<List<TransferenciaResponseDTO>> listar(@AuthenticationPrincipal CpcUsuario usuario) {
         return ResponseEntity.ok(transferenciaService.listar(usuario.getTenantId()));
     }

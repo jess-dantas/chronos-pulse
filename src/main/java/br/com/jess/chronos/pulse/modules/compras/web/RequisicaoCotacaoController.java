@@ -28,10 +28,10 @@ import java.util.UUID;
 public class RequisicaoCotacaoController {
 
     private static final String ROLES_COMPRAS =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'ESTOQUE')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'ESTOQUE')";
 
     private static final String ROLES_GERENCIA =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')";
 
     private final RequisicaoCotacaoService requisicaoCotacaoService;
     private final ComprasService comprasService;

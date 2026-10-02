@@ -17,7 +17,7 @@
 | Perfil | Nome | CPF | Senha | Observação |
 |---|---|---|---|---|
 | `ADMIN_EMPRESA` | Admin Empresa | `11111111111` | `admin123` | Gestão completa do tenant; **herda todos os módulos contratados** no primeiro consentimento LGPD |
-| `GESTOR_RH` | Gestor de RH | `22222222222` | `admin123` | Colaboradores, ponto, estoque + gerência de compras/licitações/transparência |
+| `GESTOR_RH` | Gestor de RH | `22222222222` | `admin123` | Escopo fixo `PONTO` + `RECURSOS_HUMANOS`: colaboradores, ponto e exportação fiscal |
 | `COLABORADOR` | Colaborador 1 | `12345678901` | `senha123` | Apenas ponto eletrônico |
 | `COLABORADOR` | Colaborador 2 | `98765432100` | `senha123` | Ponto + estoque (`acessoEstoque=true`, authority `ROLE_ESTOQUE`) |
 

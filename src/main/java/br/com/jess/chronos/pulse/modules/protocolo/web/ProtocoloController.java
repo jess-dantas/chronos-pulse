@@ -28,7 +28,7 @@ public class ProtocoloController {
     private final ProtocoloService protocoloService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<ProtocoloResponseDTO> cadastrar(
             @Valid @RequestBody CadastrarProtocoloDTO dto,
             Authentication authentication) {
@@ -38,7 +38,7 @@ public class ProtocoloController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<Page<ProtocoloResponseDTO>> listar(
             @PageableDefault(size = 20) Pageable pageable,
             Authentication authentication) {
@@ -47,7 +47,7 @@ public class ProtocoloController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<ProtocoloResponseDTO> buscarPorId(
             @PathVariable UUID id,
             Authentication authentication) {
@@ -56,7 +56,7 @@ public class ProtocoloController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<ProtocoloResponseDTO> atualizarStatus(
             @PathVariable UUID id,
             @Valid @RequestBody AtualizarStatusProtocoloDTO dto,
