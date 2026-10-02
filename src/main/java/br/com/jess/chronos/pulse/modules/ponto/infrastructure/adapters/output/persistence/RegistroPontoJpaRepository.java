@@ -22,10 +22,13 @@ public interface RegistroPontoJpaRepository extends JpaRepository<RegistroPontoJ
 
     @Query("SELECT r.tipoRegistro FROM RegistroPontoJpaEntity r " +
            "WHERE r.colaboradorId = :colaboradorId AND r.tenantId = :tenantId " +
-           "ORDER BY r.dataHoraServidor DESC LIMIT 1")
+           "AND r.dataHoraDispositivo >= :inicio AND r.dataHoraDispositivo < :fim " +
+           "ORDER BY r.dataHoraDispositivo DESC LIMIT 1")
     Optional<TipoRegistro> buscarUltimoTipoPorColaborador(
             @Param("colaboradorId") UUID colaboradorId,
-            @Param("tenantId") UUID tenantId);
+            @Param("tenantId") UUID tenantId,
+            @Param("inicio") Instant inicio,
+            @Param("fim") Instant fim);
 
     List<RegistroPontoJpaEntity> findByColaboradorIdAndTenantIdOrderByDataHoraDispositivoAsc(
             UUID colaboradorId, UUID tenantId);

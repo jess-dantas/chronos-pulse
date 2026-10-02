@@ -13,7 +13,7 @@ public interface RegistroPontoRepositoryPort {
     Optional<RegistroPonto> buscarPorId(UUID id);
     Long obterProximoNsr();
     Long obterProximoNsrLogico(UUID colaboradorId, UUID tenantId);
-    Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId);
+    Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId, Instant inicio, Instant fim);
     List<RegistroPonto> listarPorColaboradorEPeriodo(UUID colaboradorId, UUID tenantId, Instant inicio, Instant fim);
     List<RegistroPonto> listarPorColaborador(UUID colaboradorId, UUID tenantId);
     List<RegistroPonto> listarPorTenant(UUID tenantId);

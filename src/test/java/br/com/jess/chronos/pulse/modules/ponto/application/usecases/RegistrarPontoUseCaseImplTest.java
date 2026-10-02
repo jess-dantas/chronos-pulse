@@ -6,6 +6,7 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPonto
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,7 +44,7 @@ class RegistrarPontoUseCaseImplTest {
     @Test
     void deveAtribuirEntradaQuandoNaoHouverBatidaAnteriorEPersistirRegistro() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
+        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.empty());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.obterProximoNsr()).thenReturn(10L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
@@ -54,7 +56,7 @@ class RegistrarPontoUseCaseImplTest {
         assertThat(registro.getNsr()).isEqualTo(10L);
         assertThat(registro.getHashIntegridade()).isNotNull().hasSize(64);
         assertThat(resultado).isNotNull();
-        verify(repositoryPort).buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
+        verify(repositoryPort).buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class));
         verify(repositoryPort).obterProximoNsrLogico(colaboradorId, tenantId);
         verify(repositoryPort).obterProximoNsr();
         verify(repositoryPort).salvar(registro);
@@ -63,7 +65,7 @@ class RegistrarPontoUseCaseImplTest {
     @Test
     void deveAvancarSequenciaDeBatidasCorretamente() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.ENTRADA));
+        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.of(TipoRegistro.ENTRADA));
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(2L);
         when(repositoryPort.obterProximoNsr()).thenReturn(11L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
@@ -78,7 +80,7 @@ class RegistrarPontoUseCaseImplTest {
     @Test
     void deveReiniciarCicloParaEntradaAposSaida() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.SAIDA));
+        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.of(TipoRegistro.SAIDA));
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(3L);
         when(repositoryPort.obterProximoNsr()).thenReturn(12L);
         when(repositoryPort.salvar(any())).thenReturn(registro);
@@ -93,7 +95,7 @@ class RegistrarPontoUseCaseImplTest {
     @Test
     void devePropagarExcecaoQuandoRepositorioFalha() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
+        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.empty());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.obterProximoNsr()).thenReturn(10L);
         when(repositoryPort.salvar(any())).thenThrow(new RuntimeException("DB error"));
@@ -106,7 +108,7 @@ class RegistrarPontoUseCaseImplTest {
     @Test
     void deveAtribuirNsrAntesDePersistirParaNaoViolarNotNullDoBanco() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.empty());
+        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.empty());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.obterProximoNsr()).thenReturn(77L);
         when(repositoryPort.salvar(any())).thenAnswer(inv -> {
@@ -118,5 +120,27 @@ class RegistrarPontoUseCaseImplTest {
         useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getNsr()).isEqualTo(77L);
+    }
+
+    @Test
+    void deveLimitarBuscaDoUltimoTipoAoDiaDeSaoPauloDaBatida() {
+        Instant dataHora = Instant.parse("2026-10-02T12:00:00Z");
+        RegistroPonto registro = new RegistroPonto(UUID.randomUUID(), colaboradorId, tenantId, dataHora,
+                null, null, new BigDecimal("-23.5505"), new BigDecimal("-46.6333"),
+                new BigDecimal("5.0"), null, false, null);
+        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class)))
+                .thenReturn(Optional.empty());
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(10L);
+        when(repositoryPort.salvar(any())).thenReturn(registro);
+
+        useCase.executar(registro, "12345678901", tenantId);
+
+        ArgumentCaptor<Instant> inicio = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> fim = ArgumentCaptor.forClass(Instant.class);
+        verify(repositoryPort).buscarUltimoTipoPorColaborador(
+                eq(colaboradorId), eq(tenantId), inicio.capture(), fim.capture());
+        assertThat(inicio.getValue()).isEqualTo(Instant.parse("2026-10-02T03:00:00Z"));
+        assertThat(fim.getValue()).isEqualTo(Instant.parse("2026-10-03T03:00:00Z"));
     }
 }
