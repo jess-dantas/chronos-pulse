@@ -45,8 +45,8 @@ public class RegistroPontoRepositoryAdapter implements RegistroPontoRepositoryPo
     }
 
     @Override
-    public Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId) {
-        return jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
+    public Optional<TipoRegistro> buscarUltimoTipoPorColaborador(UUID colaboradorId, UUID tenantId, Instant inicio, Instant fim) {
+        return jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId, inicio, fim);
     }
 
     @Override

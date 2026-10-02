@@ -6,9 +6,14 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.ports.input.RegistrarPonto
 import br.com.jess.chronos.pulse.modules.ponto.domain.ports.output.RegistroPontoRepositoryPort;
 import br.com.jess.chronos.pulse.modules.ponto.domain.service.GeradorHashService;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 
 public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
+
+    private static final ZoneId FUSO_PONTO = ZoneId.of("America/Sao_Paulo");
 
     private static final TipoRegistro[] SEQUENCIA = {
         TipoRegistro.ENTRADA, TipoRegistro.INTERVALO, TipoRegistro.RETORNO, TipoRegistro.SAIDA
@@ -22,7 +27,7 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
 
     @Override
     public RegistroPonto executar(RegistroPonto registro, String cpfColaborador, UUID tenantId) {
-        TipoRegistro proximoTipo = determinarProximoTipo(registro.getColaboradorId(), tenantId);
+        TipoRegistro proximoTipo = determinarProximoTipo(registro, tenantId);
         registro.atribuirTipo(proximoTipo);
 
         Long nsrLogico = repositoryPort.obterProximoNsrLogico(registro.getColaboradorId(), tenantId);
@@ -37,8 +42,14 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
         return repositoryPort.salvar(registro);
     }
 
-    private TipoRegistro determinarProximoTipo(UUID colaboradorId, UUID tenantId) {
-        return repositoryPort.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)
+    private TipoRegistro determinarProximoTipo(RegistroPonto registro, UUID tenantId) {
+        Instant dataHora = registro.getDataHoraDispositivo();
+        LocalDate dia = dataHora.atZone(FUSO_PONTO).toLocalDate();
+        Instant inicio = dia.atStartOfDay(FUSO_PONTO).toInstant();
+        Instant fim = dia.plusDays(1).atStartOfDay(FUSO_PONTO).toInstant();
+
+        return repositoryPort
+                .buscarUltimoTipoPorColaborador(registro.getColaboradorId(), tenantId, inicio, fim)
                 .map(ultimo -> SEQUENCIA[(indexOf(ultimo) + 1) % SEQUENCIA.length])
                 .orElse(TipoRegistro.ENTRADA);
     }

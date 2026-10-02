@@ -105,11 +105,13 @@ class RegistroPontoRepositoryAdapterTest {
     void deveBuscarUltimoTipoPorColaborador() {
         UUID colaboradorId = UUID.randomUUID();
         UUID tenantId = UUID.randomUUID();
-        when(jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId)).thenReturn(Optional.of(TipoRegistro.ENTRADA));
+        Instant inicio = Instant.parse("2026-10-02T03:00:00Z");
+        Instant fim = Instant.parse("2026-10-03T03:00:00Z");
+        when(jpaRepository.buscarUltimoTipoPorColaborador(colaboradorId, tenantId, inicio, fim)).thenReturn(Optional.of(TipoRegistro.ENTRADA));
 
-        Optional<TipoRegistro> resultado = adapter.buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
+        Optional<TipoRegistro> resultado = adapter.buscarUltimoTipoPorColaborador(colaboradorId, tenantId, inicio, fim);
 
         assertThat(resultado).contains(TipoRegistro.ENTRADA);
-        verify(jpaRepository).buscarUltimoTipoPorColaborador(colaboradorId, tenantId);
+        verify(jpaRepository).buscarUltimoTipoPorColaborador(colaboradorId, tenantId, inicio, fim);
     }
 }
