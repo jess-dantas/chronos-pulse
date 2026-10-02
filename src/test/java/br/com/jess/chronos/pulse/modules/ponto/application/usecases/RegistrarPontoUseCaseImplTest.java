@@ -13,6 +13,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,7 +41,11 @@ class RegistrarPontoUseCaseImplTest {
     }
 
     private RegistroPonto novoRegistro() {
-        return new RegistroPonto(UUID.randomUUID(), colaboradorId, tenantId, Instant.now(),
+        return novoRegistroComData(Instant.now());
+    }
+
+    private RegistroPonto novoRegistroComData(Instant dataHora) {
+        return new RegistroPonto(UUID.randomUUID(), colaboradorId, tenantId, dataHora,
                 null, null, new BigDecimal("-23.5505"), new BigDecimal("-46.6333"),
                 new BigDecimal("5.0"), null, false, null);
     }
@@ -142,5 +151,60 @@ class RegistrarPontoUseCaseImplTest {
                 eq(colaboradorId), eq(tenantId), inicio.capture(), fim.capture());
         assertThat(inicio.getValue()).isEqualTo(Instant.parse("2026-10-02T03:00:00Z"));
         assertThat(fim.getValue()).isEqualTo(Instant.parse("2026-10-03T03:00:00Z"));
+    }
+
+    @Test
+    void deveRetornarRegistroJaPersistidoSemReprocessarQuandoORetryChegarDeNovo() {
+        RegistroPonto registro = novoRegistro();
+        RegistroPonto persistido = novoRegistroComData(Instant.parse("2026-10-02T12:00:00Z"));
+        persistido.atribuirTipo(TipoRegistro.INTERVALO);
+        persistido.atribuirNsrLogico(5L);
+        persistido.atribuirNsr(42L);
+        when(repositoryPort.buscarPorId(registro.getId())).thenReturn(Optional.of(persistido));
+
+        RegistroPonto resultado = useCase.executar(registro, "12345678901", tenantId);
+
+        assertThat(resultado).isSameAs(persistido);
+        assertThat(resultado.getTipoRegistro()).isEqualTo(TipoRegistro.INTERVALO);
+        assertThat(resultado.getNsrLogico()).isEqualTo(5L);
+        assertThat(resultado.getNsr()).isEqualTo(42L);
+        verify(repositoryPort, never()).buscarUltimoTipoPorColaborador(any(), any(), any(Instant.class), any(Instant.class));
+        verify(repositoryPort, never()).obterProximoNsrLogico(any(), any());
+        verify(repositoryPort, never()).obterProximoNsr();
+        verify(repositoryPort, never()).salvar(any());
+    }
+
+    @Test
+    void deveSerializarDerivacaoDeTipoParaOMesmoColaboradorEDia() throws Exception {
+        Instant fixo = Instant.parse("2026-10-02T12:00:00Z");
+        AtomicInteger ativos = new AtomicInteger();
+        AtomicInteger maximoConcorrente = new AtomicInteger();
+
+        when(repositoryPort.buscarPorId(any())).thenReturn(Optional.empty());
+        when(repositoryPort.buscarUltimoTipoPorColaborador(any(), any(), any(Instant.class), any(Instant.class)))
+                .thenAnswer(inv -> {
+                    int atual = ativos.incrementAndGet();
+                    maximoConcorrente.accumulateAndGet(atual, Math::max);
+                    Thread.sleep(50);
+                    ativos.decrementAndGet();
+                    return Optional.empty();
+                });
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
+        when(repositoryPort.obterProximoNsr()).thenReturn(10L);
+        when(repositoryPort.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<RegistroPonto> f1 = pool.submit(() -> useCase.executar(novoRegistroComData(fixo), "12345678901", tenantId));
+            Future<RegistroPonto> f2 = pool.submit(() -> useCase.executar(novoRegistroComData(fixo), "12345678901", tenantId));
+            f1.get(5, TimeUnit.SECONDS);
+            f2.get(5, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(maximoConcorrente.get())
+                .as("derivacao de tipo nunca deve rodar em paralelo para o mesmo colaborador/dia")
+                .isEqualTo(1);
     }
 }

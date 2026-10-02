@@ -9,6 +9,8 @@ import br.com.jess.chronos.pulse.modules.ponto.domain.service.GeradorHashService
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
@@ -19,6 +21,20 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
         TipoRegistro.ENTRADA, TipoRegistro.INTERVALO, TipoRegistro.RETORNO, TipoRegistro.SAIDA
     };
 
+    /**
+     * Trilhas de lock em memória por (colaborador, dia de São Paulo): serializa
+     * a derivação de tipo/nsr quando o sync do heartbeat e o sync por-batida
+     * disputam o mesmo dia. Assunção: instância única (Render/docker com uma
+     * réplica) — o lock protege o read-then-insert sem lock no banco.
+     */
+    private static final Object[] TRILHAS = new Object[64];
+
+    static {
+        for (int i = 0; i < TRILHAS.length; i++) {
+            TRILHAS[i] = new Object();
+        }
+    }
+
     private final RegistroPontoRepositoryPort repositoryPort;
 
     public RegistrarPontoUseCaseImpl(RegistroPontoRepositoryPort repositoryPort) {
@@ -27,19 +43,37 @@ public class RegistrarPontoUseCaseImpl implements RegistrarPontoUseCase {
 
     @Override
     public RegistroPonto executar(RegistroPonto registro, String cpfColaborador, UUID tenantId) {
-        TipoRegistro proximoTipo = determinarProximoTipo(registro, tenantId);
-        registro.atribuirTipo(proximoTipo);
+        synchronized (trilhaDe(registro)) {
+            if (registro.getId() != null) {
+                Optional<RegistroPonto> existente = repositoryPort.buscarPorId(registro.getId());
+                if (existente.isPresent()) {
+                    // Reenvio idempotente: o registro já foi persistido — devolve
+                    // como está, sem rederivar tipo nem gerar novo nsr (o
+                    // reprocessamento flipava o próprio tipo do dia).
+                    return existente.get();
+                }
+            }
 
-        Long nsrLogico = repositoryPort.obterProximoNsrLogico(registro.getColaboradorId(), tenantId);
-        registro.atribuirNsrLogico(nsrLogico);
+            TipoRegistro proximoTipo = determinarProximoTipo(registro, tenantId);
+            registro.atribuirTipo(proximoTipo);
 
-        Long nsr = repositoryPort.obterProximoNsr();
-        registro.atribuirNsr(nsr);
+            Long nsrLogico = repositoryPort.obterProximoNsrLogico(registro.getColaboradorId(), tenantId);
+            registro.atribuirNsrLogico(nsrLogico);
 
-        String hash = GeradorHashService.gerarHashRegistro(registro, cpfColaborador);
-        registro.atribuirHash(hash);
+            Long nsr = repositoryPort.obterProximoNsr();
+            registro.atribuirNsr(nsr);
 
-        return repositoryPort.salvar(registro);
+            String hash = GeradorHashService.gerarHashRegistro(registro, cpfColaborador);
+            registro.atribuirHash(hash);
+
+            return repositoryPort.salvar(registro);
+        }
+    }
+
+    private Object trilhaDe(RegistroPonto registro) {
+        LocalDate dia = registro.getDataHora().atZone(FUSO_PONTO).toLocalDate();
+        int indice = Math.floorMod(Objects.hash(registro.getColaboradorId(), dia), TRILHAS.length);
+        return TRILHAS[indice];
     }
 
     private TipoRegistro determinarProximoTipo(RegistroPonto registro, UUID tenantId) {
