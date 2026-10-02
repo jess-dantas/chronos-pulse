@@ -29,7 +29,7 @@ public class InventarioController {
     private final AuditoriaService auditoriaService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<InventarioResponseDTO> criar(
             @Valid @RequestBody CriarInventarioDTO dto,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -43,7 +43,7 @@ public class InventarioController {
     }
 
     @PostMapping("/{id}/conferir")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<InventarioResponseDTO> conferirItem(
             @PathVariable UUID id,
             @Valid @RequestBody ConferirItemDTO dto,
@@ -58,7 +58,7 @@ public class InventarioController {
     }
 
     @PostMapping("/{id}/finalizar")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<InventarioResponseDTO> finalizar(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -72,7 +72,7 @@ public class InventarioController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')")
     public ResponseEntity<Void> cancelar(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario,
@@ -86,13 +86,13 @@ public class InventarioController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<List<InventarioResponseDTO>> listar(@AuthenticationPrincipal CpcUsuario usuario) {
         return ResponseEntity.ok(inventarioService.listar(usuario.getTenantId()));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'COLABORADOR')")
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'COLABORADOR')")
     public ResponseEntity<InventarioResponseDTO> buscarPorId(
             @PathVariable UUID id,
             @AuthenticationPrincipal CpcUsuario usuario) {

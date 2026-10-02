@@ -42,11 +42,20 @@ public class LoginSessionFactory {
                 usuario.isAcessoEstoque(), usuario.isAcessoPatrimonio(),
                 usuario.isAcessoFrota(), usuario.isAcessoProtocolo());
         String refreshToken = jwtService.gerarRefreshToken(usuario.getCpf());
-        List<String> modulos = usuario.getTenantId() != null
-                ? (usuario.getRole() == Role.ADMIN_EMPRESA
-                    ? modulosPort.listarCodigosAtivos(usuario.getTenantId())
-                    : modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId()))
-                : Collections.emptyList();
+        List<String> modulos;
+        if (usuario.getTenantId() == null) {
+            modulos = Collections.emptyList();
+        } else if (usuario.getRole() == Role.ADMIN_EMPRESA) {
+            modulos = modulosPort.listarCodigosAtivos(usuario.getTenantId());
+        } else if (usuario.getRole() == Role.GESTOR_RH) {
+            // Gestor RH: escopo fixo do papel — só PONTO + RECURSOS_HUMANOS
+            // (filtra pelos módulos ativos do tenant, ignorando vínculos).
+            modulos = modulosPort.listarCodigosAtivos(usuario.getTenantId()).stream()
+                    .filter(codigo -> "PONTO".equals(codigo) || "RECURSOS_HUMANOS".equals(codigo))
+                    .toList();
+        } else {
+            modulos = modulosPort.listarCodigosDoUsuario(usuario.getId(), usuario.getTenantId());
+        }
 
         loginMetricsRecorder.registrarSucesso(usuario.getTenantId(), usuario.getCpcId(),
                 usuario.getRole().name());

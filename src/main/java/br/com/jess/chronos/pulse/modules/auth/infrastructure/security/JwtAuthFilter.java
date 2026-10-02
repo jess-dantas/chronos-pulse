@@ -149,16 +149,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String role = usuario.getRole().name();
         var authorities = new java.util.ArrayList<SimpleGrantedAuthority>();
         authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-        if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+        // Gestor RH NÃO recebe authorities extras de módulo: seu escopo é
+        // fixo em PONTO + RECURSOS_HUMANOS (papel ROLE_GESTOR_RH).
+        if (usuario.isAcessoEstoque() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ESTOQUE"));
         }
-        if (usuario.isAcessoPatrimonio() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+        if (usuario.isAcessoPatrimonio() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_PATRIMONIO"));
         }
-        if (usuario.isAcessoFrota() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+        if (usuario.isAcessoFrota() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_FROTA"));
         }
-        if (usuario.isAcessoProtocolo() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role) || "GESTOR_RH".equals(role)) {
+        if (usuario.isAcessoProtocolo() || "ADMIN_PLATAFORMA".equals(role) || "ADMIN_EMPRESA".equals(role)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_PROTOCOLO"));
         }
         var auth = new UsernamePasswordAuthenticationToken(usuario, null, authorities);

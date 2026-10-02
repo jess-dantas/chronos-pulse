@@ -25,10 +25,10 @@ import java.util.UUID;
 public class TransparenciaController {
 
     private static final String ROLES_LEITURA =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH', 'ESTOQUE', 'COLABORADOR')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'ESTOQUE', 'COLABORADOR')";
 
     private static final String ROLES_GERENCIA =
-            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA', 'GESTOR_RH')";
+            "hasAnyRole('ADMIN_PLATAFORMA', 'ADMIN_EMPRESA')";
 
     private final TransparenciaService transparenciaService;
     private final AuditoriaService auditoriaService;
