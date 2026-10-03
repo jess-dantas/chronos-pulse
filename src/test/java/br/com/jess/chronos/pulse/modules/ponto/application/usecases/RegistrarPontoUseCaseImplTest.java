@@ -10,7 +10,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -50,13 +53,31 @@ class RegistrarPontoUseCaseImplTest {
                 new BigDecimal("5.0"), null, false, null);
     }
 
+    /** Batidas anteriores em ordem cronológica (o tipo delas não importa: a regra é posicional). */
+    private List<RegistroPonto> cadeia(Instant... instantes) {
+        return Arrays.stream(instantes)
+                .sorted(Instant::compareTo)
+                .map(this::novoRegistroComData)
+                .toList();
+    }
+
+    private void stubCadeia(List<RegistroPonto> batidas) {
+        when(repositoryPort.listarPorColaboradorEPeriodo(
+                eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class)))
+                .thenReturn(batidas);
+    }
+
+    private void stubPersistencia(long nsrLogico, long nsr) {
+        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(nsrLogico);
+        when(repositoryPort.obterProximoNsr()).thenReturn(nsr);
+        when(repositoryPort.salvar(any())).thenAnswer(inv -> inv.getArgument(0));
+    }
+
     @Test
     void deveAtribuirEntradaQuandoNaoHouverBatidaAnteriorEPersistirRegistro() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.empty());
-        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
-        when(repositoryPort.obterProximoNsr()).thenReturn(10L);
-        when(repositoryPort.salvar(any())).thenReturn(registro);
+        stubCadeia(List.of());
+        stubPersistencia(1L, 10L);
 
         RegistroPonto resultado = useCase.executar(registro, "12345678901", tenantId);
 
@@ -65,7 +86,8 @@ class RegistrarPontoUseCaseImplTest {
         assertThat(registro.getNsr()).isEqualTo(10L);
         assertThat(registro.getHashIntegridade()).isNotNull().hasSize(64);
         assertThat(resultado).isNotNull();
-        verify(repositoryPort).buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class));
+        verify(repositoryPort).listarPorColaboradorEPeriodo(
+                eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class));
         verify(repositoryPort).obterProximoNsrLogico(colaboradorId, tenantId);
         verify(repositoryPort).obterProximoNsr();
         verify(repositoryPort).salvar(registro);
@@ -73,11 +95,10 @@ class RegistrarPontoUseCaseImplTest {
 
     @Test
     void deveAvancarSequenciaDeBatidasCorretamente() {
-        RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.of(TipoRegistro.ENTRADA));
-        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(2L);
-        when(repositoryPort.obterProximoNsr()).thenReturn(11L);
-        when(repositoryPort.salvar(any())).thenReturn(registro);
+        Instant agora = Instant.parse("2026-10-06T11:00:00Z"); // 08:00 SP
+        RegistroPonto registro = novoRegistroComData(agora);
+        stubCadeia(cadeia(agora.minus(Duration.ofHours(1)))); // uma batida anterior
+        stubPersistencia(2L, 11L);
 
         useCase.executar(registro, "12345678901", tenantId);
 
@@ -86,25 +107,89 @@ class RegistrarPontoUseCaseImplTest {
         assertThat(registro.getNsr()).isEqualTo(11L);
     }
 
+    // TC001 — jornada de 8h com almoço: 08h(E), 12h(I), 13h(R) → 17h = SAIDA.
     @Test
-    void deveReiniciarCicloParaEntradaAposSaida() {
-        RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.of(TipoRegistro.SAIDA));
-        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(3L);
-        when(repositoryPort.obterProximoNsr()).thenReturn(12L);
-        when(repositoryPort.salvar(any())).thenReturn(registro);
+    void tc001JornadaDeOitoHorasFechaComSaida() {
+        Instant inicio = Instant.parse("2026-10-06T11:00:00Z"); // 08:00 SP
+        Instant agora = Instant.parse("2026-10-06T20:00:00Z"); // 17:00 SP
+        RegistroPonto registro = novoRegistroComData(agora);
+        stubCadeia(cadeia(inicio,
+                inicio.plus(Duration.ofHours(4)), // 12:00 SP
+                inicio.plus(Duration.ofHours(5)))); // 13:00 SP
+        stubPersistencia(4L, 14L);
+
+        useCase.executar(registro, "12345678901", tenantId);
+
+        assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.SAIDA);
+    }
+
+    // TC002 — a 6ª batida é SAIDA (HE) e a 7ª reinicia a jornada em ENTRADA.
+    @Test
+    void tc002SextaBatidaESaidaDeHoraExtraESetimaReiniciaEntrada() {
+        Instant agora = Instant.parse("2026-10-06T23:00:00Z"); // 20:00 SP
+        Instant primeira = agora.minus(Duration.ofHours(12)); // 08:00 SP
+        Instant[] anteriores = new Instant[5];
+        for (int i = 0; i < 5; i++) {
+            anteriores[i] = primeira.plus(Duration.ofHours(2L * i));
+        }
+
+        RegistroPonto sexta = novoRegistroComData(agora);
+        stubCadeia(cadeia(anteriores));
+        stubPersistencia(6L, 16L);
+        useCase.executar(sexta, "12345678901", tenantId);
+        assertThat(sexta.getTipoRegistro())
+                .as("a 6ª batida da jornada é a saída de hora extra")
+                .isEqualTo(TipoRegistro.SAIDA);
+
+        Instant seguinte = agora.plus(Duration.ofHours(1)); // 21:00 SP, gap 1h
+        RegistroPonto setima = novoRegistroComData(seguinte);
+        when(repositoryPort.listarPorColaboradorEPeriodo(
+                eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class)))
+                .thenReturn(cadeia(concat(anteriores, agora)));
+        stubPersistencia(7L, 17L);
+        useCase.executar(setima, "12345678901", tenantId);
+
+        assertThat(setima.getTipoRegistro())
+                .as("a jornada fecha nas 6 batidas; a 7ª começa jornada nova")
+                .isEqualTo(TipoRegistro.ENTRADA);
+    }
+
+    // TC003 — turno noturno: 22h(E) → 02h → 04h → 06h = 4ª batida = SAIDA
+    // (o intervalo ≤10h mantém a virada na mesma jornada).
+    @Test
+    void tc003TurnoNoturnoQueAtravessaAViradaContinuaASequencia() {
+        Instant entrada = Instant.parse("2026-10-06T01:00:00Z"); // 22:00 SP (dia 05)
+        Instant agora = Instant.parse("2026-10-06T09:00:00Z"); // 06:00 SP (dia 06)
+        RegistroPonto registro = novoRegistroComData(agora);
+        stubCadeia(cadeia(entrada,
+                entrada.plus(Duration.ofHours(4)), // 02:00 SP
+                entrada.plus(Duration.ofHours(6)))); // 04:00 SP
+        stubPersistencia(4L, 14L);
+
+        useCase.executar(registro, "12345678901", tenantId);
+
+        assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.SAIDA);
+    }
+
+    // TC004 — intervalo >10h entre batidas abre jornada nova: ontem 17h →
+    // hoje 08h = ENTRADA, mesmo que a última batida de ontem tenha sido SAIDA.
+    @Test
+    void tc004IntervaloMaiorQueDezHorasAbreNovaJornadaComEntrada() {
+        Instant ontem = Instant.parse("2026-10-05T20:00:00Z"); // 17:00 SP
+        Instant agora = Instant.parse("2026-10-06T11:00:00Z"); // 08:00 SP (15h depois)
+        RegistroPonto registro = novoRegistroComData(agora);
+        stubCadeia(cadeia(ontem));
+        stubPersistencia(1L, 10L);
 
         useCase.executar(registro, "12345678901", tenantId);
 
         assertThat(registro.getTipoRegistro()).isEqualTo(TipoRegistro.ENTRADA);
-        assertThat(registro.getNsrLogico()).isEqualTo(3L);
-        assertThat(registro.getNsr()).isEqualTo(12L);
     }
 
     @Test
     void devePropagarExcecaoQuandoRepositorioFalha() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.empty());
+        stubCadeia(List.of());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.obterProximoNsr()).thenReturn(10L);
         when(repositoryPort.salvar(any())).thenThrow(new RuntimeException("DB error"));
@@ -117,7 +202,7 @@ class RegistrarPontoUseCaseImplTest {
     @Test
     void deveAtribuirNsrAntesDePersistirParaNaoViolarNotNullDoBanco() {
         RegistroPonto registro = novoRegistro();
-        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class))).thenReturn(Optional.empty());
+        stubCadeia(List.of());
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.obterProximoNsr()).thenReturn(77L);
         when(repositoryPort.salvar(any())).thenAnswer(inv -> {
@@ -132,25 +217,20 @@ class RegistrarPontoUseCaseImplTest {
     }
 
     @Test
-    void deveLimitarBuscaDoUltimoTipoAoDiaDeSaoPauloDaBatida() {
-        Instant dataHora = Instant.parse("2026-10-02T12:00:00Z");
-        RegistroPonto registro = new RegistroPonto(UUID.randomUUID(), colaboradorId, tenantId, dataHora,
-                null, null, new BigDecimal("-23.5505"), new BigDecimal("-46.6333"),
-                new BigDecimal("5.0"), null, false, null);
-        when(repositoryPort.buscarUltimoTipoPorColaborador(eq(colaboradorId), eq(tenantId), any(Instant.class), any(Instant.class)))
-                .thenReturn(Optional.empty());
-        when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
-        when(repositoryPort.obterProximoNsr()).thenReturn(10L);
-        when(repositoryPort.salvar(any())).thenReturn(registro);
+    void deveBuscarACadeiaDaJornadaNosUltimos72Horas() {
+        Instant agora = Instant.parse("2026-10-06T12:00:00Z");
+        RegistroPonto registro = novoRegistroComData(agora);
+        stubCadeia(List.of());
+        stubPersistencia(1L, 10L);
 
         useCase.executar(registro, "12345678901", tenantId);
 
         ArgumentCaptor<Instant> inicio = ArgumentCaptor.forClass(Instant.class);
         ArgumentCaptor<Instant> fim = ArgumentCaptor.forClass(Instant.class);
-        verify(repositoryPort).buscarUltimoTipoPorColaborador(
+        verify(repositoryPort).listarPorColaboradorEPeriodo(
                 eq(colaboradorId), eq(tenantId), inicio.capture(), fim.capture());
-        assertThat(inicio.getValue()).isEqualTo(Instant.parse("2026-10-02T03:00:00Z"));
-        assertThat(fim.getValue()).isEqualTo(Instant.parse("2026-10-03T03:00:00Z"));
+        assertThat(inicio.getValue()).isEqualTo(agora.minus(Duration.ofHours(72)));
+        assertThat(fim.getValue()).isEqualTo(agora);
     }
 
     @Test
@@ -168,26 +248,26 @@ class RegistrarPontoUseCaseImplTest {
         assertThat(resultado.getTipoRegistro()).isEqualTo(TipoRegistro.INTERVALO);
         assertThat(resultado.getNsrLogico()).isEqualTo(5L);
         assertThat(resultado.getNsr()).isEqualTo(42L);
-        verify(repositoryPort, never()).buscarUltimoTipoPorColaborador(any(), any(), any(Instant.class), any(Instant.class));
+        verify(repositoryPort, never()).listarPorColaboradorEPeriodo(any(), any(), any(Instant.class), any(Instant.class));
         verify(repositoryPort, never()).obterProximoNsrLogico(any(), any());
         verify(repositoryPort, never()).obterProximoNsr();
         verify(repositoryPort, never()).salvar(any());
     }
 
     @Test
-    void deveSerializarDerivacaoDeTipoParaOMesmoColaboradorEDia() throws Exception {
+    void deveSerializarDerivacaoDeTipoParaOMesmoColaborador() throws Exception {
         Instant fixo = Instant.parse("2026-10-02T12:00:00Z");
         AtomicInteger ativos = new AtomicInteger();
         AtomicInteger maximoConcorrente = new AtomicInteger();
 
         when(repositoryPort.buscarPorId(any())).thenReturn(Optional.empty());
-        when(repositoryPort.buscarUltimoTipoPorColaborador(any(), any(), any(Instant.class), any(Instant.class)))
+        when(repositoryPort.listarPorColaboradorEPeriodo(any(), any(), any(Instant.class), any(Instant.class)))
                 .thenAnswer(inv -> {
                     int atual = ativos.incrementAndGet();
                     maximoConcorrente.accumulateAndGet(atual, Math::max);
                     Thread.sleep(50);
                     ativos.decrementAndGet();
-                    return Optional.empty();
+                    return List.of();
                 });
         when(repositoryPort.obterProximoNsrLogico(colaboradorId, tenantId)).thenReturn(1L);
         when(repositoryPort.obterProximoNsr()).thenReturn(10L);
@@ -204,7 +284,13 @@ class RegistrarPontoUseCaseImplTest {
         }
 
         assertThat(maximoConcorrente.get())
-                .as("derivacao de tipo nunca deve rodar em paralelo para o mesmo colaborador/dia")
+                .as("derivacao de tipo nunca deve rodar em paralelo para o mesmo colaborador")
                 .isEqualTo(1);
+    }
+
+    private static Instant[] concat(Instant[] base, Instant extra) {
+        Instant[] resultado = Arrays.copyOf(base, base.length + 1);
+        resultado[base.length] = extra;
+        return resultado;
     }
 }

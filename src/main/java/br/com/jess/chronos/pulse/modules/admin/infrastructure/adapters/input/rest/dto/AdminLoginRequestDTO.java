@@ -19,4 +19,10 @@ public class AdminLoginRequestDTO {
     // tempToken direto; com senha o fluxo é o tradicional.
     @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres")
     private String senha;
+
+    // Opcional (biometria-first): dispositivo confiável. Quando presente e
+    // válido, autentica direto pulando senha e 2FA; a biometria é confirmada
+    // no aparelho antes de o cliente enviar o token.
+    @Size(max = 200, message = "deviceToken deve ter no máximo 200 caracteres")
+    private String deviceToken;
 }

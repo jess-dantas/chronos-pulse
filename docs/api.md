@@ -82,7 +82,7 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 
 | Método | Rota | Acesso | Descrição |
 |---|---|---|---|
-| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` opcional (8–100) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true`. **2FA-first:** sem `senha` exige `twoFactorEnabled` e emite `tempToken` direto (sem senha → `400 "Senha é obrigatória"`); conta bloqueada → `403` |
+| `POST` | `/admin/auth/login` | 🔓 | Login `username` (≤20) + `senha` opcional (8–100) + `deviceToken` opcional (≤200) → `accessToken`/`refreshToken` **ou** `requiresTwoFactor: true` + `tempToken` (5 min); se o 2FA for obrigatório e estiver desligado → `setupRequired: true`. **Biometria-first:** `deviceToken` válido (dispositivo confiável, V007) autentica direto, pulando senha e 2FA (o aparelho confirma a biometria antes de enviar); inválido/expirado cai no fluxo normal. **2FA-first:** sem `senha` exige `twoFactorEnabled` e emite `tempToken` direto (sem senha → `400 "Senha é obrigatória"`); conta bloqueada → `403` |
 | `GET` | `/admin/auth/bootstrap/status` | 🔓 | `{ bootstrapAvailable }` — `true` enquanto `admin_plataforma` estiver vazia (first-run) |
 | `POST` | `/admin/auth/bootstrap` | 🔓 | First-run wizard: `{ username, senha, nomeCompleto, email }` → cria o Administrator e responde `requiresTwoFactor: true`, `setupRequired: true` + `tempToken` |
 | `POST` | `/admin/auth/2fa/verify` | 🔓 | `{ tempToken, codigo }` (6 dígitos TOTP) → troca pelos tokens finais; código errado conta no lockout (`registrarFalhaLogin`, 5 falhas / 15 min) |
@@ -96,6 +96,8 @@ Base: `http://localhost:3030/admin/auth` (o controller é `@RequestMapping("/adm
 | `POST` | `/admin/auth/2fa/confirm` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — valida TOTP, **ativa** o 2FA e, no fluxo de bootstrap/setup, emite os tokens finais **e 8 códigos de recuperação** (exibidos uma única vez) |
 | `POST` | `/admin/auth/2fa/disable` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ codigo }` — exige código TOTP válido e **desativa** o 2FA (sempre permitido; com `chronos.admin.two-factor-required=true` o próximo login força o wizard de setup novamente) |
 | `POST` | `/admin/auth/alterar-senha` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ senhaAtual?, novaSenha }` (nova 8–100) — `senhaAtual` **opcional**: se enviada, é validada (`400 "Senha atual incorreta"`) |
+| `POST` | `/admin/auth/dispositivo` | 🛡️ (`ADMIN_PLATAFORMA`) | `{ deviceName? }` (≤120) — vincula o **dispositivo confiável** do admin (biometria-first): responde `{ deviceToken, expiraEm }` (TTL 30 dias, `chronos.admin.device-expiration-ms`); só o hash SHA-256 fica no banco (V007) e o valor cru aparece **uma única vez**; `tempToken` do 2FA é recusado (`400 "Token inválido"`) |
+| `DELETE` | `/admin/auth/dispositivo` | 🛡️ (`ADMIN_PLATAFORMA`) | Revoga **todos** os vínculos de dispositivo confiável do admin (perda/troca de aparelho) |
 | `POST` | `/admin/auth/reset-senha/enviar` | 🔓 | `{ username }` → gera OTP de 8 dígitos (15 min, 1 pendente por admin, hash bcrypt nas colunas da V003) e envia por e-mail; usuário inexistente/desativado → `400`, conta bloqueada → `403`, sem e-mail → `400` |
 | `POST` | `/admin/auth/reset-senha/verificar` | 🔓 | `{ username, codigo, novaSenha }` (nova 8–100) → valida o OTP (5 tentativas) e redefine a senha limpando o código; código inválido/expirado → `400` |
 

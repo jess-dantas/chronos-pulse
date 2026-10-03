@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest;
 
+import br.com.jess.chronos.pulse.modules.admin.application.service.AdminDeviceTokenService;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.BootstrapAdminUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AutenticarAdminPlataformaUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AlterarSenhaAdminUseCase;
@@ -14,6 +15,8 @@ import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.VerificarTwoFa
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminAlterarSenhaRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminBootstrapRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminBootstrapStatusDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminDispositivoRequestDTO;
+import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminDeviceTokenResponseDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminEmailCodigoRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminEmailVerifyRequestDTO;
 import br.com.jess.chronos.pulse.modules.admin.infrastructure.adapters.input.rest.dto.AdminLoginRequestDTO;
@@ -32,6 +35,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/admin/auth")
 public class AdminAuthController {
@@ -47,6 +52,7 @@ public class AdminAuthController {
     private final SolicitarResetSenhaAdminUseCase solicitarResetSenhaAdminUseCase;
     private final RedefinirSenhaAdminUseCase redefinirSenhaAdminUseCase;
     private final RefreshAdminTokenUseCase refreshAdminTokenUseCase;
+    private final AdminDeviceTokenService adminDeviceTokenService;
     private final JwtService jwtService;
 
     public AdminAuthController(
@@ -61,6 +67,7 @@ public class AdminAuthController {
             SolicitarResetSenhaAdminUseCase solicitarResetSenhaAdminUseCase,
             RedefinirSenhaAdminUseCase redefinirSenhaAdminUseCase,
             RefreshAdminTokenUseCase refreshAdminTokenUseCase,
+            AdminDeviceTokenService adminDeviceTokenService,
             JwtService jwtService) {
         this.autenticarAdminPlataformaUseCase = autenticarAdminPlataformaUseCase;
         this.verificarTwoFactorAdminUseCase = verificarTwoFactorAdminUseCase;
@@ -73,13 +80,15 @@ public class AdminAuthController {
         this.solicitarResetSenhaAdminUseCase = solicitarResetSenhaAdminUseCase;
         this.redefinirSenhaAdminUseCase = redefinirSenhaAdminUseCase;
         this.refreshAdminTokenUseCase = refreshAdminTokenUseCase;
+        this.adminDeviceTokenService = adminDeviceTokenService;
         this.jwtService = jwtService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<AdminLoginResponseDTO> login(@RequestBody @Valid AdminLoginRequestDTO request) {
         var resultado = autenticarAdminPlataformaUseCase.executar(
-                new AutenticarAdminPlataformaUseCase.Comando(request.getUsername(), request.getSenha())
+                new AutenticarAdminPlataformaUseCase.Comando(
+                        request.getUsername(), request.getSenha(), request.getDeviceToken())
         );
 
         if (resultado.requiresTwoFactor()) {
@@ -246,6 +255,36 @@ public class AdminAuthController {
             @RequestBody @Valid AdminResetSenhaVerificarRequestDTO request) {
         redefinirSenhaAdminUseCase.executar(new RedefinirSenhaAdminUseCase.Comando(
                 request.getUsername(), request.getCodigo(), request.getNovaSenha()));
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/dispositivo")
+    public ResponseEntity<AdminDeviceTokenResponseDTO> dispositivoVincular(
+            @RequestHeader("Authorization") String authorization,
+            @RequestBody(required = false) @Valid AdminDispositivoRequestDTO request) {
+        // Exige access token admin (o JwtAuthFilter já recusa tempToken).
+        // A checagem explícita abaixo é defesa em profundidade: um tempToken
+        // do 2FA-first não pode confiar o dispositivo sem o código.
+        Claims claims = extrairClaims(authorization);
+        if (jwtService.isTwoFactorToken(claims)) {
+            throw new IllegalArgumentException("Token inválido");
+        }
+        String adminId = claims.get("adminId", String.class);
+        if (adminId == null) {
+            throw new IllegalArgumentException("Token inválido");
+        }
+        var vinculo = adminDeviceTokenService.vincular(
+                UUID.fromString(adminId), request == null ? null : request.getDeviceName());
+        return ResponseEntity.ok(new AdminDeviceTokenResponseDTO(
+                vinculo.deviceToken(), vinculo.expiraEm()));
+    }
+
+    @DeleteMapping("/dispositivo")
+    public ResponseEntity<Void> dispositivoRevogar(
+            @RequestHeader("Authorization") String authorization) {
+        // Revoga TODOS os vínculos do admin (perda/troca de aparelho).
+        String adminId = extrairAdminId(authorization);
+        adminDeviceTokenService.revogarTodos(UUID.fromString(adminId));
         return ResponseEntity.ok().build();
     }
 

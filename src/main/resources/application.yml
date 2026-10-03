@@ -21,6 +21,10 @@ chronos:
     # true (produção): 2FA do Administrator é obrigatório — login força o
     # wizard de setup e /2fa/disable retorna 403. false (dev): opt-in.
     two-factor-required: ${CHRONOS_ADMIN_2FA_REQUIRED:true}
+    # Dispositivo confiável (login biometria-first): 30 dias. O deviceToken
+    # emitido por POST /admin/auth/dispositivo autentica direto, pulando
+    # senha e 2FA — a biometria é confirmada no aparelho no cliente.
+    device-expiration-ms: ${CHRONOS_ADMIN_DEVICE_EXPIRATION_MS:2592000000}
   cors:
     allowed-origins: ${CHRONOS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:3030,http://localhost:4200,https://chronos-pulse-portal.vercel.app}
   telemetria:

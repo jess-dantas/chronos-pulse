@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.admin.application.usecases;
 
+import br.com.jess.chronos.pulse.modules.admin.application.service.AdminDeviceTokenService;
 import br.com.jess.chronos.pulse.modules.admin.domain.model.AdminPlataforma;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AutenticarAdminPlataformaUseCase;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.output.AdminPlataformaRepositoryPort;
@@ -17,6 +18,7 @@ public class AutenticarAdminPlataformaUseCaseImpl implements AutenticarAdminPlat
     private final AdminPlataformaRepositoryPort repositoryPort;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AdminDeviceTokenService adminDeviceTokenService;
     private final boolean twoFactorRequired;
 
     @Autowired
@@ -24,10 +26,12 @@ public class AutenticarAdminPlataformaUseCaseImpl implements AutenticarAdminPlat
             AdminPlataformaRepositoryPort repositoryPort,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
+            AdminDeviceTokenService adminDeviceTokenService,
             @Value("${chronos.admin.two-factor-required:true}") boolean twoFactorRequired) {
         this.repositoryPort = repositoryPort;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.adminDeviceTokenService = adminDeviceTokenService;
         this.twoFactorRequired = twoFactorRequired;
     }
 
@@ -42,6 +46,27 @@ public class AutenticarAdminPlataformaUseCaseImpl implements AutenticarAdminPlat
         if (!admin.isAtivo()) {
             log.warn("Falha de login admin: conta desativada (username={})", comando.username());
             throw new IllegalStateException("Conta desativada");
+        }
+
+        // Biometria-first: dispositivo confiável (deviceToken) autentica
+        // direto, pulando senha e 2FA — a biometria é confirmada no aparelho
+        // ANTES de o cliente enviar o token. Bloqueio de login continua valendo;
+        // token inválido/expirado cai no fluxo normal (senha/2FA).
+        if (comando.deviceToken() != null && !comando.deviceToken().isBlank()) {
+            if (admin.isLoginBloqueado()) {
+                log.warn("Falha de login admin: conta bloqueada por excesso de tentativas (username={})", comando.username());
+                throw new IllegalStateException("Conta temporariamente bloqueada por excesso de tentativas");
+            }
+            if (adminDeviceTokenService.validar(admin.getId(), comando.deviceToken())) {
+                log.info("Login admin via dispositivo confiável (username={})", comando.username());
+                admin.registrarLoginSucesso();
+                admin.setUltimoLogin(java.time.Instant.now());
+                repositoryPort.salvar(admin);
+                String accessToken = jwtService.gerarAccessTokenAdmin(admin.getUsername(), admin.getId().toString());
+                String refreshToken = jwtService.gerarRefreshTokenAdmin(admin.getUsername(), admin.getId().toString());
+                return new Resultado(admin, accessToken, refreshToken, false, null, false);
+            }
+            log.info("Login admin: deviceToken inválido/expirado, segue fluxo normal (username={})", comando.username());
         }
 
         // 2FA-first: sem senha, exige 2FA já habilitado e o tempToken

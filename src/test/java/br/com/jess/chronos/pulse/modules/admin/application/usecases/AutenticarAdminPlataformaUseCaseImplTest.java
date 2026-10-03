@@ -1,5 +1,6 @@
 package br.com.jess.chronos.pulse.modules.admin.application.usecases;
 
+import br.com.jess.chronos.pulse.modules.admin.application.service.AdminDeviceTokenService;
 import br.com.jess.chronos.pulse.modules.admin.domain.model.AdminPlataforma;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.input.AutenticarAdminPlataformaUseCase.Comando;
 import br.com.jess.chronos.pulse.modules.admin.domain.ports.output.AdminPlataformaRepositoryPort;
@@ -31,6 +32,9 @@ class AutenticarAdminPlataformaUseCaseImplTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private AdminDeviceTokenService adminDeviceTokenService;
+
     private AdminPlataforma admin;
 
     @BeforeEach
@@ -47,7 +51,7 @@ class AutenticarAdminPlataformaUseCaseImplTest {
 
     private AutenticarAdminPlataformaUseCaseImpl useCase(boolean twoFactorRequired) {
         return new AutenticarAdminPlataformaUseCaseImpl(
-                repositoryPort, passwordEncoder, jwtService, twoFactorRequired);
+                repositoryPort, passwordEncoder, jwtService, adminDeviceTokenService, twoFactorRequired);
     }
 
     private void prepararLogin() {
@@ -129,5 +133,76 @@ class AutenticarAdminPlataformaUseCaseImplTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("bloqueada");
         verifyNoInteractions(passwordEncoder);
+    }
+
+    // --- biometria-first: dispositivo confiável (deviceToken) ---
+
+    @Test
+    void devePularSenhaE2FAQuandoDispositivoConfiavel() {
+        admin.setTwoFactorEnabled(true);
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+        when(adminDeviceTokenService.validar(admin.getId(), "device-token")).thenReturn(true);
+        prepararTokensFinais();
+
+        var resultado = useCase(true)
+                .executar(new Comando("Administrator", "admin1234", "device-token"));
+
+        assertThat(resultado.requiresTwoFactor()).isFalse();
+        assertThat(resultado.setupRequired()).isFalse();
+        assertThat(resultado.tempToken()).isNull();
+        assertThat(resultado.accessToken()).isEqualTo("access");
+        assertThat(resultado.refreshToken()).isEqualTo("refresh");
+        verifyNoInteractions(passwordEncoder);
+        verify(repositoryPort).salvar(any(AdminPlataforma.class));
+    }
+
+    @Test
+    void devePularSenhaE2FAQuandoDispositivoConfiavelSemSenha() {
+        admin.setTwoFactorEnabled(true);
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+        when(adminDeviceTokenService.validar(admin.getId(), "device-token")).thenReturn(true);
+        prepararTokensFinais();
+
+        var resultado = useCase(true)
+                .executar(new Comando("Administrator", null, "device-token"));
+
+        assertThat(resultado.requiresTwoFactor()).isFalse();
+        assertThat(resultado.accessToken()).isEqualTo("access");
+        assertThat(resultado.refreshToken()).isEqualTo("refresh");
+        verifyNoInteractions(passwordEncoder);
+        verify(jwtService, never()).gerarTempTokenTwoFactor(any());
+    }
+
+    @Test
+    void deveIgnorarDispositivoInvalidoEExigir2FA() {
+        admin.setTwoFactorEnabled(true);
+        prepararLogin();
+        when(adminDeviceTokenService.validar(admin.getId(), "device-vencido")).thenReturn(false);
+        when(jwtService.gerarTempTokenTwoFactor(admin.getId().toString())).thenReturn("temp-token");
+
+        var resultado = useCase(true)
+                .executar(new Comando("Administrator", "admin1234", "device-vencido"));
+
+        assertThat(resultado.requiresTwoFactor()).isTrue();
+        assertThat(resultado.tempToken()).isEqualTo("temp-token");
+        verify(adminDeviceTokenService).validar(admin.getId(), "device-vencido");
+        verify(repositoryPort, never()).salvar(any(AdminPlataforma.class));
+    }
+
+    @Test
+    void deveBloquearLoginComDispositivoQuandoContaBloqueada() {
+        admin.setBloqueioLoginAte(java.time.Instant.now().plusSeconds(600));
+        when(repositoryPort.buscarPorUsername("Administrator")).thenReturn(Optional.of(admin));
+
+        assertThatThrownBy(() -> useCase(true)
+                .executar(new Comando("Administrator", "admin1234", "device-token")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("bloqueada");
+        verifyNoInteractions(adminDeviceTokenService);
+    }
+
+    private void prepararTokensFinais() {
+        when(jwtService.gerarAccessTokenAdmin("Administrator", admin.getId().toString())).thenReturn("access");
+        when(jwtService.gerarRefreshTokenAdmin("Administrator", admin.getId().toString())).thenReturn("refresh");
     }
 }
