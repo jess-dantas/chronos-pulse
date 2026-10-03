@@ -6,7 +6,16 @@ import java.util.UUID;
 
 public interface AutenticarAdminPlataformaUseCase {
 
-    record Comando(String username, String senha) {}
+    /**
+     * deviceToken: dispositivo confiável ("biometria-first"). Quando presente
+     * e válido, autentica direto (pulando senha e 2FA); inválido/expirado cai
+     * no fluxo normal. Compatível com o construtor de 2 args (fluxo clássico).
+     */
+    record Comando(String username, String senha, String deviceToken) {
+        public Comando(String username, String senha) {
+            this(username, senha, null);
+        }
+    }
 
     /**
      * Quando requiresTwoFactor=true, accessToken/refreshToken vêm nulos e

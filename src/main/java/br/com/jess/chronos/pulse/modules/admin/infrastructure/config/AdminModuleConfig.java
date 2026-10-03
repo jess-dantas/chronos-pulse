@@ -67,9 +67,11 @@ public class AdminModuleConfig {
             AdminPlataformaRepositoryPort repositoryPort,
             org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
             br.com.jess.chronos.pulse.modules.auth.infrastructure.security.JwtService jwtService,
+            br.com.jess.chronos.pulse.modules.admin.application.service.AdminDeviceTokenService adminDeviceTokenService,
             @org.springframework.beans.factory.annotation.Value("${chronos.admin.two-factor-required:true}")
             boolean twoFactorRequired) {
-        return new AutenticarAdminPlataformaUseCaseImpl(repositoryPort, passwordEncoder, jwtService, twoFactorRequired);
+        return new AutenticarAdminPlataformaUseCaseImpl(
+                repositoryPort, passwordEncoder, jwtService, adminDeviceTokenService, twoFactorRequired);
     }
 
     @Bean
