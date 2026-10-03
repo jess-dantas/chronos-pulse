@@ -1,73 +1,119 @@
 -- ============================================================================
--- Auditoria da sequência de batidas (pré V006)
+-- Auditoria da sequência de batidas (regra posicional — Fase B, 2026-10-03)
 -- ----------------------------------------------------------------------------
--- Compara o tipo armazenado em registro_ponto com o ciclo canônico
--- ENTRADA -> INTERVALO -> RETORNO -> SAIDA, na ordem cronológica do dia de
--- São Paulo (a mesma janela que o backend usa em
--- RegistrarPontoUseCaseImpl.determinarProximoTipo).
+-- Compara o tipo armazenado em registro_ponto com a jornada canônico de 6
+-- batidas ENTRADA -> INTERVALO -> RETORNO -> SAIDA -> ENTRADA -> SAIDA,
+-- na ordem cronológica de cada colaborador (a mesma regra de
+-- RegistrarPontoUseCaseImpl.determinarProximoTipo):
 --
--- Uso: rodar no console do Postgres (Render) antes e depois da migração
--- V006__repara_sequencia_batidas.sql.
+--   * a posição manda, não o tipo anterior: 5ª batida = ENTRADA (HE),
+--     6ª = SAIDA (HE), 7ª reinicia a jornada em ENTRADA;
+--   * duas batidas com intervalo > 10h abrem jornada nova (o turno noturno
+--     22h -> 06h atravessa a virada sem regra própria);
+--   * ajustes manuais ENTRAM na cadeia (o backend não filtra), mas só as
+--     batidas naturais (ajuste_manual = false) são comparadas — o tipo de um
+--     ajuste é decisão do RH.
 --
--- Esperado após a V006: as consultas 1-2 (sequência) e 3 (nsr_logico null)
--- não retornam linhas; consultas 4-5 podem continuar apontando dados legados
--- de nsr que a migração não toca (por decisão: nsr_logico é intocado).
+-- Sem backfill (decisão 2026-10-03): dados antigos NÃO são corrigidos. Por
+-- isso as consultas 1-2 filtram por LIMITE_AVALIACIO — ajuste a data do
+-- deploy da regra nova; antes dela as divergências são esperadas.
+--
+-- Uso: rodar no console do Postgres (Render). As consultas 3-5 (nsr) são
+-- independentes da regra de sequência e continuam valendo.
 -- ============================================================================
 
+-- Data a partir da qual a regra posicional vale (deploy da Fase B).
+-- Consultas 1 e 2: troque o literal abaixo se necessário.
+-- 2026-10-03 00:00 (-03)
+
 -- ----------------------------------------------------------------------------
--- 1) Resumo: dias com divergência (apenas batidas naturais; ajustes manuais
---    são intocados — o tipo deles é a decisão do RH).
---    Cada posição rn de um (colaborador, dia SP) espera SEQUENCIA[(rn-1) % 4]:
---    primeira batida do dia = ENTRADA, pois o backend deriva o próximo tipo a
---    partir do último e cai em ENTRADA quando o dia está vazio.
+-- 1) Resumo: batidas naturais fora da jornada canônica (após o deploy).
+--    Esperado: 0 linhas.
 -- ----------------------------------------------------------------------------
-WITH ordenados AS (
+WITH RECURSIVE limite AS (
+    SELECT TIMESTAMPTZ '2026-10-03 00:00:00-03' AS desde
+),
+ordenados AS (
     SELECT
+        r.tenant_id,
         r.colaborador_id,
         r.data_hora_dispositivo,
         r.tipo_registro,
         r.ajuste_manual,
         ROW_NUMBER() OVER (
-            PARTITION BY
-                r.colaborador_id,
-                (r.data_hora_dispositivo AT TIME ZONE 'America/Sao_Paulo')::date
+            PARTITION BY r.tenant_id, r.colaborador_id
             ORDER BY r.data_hora_dispositivo, r.nsr
         ) AS rn
-    FROM registro_ponto r
+    FROM registro_ponto r, limite
+    WHERE r.data_hora_dispositivo >= limite.desde
+),
+cadeia AS (
+    SELECT
+        o.tenant_id,
+        o.colaborador_id,
+        o.data_hora_dispositivo,
+        o.tipo_registro,
+        o.ajuste_manual,
+        o.rn,
+        1 AS posicao
+    FROM ordenados o
+    WHERE o.rn = 1
+
+    UNION ALL
+
+    SELECT
+        o.tenant_id,
+        o.colaborador_id,
+        o.data_hora_dispositivo,
+        o.tipo_registro,
+        o.ajuste_manual,
+        o.rn,
+        CASE
+            WHEN o.data_hora_dispositivo - c.data_hora_dispositivo
+                    > INTERVAL '10 hours'
+                OR c.posicao >= 6
+            THEN 1
+            ELSE c.posicao + 1
+        END AS posicao
+    FROM ordenados o
+    JOIN cadeia c
+      ON c.tenant_id = o.tenant_id
+     AND c.colaborador_id = o.colaborador_id
+     AND c.rn = o.rn - 1
 ),
 canonico AS (
     SELECT
-        o.colaborador_id,
-        (o.data_hora_dispositivo AT TIME ZONE 'America/Sao_Paulo')::date AS dia_sp,
-        o.rn,
-        o.tipo_registro,
-        CASE (o.rn - 1) % 4
-            WHEN 0 THEN 'ENTRADA'
-            WHEN 1 THEN 'INTERVALO'
-            WHEN 2 THEN 'RETORNO'
-            WHEN 3 THEN 'SAIDA'
+        c.*,
+        CASE c.posicao
+            WHEN 1 THEN 'ENTRADA'
+            WHEN 2 THEN 'INTERVALO'
+            WHEN 3 THEN 'RETORNO'
+            WHEN 4 THEN 'SAIDA'
+            WHEN 5 THEN 'ENTRADA'
+            WHEN 6 THEN 'SAIDA'
         END AS tipo_esperado
-    FROM ordenados o
-    WHERE o.ajuste_manual = false
+    FROM cadeia c
 )
 SELECT
-    dia_sp,
-    tipo_esperado,
-    tipo_registro,
-    COUNT(*) AS qtd_divergente,
-    COUNT(DISTINCT colaborador_id) AS qtd_colaboradores
-FROM canonico
-WHERE tipo_registro <> tipo_esperado
-GROUP BY dia_sp, tipo_esperado, tipo_registro
-ORDER BY dia_sp, tipo_esperado, tipo_registro;
+    c.colaborador_id,
+    c.tipo_esperado,
+    c.tipo_registro,
+    COUNT(*) AS qtd_divergente
+FROM canonico c
+WHERE c.ajuste_manual = false
+  AND c.tipo_registro <> c.tipo_esperado
+GROUP BY c.colaborador_id, c.tipo_esperado, c.tipo_registro
+ORDER BY c.colaborador_id, c.tipo_esperado, c.tipo_registro;
 
 -- ----------------------------------------------------------------------------
--- 2) Detalhe das batidas naturais fora do ciclo canônico (o que a V006 vai
---    corrigir). Ajustes manuais não aparecem: o tipo deles foi escolhido pelo
---    RH, mas a posição deles continua contando no ciclo (igual ao backend,
---    que não filtra ajuste_manual ao buscar o último tipo do dia).
+-- 2) Detalhe das batidas naturais fora da jornada canônica (após o deploy).
+--    Esperado: 0 linhas. Ajustes não aparecem no comparado, mas contam na
+--    posição — igual ao backend, que não filtra ajuste_manual.
 -- ----------------------------------------------------------------------------
-WITH ordenados AS (
+WITH RECURSIVE limite AS (
+    SELECT TIMESTAMPTZ '2026-10-03 00:00:00-03' AS desde
+),
+ordenados AS (
     SELECT
         r.id,
         r.tenant_id,
@@ -79,39 +125,70 @@ WITH ordenados AS (
         r.nsr_logico,
         r.nsr,
         ROW_NUMBER() OVER (
-            PARTITION BY
-                r.colaborador_id,
-                (r.data_hora_dispositivo AT TIME ZONE 'America/Sao_Paulo')::date
+            PARTITION BY r.tenant_id, r.colaborador_id
             ORDER BY r.data_hora_dispositivo, r.nsr
         ) AS rn
-    FROM registro_ponto r
+    FROM registro_ponto r, limite
+    WHERE r.data_hora_dispositivo >= limite.desde
 ),
-canonico AS (
+cadeia AS (
     SELECT
-        o.*,
-        CASE (o.rn - 1) % 4
-            WHEN 0 THEN 'ENTRADA'
-            WHEN 1 THEN 'INTERVALO'
-            WHEN 2 THEN 'RETORNO'
-            WHEN 3 THEN 'SAIDA'
-        END AS tipo_esperado
+        o.id, o.tenant_id, o.colaborador_id, o.data_hora_dispositivo,
+        o.data_hora_servidor, o.tipo_registro, o.ajuste_manual,
+        o.nsr_logico, o.nsr, o.rn,
+        1 AS posicao
     FROM ordenados o
+    WHERE o.rn = 1
+
+    UNION ALL
+
+    SELECT
+        o.id, o.tenant_id, o.colaborador_id, o.data_hora_dispositivo,
+        o.data_hora_servidor, o.tipo_registro, o.ajuste_manual,
+        o.nsr_logico, o.nsr, o.rn,
+        CASE
+            WHEN o.data_hora_dispositivo - c.data_hora_dispositivo
+                    > INTERVAL '10 hours'
+                OR c.posicao >= 6
+            THEN 1
+            ELSE c.posicao + 1
+        END AS posicao
+    FROM ordenados o
+    JOIN cadeia c
+      ON c.tenant_id = o.tenant_id
+     AND c.colaborador_id = o.colaborador_id
+     AND c.rn = o.rn - 1
 )
 SELECT
     c.id,
     c.tenant_id,
     c.colaborador_id,
     (c.data_hora_dispositivo AT TIME ZONE 'America/Sao_Paulo')::date AS dia_sp,
-    c.rn AS posicao_no_dia,
-    c.tipo_esperado,
+    c.posicao AS posicao_na_jornada,
+    CASE c.posicao
+        WHEN 1 THEN 'ENTRADA'
+        WHEN 2 THEN 'INTERVALO'
+        WHEN 3 THEN 'RETORNO'
+        WHEN 4 THEN 'SAIDA'
+        WHEN 5 THEN 'ENTRADA'
+        WHEN 6 THEN 'SAIDA'
+    END AS tipo_esperado,
     c.tipo_registro,
     c.nsr_logico,
     c.data_hora_dispositivo,
     c.data_hora_servidor
-FROM canonico c
+FROM cadeia c
 WHERE c.ajuste_manual = false
-  AND c.tipo_registro <> c.tipo_esperado
-ORDER BY c.colaborador_id, dia_sp, c.rn;
+  AND c.tipo_registro <>
+      CASE c.posicao
+          WHEN 1 THEN 'ENTRADA'
+          WHEN 2 THEN 'INTERVALO'
+          WHEN 3 THEN 'RETORNO'
+          WHEN 4 THEN 'SAIDA'
+          WHEN 5 THEN 'ENTRADA'
+          WHEN 6 THEN 'SAIDA'
+      END
+ORDER BY c.colaborador_id, c.data_hora_dispositivo;
 
 -- ----------------------------------------------------------------------------
 -- 3) nsr_logico ausente (linha não passou pelo use case / legado).
